@@ -566,11 +566,11 @@ export default function HtmlCssChallenge() {
                             </div>
                             <div className="flex-1 relative overflow-auto bg-gray-100">
                                 {previewTab === "live" ? (
-                                    <PreviewFrame ref={previewRef} code={code} />
+                                    <PreviewFrame ref={previewRef} code={code} assets={currentAssets} />
                                 ) : (
                                     // Show expected result preview with the admin-defined expected code
                                     expectedCode.html || expectedCode.css || expectedCode.js ? (
-                                        <PreviewFrame ref={expectedPreviewRef} code={expectedCode} />
+                                        <PreviewFrame ref={expectedPreviewRef} code={expectedCode} assets={currentAssets} />
                                     ) : (
                                         <div className="h-full flex items-center justify-center text-sm text-gray-500 p-8">
                                             <div className="text-center">
@@ -609,6 +609,7 @@ export default function HtmlCssChallenge() {
                             <PreviewFrame
                                 ref={fullScreenView === "expected" ? expectedPreviewRef : previewRef}
                                 code={fullScreenView === "expected" ? expectedCode : code}
+                                assets={currentAssets}
                             />
                         </div>
                     </div>

@@ -1,13 +1,66 @@
 import { forwardRef, useImperativeHandle, useRef, useEffect, useState } from 'react';
 
-const PreviewFrame = forwardRef(({ code, isRestricted = false }, ref) => {
+const PreviewFrame = forwardRef(({ code, assets = [], isRestricted = false }, ref) => {
     const iframeRef = useRef(null);
     const [isLoading, setIsLoading] = useState(true);
 
     // Generate the HTML content for the iframe
     const generatePreviewContent = (codeObj) => {
-        const { html = '', css = '', js = '' } = codeObj || {};
+        let { html = '', css = '', js = '' } = codeObj || {};
 
+        // 1. Perform asset path replacements
+        // If assets are provided, replace asset names with their paths in the HTML
+        if (assets && assets.length > 0) {
+            assets.forEach(asset => {
+                if (asset.name && asset.path) {
+                    // Replace all occurrences of the asset name in src attributes
+                    // We handle both src="name" and src='name'
+                    // Make it case-insensitive and allow for optional extensions in the HTML
+                    const escapedName = asset.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+                    // Regex helps find the name in src, with or without extension
+                    const regex = new RegExp(`(src=["'])(${escapedName}(\\.[a-zA-Z0-9]+)?)(["'])`, 'gi');
+
+                    // Ensure path uses forward slashes for URL
+                    let webPath = asset.path.replace(/\\/g, '/');
+
+                    // If the path doesn't start with assets/ and doesn't have a protocol, 
+                    // and it's not starting with /, prepend assets/ just in case
+                    if (!webPath.startsWith('assets/') && !webPath.startsWith('/') && !webPath.startsWith('http')) {
+                        webPath = 'assets/' + webPath;
+                    }
+
+                    html = html.replace(regex, `$1${webPath}$4`);
+                }
+            });
+        }
+
+        // 2. Check if the provided HTML is already a full document
+        const isFullDocument = /<html/i.test(html) && /<body/i.test(html);
+
+        if (isFullDocument) {
+            // It's a full document. We might still want to inject CSS/JS if they aren't empty
+            // and aren't already in the document. 
+            // But for simplicity, if it's a full document, we mostly trust it.
+            // We can try to insert a <base href="/" /> if not present.
+            if (!/<base/i.test(html)) {
+                html = html.replace(/<head[^>]*>/i, `$&<base href="/" />`);
+            }
+
+            // If CSS provided separately, inject it before </head>
+            if (css.trim()) {
+                html = html.replace(/<\/head>/i, `<style>${css}</style></head>`);
+            }
+
+            // If JS provided separately, inject it before </body>
+            if (js.trim()) {
+                html = html.replace(/<\/body>/i, `<script>${js}</script></body>`);
+            }
+
+            return html;
+        }
+
+        // 3. Fallback for partial HTML: wrap in full document structure
         return `
 <!DOCTYPE html>
 <html lang="en">
@@ -17,7 +70,7 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false }, ref) => {
   <base href="/" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; min-height: 100vh; }
     ${css}
   </style>
 </head>

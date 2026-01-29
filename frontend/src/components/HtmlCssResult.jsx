@@ -56,6 +56,18 @@ const HtmlCssResult = ({ results, onBack }) => {
     }, [question]);
 
 
+    // Extract current question assets
+    const currentAssets = useMemo(() => {
+        if (!question?.output_format) return [];
+        try {
+            const parsed = JSON.parse(question.output_format);
+            if (Array.isArray(parsed)) return parsed;
+        } catch (e) {
+            // Silently fail or try alternative parsing
+        }
+        return [];
+    }, [question]);
+
     // --- Robust "Smart Match" Scoring Logic ---
     const runAnalysis = () => {
         setIsScoring(true);
@@ -333,7 +345,7 @@ const HtmlCssResult = ({ results, onBack }) => {
                         </div>
                         <div className="flex-1 overflow-hidden bg-white relative">
                             <div style={{ width: '100%', height: '100%', display: viewMode === 'preview' ? 'block' : 'none' }}>
-                                <PreviewFrame ref={userPreviewRef} code={userCode} isRestricted={true} />
+                                <PreviewFrame ref={userPreviewRef} code={userCode} assets={currentAssets} isRestricted={true} />
                             </div>
                             <div style={{ width: '100%', height: '100%', display: viewMode === 'code' ? 'block' : 'none' }}>
                                 <div className="h-full grid grid-rows-2">
@@ -358,7 +370,7 @@ const HtmlCssResult = ({ results, onBack }) => {
                         </div>
                         <div className="flex-1 overflow-hidden bg-white relative">
                             <div style={{ width: '100%', height: '100%', display: viewMode === 'preview' ? 'block' : 'none' }}>
-                                <PreviewFrame ref={correctPreviewRef} code={correctCode} isRestricted={true} />
+                                <PreviewFrame ref={correctPreviewRef} code={correctCode} assets={currentAssets} isRestricted={true} />
                             </div>
                             <div style={{ width: '100%', height: '100%', display: viewMode === 'code' ? 'block' : 'none' }}>
                                 <div className="h-full grid grid-rows-2">
