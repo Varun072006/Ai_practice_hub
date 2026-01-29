@@ -129,17 +129,42 @@ const MCQPractice = () => {
   const handleFinish = async (auto = false) => {
     if (!session) return;
 
-    // For manual finish (last question button), we might need to submit the last answer if not already submitted
-    // But handleNext calls this for the last question, so it's already submitted.
-    // However, if auto-submit triggers, we just finish.
+    // Submit ALL selected answers that haven't been submitted yet
+    // Track which questions were already submitted via handleNext
+    const submittedQuestions = new Set();
 
-    // If auto is true, just finish.
-    if (!auto) {
-      // Double check if we need a confirmation, but user requested streamlined flow.
-      // Let's keep confirmation only if explicitly "Finish"ed not via flow? 
-      // Actually, plan said "Finish Test" button on last question.
-      // User probably expects it to just finish.
-    } else {
+    // We need to submit all selected answers
+    // Since handleNext submits when moving to next question, we need to track what's been submitted
+    // For simplicity, we'll submit all selected options - the backend should handle duplicates gracefully
+
+    try {
+      // Submit all selected answers
+      const submitPromises = [];
+      for (const [indexStr, optionId] of Object.entries(selectedOptions)) {
+        const questionIndex = parseInt(indexStr);
+        const question = session.questions[questionIndex];
+        if (question && optionId) {
+          submitPromises.push(
+            api.post(`/sessions/${session.id}/submit`, {
+              questionId: question.question_id,
+              selected_option_id: optionId,
+            }).catch(err => {
+              // Log but don't fail - answer might already be submitted
+              console.warn(`Could not submit answer for question ${questionIndex + 1}:`, err.message);
+            })
+          );
+        }
+      }
+
+      // Wait for all submissions to complete
+      if (submitPromises.length > 0) {
+        await Promise.all(submitPromises);
+      }
+    } catch (e) {
+      console.warn("Error during batch answer submission", e);
+    }
+
+    if (auto) {
       setAutoSubmitted(true);
     }
 
@@ -152,6 +177,7 @@ const MCQPractice = () => {
       alert('Failed to complete session');
     }
   };
+
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -298,8 +324,8 @@ const MCQPractice = () => {
                     onClick={handleClearSelection}
                     disabled={!selectedOption}
                     className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg border transition-colors ${selectedOption
-                        ? 'text-gray-600 hover:text-red-600 hover:bg-red-50 border-gray-200 hover:border-red-200 cursor-pointer'
-                        : 'text-gray-400 border-gray-200 bg-gray-50 cursor-not-allowed'
+                      ? 'text-gray-600 hover:text-red-600 hover:bg-red-50 border-gray-200 hover:border-red-200 cursor-pointer'
+                      : 'text-gray-400 border-gray-200 bg-gray-50 cursor-not-allowed'
                       }`}
                   >
                     <X size={16} />

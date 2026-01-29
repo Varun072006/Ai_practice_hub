@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ArrowRight, CheckCircle, Code, Eye } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { ArrowRight, CheckCircle, Code, Eye, XCircle, LayoutTemplate } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import PreviewFrame from './PreviewFrame';
@@ -7,421 +7,458 @@ import PreviewFrame from './PreviewFrame';
 const HtmlCssResult = ({ results, onBack }) => {
     const navigate = useNavigate();
     const [viewMode, setViewMode] = useState('preview'); // 'preview' or 'code'
+    const [codeTab, setCodeTab] = useState('html'); // 'html', 'css', 'js'
 
-    // Detailed Scores
-    const [scores, setScores] = useState({
-        structure: 0,
-        content: 0,
-        style: 0,
-        total: 0
-    });
-    const [isScoring, setIsScoring] = useState(true);
     const [currentIndex, setCurrentIndex] = useState(0);
 
+    // Store scores for ALL questions: { [index]: { structure, content, style, total } }
+    const [allScores, setAllScores] = useState({});
+    const [isScoring, setIsScoring] = useState(true);
+
+    // Refs for ALL questions to run parallel/hidden analysis
+    // Structure: refs.current[index] = { user: ref, correct: ref }
+    const previewRefs = useRef({});
+
+    // Visible refs for the current question
     const userPreviewRef = useRef(null);
     const correctPreviewRef = useRef(null);
 
-    // Extract current question data
-    const question = results.questions[currentIndex];
-
-    // Robust parsing for user code
-    const userCode = useMemo(() => {
-        if (!question?.submission?.submitted_code) return { html: '', css: '', js: '' };
-
+    // --- Helper to parse code safely ---
+    const parseCode = (raw) => {
         try {
-            const raw = question.submission.submitted_code;
-            // If already an object (MySQL JSON type or previously parsed), return it
-            if (typeof raw === 'object' && raw !== null) return raw;
-            // Otherwise parse it
+            if (!raw) return { html: '', css: '', js: '' };
+            if (typeof raw === 'object') return raw;
             return JSON.parse(raw);
         } catch (e) {
-            console.error("Failed to parse user code:", e);
-            // If it's a string but NOT JSON, might be direct HTML (old format)
-            if (typeof question.submission.submitted_code === 'string') {
-                return { html: question.submission.submitted_code, css: '', js: '' };
-            }
+            if (typeof raw === 'string') return { html: raw, css: '', js: '' };
             return { html: '', css: '', js: '' };
         }
-    }, [question]);
-
-    const correctCode = useMemo(() => {
-        try {
-            if (!question?.reference_solution) return { html: '', css: '', js: '' };
-            const raw = question.reference_solution;
-            if (typeof raw === 'object' && raw !== null) return raw;
-            return JSON.parse(raw);
-        } catch (e) {
-            return { html: question.reference_solution || '', css: '', js: '' };
-        }
-    }, [question]);
-
-
-    // Extract current question assets
-    const currentAssets = useMemo(() => {
-        if (!question?.output_format) return [];
-        try {
-            const parsed = JSON.parse(question.output_format);
-            if (Array.isArray(parsed)) return parsed;
-        } catch (e) {
-            // Silently fail or try alternative parsing
-        }
-        return [];
-    }, [question]);
-
-    // --- Robust "Smart Match" Scoring Logic ---
-    const runAnalysis = () => {
-        setIsScoring(true);
-        // Wait for iframes (increased timeout for reliability)
-        setTimeout(() => {
-            try {
-                const userWin = userPreviewRef.current?.getWindow();
-                const correctWin = correctPreviewRef.current?.getWindow();
-
-                if (!userWin || !correctWin) {
-                    console.warn("Analysis: Iframe windows not ready");
-                    setScores({ structure: 0, content: 0, style: 0, total: 0 });
-                    setIsScoring(false);
-                    return;
-                }
-
-                const userDoc = userWin.document;
-                const correctDoc = correctWin.document;
-
-                // Ensure body is loaded
-                if (!userDoc.body || !correctDoc.body) {
-                    console.warn("Analysis: Documents not fully loaded");
-                    setIsScoring(false);
-                    return;
-                }
-
-                const correctElements = Array.from(correctDoc.body.querySelectorAll('*'));
-                console.log(`Analyzing: ${correctElements.length} elements to match`);
-
-                if (correctElements.length === 0) {
-                    setScores({ structure: 100, content: 100, style: 100, total: 100 });
-                    setIsScoring(false);
-                    return;
-                }
-
-                let structurePoints = 0;
-                let maxStructurePoints = 0;
-
-                let contentPoints = 0;
-                let maxContentPoints = 0;
-
-                let stylePoints = 0;
-                let maxStylePoints = 0;
-
-                const usedUserElements = new Set();
-
-                correctElements.forEach(correctEl => {
-                    maxStructurePoints += 1; // Base point for existence
-
-                    // --- FIND BEST MATCH START ---
-                    const candidates = Array.from(userDoc.body.getElementsByTagName(correctEl.tagName));
-
-                    let bestMatch = null;
-                    let bestMatchScore = -1;
-
-                    candidates.forEach(cand => {
-                        if (usedUserElements.has(cand)) return;
-
-                        let currentScore = 0;
-                        if (correctEl.id && cand.id === correctEl.id) currentScore += 50;
-
-                        const cClasses = Array.from(correctEl.classList);
-                        const uClasses = Array.from(cand.classList);
-                        const intersection = cClasses.filter(c => uClasses.includes(c));
-                        if (cClasses.length > 0) {
-                            currentScore += (intersection.length / cClasses.length) * 20;
-                        }
-
-                        if (correctEl.children.length === 0 && correctEl.textContent.trim()) {
-                            if (correctEl.textContent.trim() === cand.textContent.trim()) currentScore += 30;
-                            else if (cand.textContent.includes(correctEl.textContent.trim())) currentScore += 10;
-                        }
-
-                        if (correctEl.parentElement && cand.parentElement && correctEl.parentElement.tagName === cand.parentElement.tagName) {
-                            currentScore += 5;
-                        }
-
-                        if (currentScore > bestMatchScore) {
-                            bestMatchScore = currentScore;
-                            bestMatch = cand;
-                        }
-                    });
-
-                    let userEl = bestMatch;
-                    if (!userEl && candidates.length > 0) {
-                        userEl = candidates.find(c => !usedUserElements.has(c));
-                    }
-                    // --- FIND BEST MATCH END ---
-
-                    if (userEl) {
-                        usedUserElements.add(userEl);
-
-                        // Scored Match
-                        structurePoints += 1;
-
-                        const correctClasses = Array.from(correctEl.classList).sort().join(' ');
-                        const userClasses = Array.from(userEl.classList).sort().join(' ');
-                        if (correctClasses === userClasses) structurePoints += 0.5;
-                        maxStructurePoints += 0.5;
-
-                        // Content Check
-                        if (correctEl.children.length === 0 && correctEl.textContent.trim().length > 0) {
-                            maxContentPoints += 1;
-                            const norm = (s) => s.replace(/\s+/g, ' ').trim();
-                            if (norm(correctEl.textContent) === norm(userEl.textContent)) {
-                                contentPoints += 1;
-                            }
-                        }
-
-                        // --- PIXEL SIMILARITY / STYLE CHECK ---
-
-                        // 1. Comprehensive CSS Properties
-                        const expandedStyles = [
-                            'display', 'position', 'color', 'background-color',
-                            'font-size', 'font-family', 'font-weight', 'line-height', 'text-align', 'text-decoration',
-                            'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
-                            'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
-                            'border-top-width', 'border-right-width', 'border-bottom-width', 'border-left-width',
-                            'border-radius', 'box-shadow', 'opacity',
-                            'flex-direction', 'justify-content', 'align-items', 'flex-wrap', 'gap'
-                        ];
-
-                        maxStylePoints += expandedStyles.length;
-                        const correctStyle = correctWin.getComputedStyle(correctEl);
-                        const userStyle = userWin.getComputedStyle(userEl);
-
-                        expandedStyles.forEach(prop => {
-                            if (correctStyle.getPropertyValue(prop) === userStyle.getPropertyValue(prop)) {
-                                stylePoints += 1;
-                            }
-                        });
-
-                        // 2. Geometry Check (Bounding Box)
-                        // Verifies: Width, Height, Absolute Position (Top, Left)
-                        maxStylePoints += 4;
-                        const correctRect = correctEl.getBoundingClientRect();
-                        const userRect = userEl.getBoundingClientRect();
-                        const tolerance = 2; // 2px tolerance
-
-                        // Size
-                        if (Math.abs(correctRect.width - userRect.width) <= tolerance) stylePoints += 1;
-                        else if (correctRect.width > 0 && Math.abs(correctRect.width - userRect.width) / correctRect.width < 0.05) stylePoints += 1; // 5% diff
-
-                        if (Math.abs(correctRect.height - userRect.height) <= tolerance) stylePoints += 1;
-                        else if (correctRect.height > 0 && Math.abs(correctRect.height - userRect.height) / correctRect.height < 0.05) stylePoints += 1;
-
-                        // Position (Layout)
-                        if (Math.abs(correctRect.top - userRect.top) <= tolerance) stylePoints += 1;
-                        if (Math.abs(correctRect.left - userRect.left) <= tolerance) stylePoints += 1;
-
-                    } else {
-                        // Missing element penalties
-                        if (correctEl.children.length === 0 && correctEl.textContent.trim().length > 0) {
-                            maxContentPoints += 1;
-                        }
-                        // Style penalties (max points increase but stylePoints don't)
-                        // Styles + Geometry points
-                        maxStylePoints += 34; // 30 styles + 4 geometry
-                    }
-                });
-
-                const structureScore = maxStructurePoints > 0 ? Math.round((structurePoints / maxStructurePoints) * 100) : 100;
-                const contentScore = maxContentPoints > 0 ? Math.round((contentPoints / maxContentPoints) * 100) : 100;
-                const styleScoreVal = maxStylePoints > 0 ? Math.round((stylePoints / maxStylePoints) * 100) : 100;
-
-                // Weighted Total: 30% Structure, 50% Style/Pixels, 20% Content
-                const total = Math.round((structureScore * 0.3) + (styleScoreVal * 0.5) + (contentScore * 0.2));
-
-                setScores({
-                    structure: structureScore,
-                    content: contentScore,
-                    style: styleScoreVal,
-                    total: total
-                });
-                setIsScoring(false);
-
-            } catch (e) {
-                console.error("Analysis failed", e);
-                setIsScoring(false);
-            }
-        }, 2500);
     };
 
+    const parseAssets = (raw) => {
+        if (!raw) return [];
+        try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) return parsed;
+        } catch (e) {
+            // Try pipe-separated if JSON fails (old format)
+            try {
+                return raw.split(',').map(item => {
+                    const parts = item.trim().split('|');
+                    return {
+                        name: parts[0] || '',
+                        path: parts[1] || parts[0] || ''
+                    };
+                }).filter(a => a.name);
+            } catch (err) {
+                return [];
+            }
+        }
+        return [];
+    };
+
+    // Prepare data for all questions
+    const questionsData = useMemo(() => {
+        return results.questions.map(q => ({
+            ...q,
+            userCode: parseCode(q.submission?.submitted_code),
+            correctCode: parseCode(q.reference_solution),
+            assets: parseAssets(q.output_format)
+        }));
+    }, [results]);
+
+    // Current displayed question
+    const currentQuestion = questionsData[currentIndex];
+    const currentScore = allScores[currentIndex] || { structure: 0, content: 0, style: 0, total: 0 };
+
+
+    // Current question assets shorthand
+    const currentAssets = currentQuestion?.assets || [];
+
+    // --- ANALYSIS LOGIC ---
+    const analyzeQuestion = useCallback((index) => {
+        const refs = previewRefs.current[index];
+        if (!refs || !refs.user?.current || !refs.correct?.current) return;
+
+        const userWin = refs.user.current.getWindow();
+        const correctWin = refs.correct.current.getWindow();
+
+        if (!userWin || !correctWin || !userWin.document.body || !correctWin.document.body) return;
+
+        const correctDoc = correctWin.document;
+        const userDoc = userWin.document;
+        const correctElements = Array.from(correctDoc.body.querySelectorAll('*'));
+
+        if (correctElements.length === 0) {
+            setAllScores(prev => ({ ...prev, [index]: { structure: 100, content: 100, style: 100, total: 100 } }));
+            return;
+        }
+
+        let structurePoints = 0;
+        let maxStructurePoints = 0;
+        let contentPoints = 0;
+        let maxContentPoints = 0;
+        let stylePoints = 0;
+        let maxStylePoints = 0;
+
+        const usedUserElements = new Set();
+
+        correctElements.forEach(correctEl => {
+            maxStructurePoints += 1;
+
+            // Find match
+            const candidates = Array.from(userDoc.body.getElementsByTagName(correctEl.tagName));
+            let bestMatch = null;
+            let bestMatchScore = -1;
+
+            candidates.forEach(cand => {
+                if (usedUserElements.has(cand)) return;
+                let s = 0;
+                if (correctEl.id && cand.id === correctEl.id) s += 50;
+                if (correctEl.className === cand.className) s += 20;
+                if (correctEl.textContent.trim() === cand.textContent.trim()) s += 30;
+                if (s > bestMatchScore) { bestMatchScore = s; bestMatch = cand; }
+            });
+
+            if (!bestMatch && candidates.length > 0) {
+                bestMatch = candidates.find(c => !usedUserElements.has(c));
+            }
+
+            if (bestMatch) {
+                usedUserElements.add(bestMatch);
+                structurePoints += 1;
+                // Content
+                if (correctEl.children.length === 0 && correctEl.textContent.trim()) {
+                    maxContentPoints += 1;
+                    if (correctEl.textContent.trim() === bestMatch.textContent.trim()) contentPoints += 1;
+                }
+
+                // Style & Geometry
+                const expandedStyles = ['display', 'color', 'background-color', 'font-size', 'margin', 'padding', 'border-radius', 'text-align'];
+                maxStylePoints += expandedStyles.length + 4; // +4 for bounding box
+
+                const cStyle = correctWin.getComputedStyle(correctEl);
+                const uStyle = userWin.getComputedStyle(bestMatch);
+
+                expandedStyles.forEach(p => {
+                    if (cStyle.getPropertyValue(p) === uStyle.getPropertyValue(p)) stylePoints += 1;
+                });
+
+                const cRect = correctEl.getBoundingClientRect();
+                const uRect = bestMatch.getBoundingClientRect();
+                if (Math.abs(cRect.width - uRect.width) < 5) stylePoints += 1;
+                if (Math.abs(cRect.height - uRect.height) < 5) stylePoints += 1;
+                if (Math.abs(cRect.top - uRect.top) < 5) stylePoints += 1;
+                if (Math.abs(cRect.left - uRect.left) < 5) stylePoints += 1;
+
+            } else {
+                if (correctEl.children.length === 0 && correctEl.textContent.trim()) maxContentPoints += 1;
+                maxStylePoints += 12; // Penalty
+            }
+        });
+
+        const calc = (pts, max) => max > 0 ? Math.round((pts / max) * 100) : 100;
+        const sScore = calc(structurePoints, maxStructurePoints);
+        const cScore = calc(contentPoints, maxContentPoints);
+        const stScore = calc(stylePoints, maxStylePoints);
+        const total = Math.round((sScore * 0.3) + (stScore * 0.5) + (cScore * 0.2));
+
+        setAllScores(prev => ({
+            ...prev,
+            [index]: { structure: sScore, content: cScore, style: stScore, total }
+        }));
+
+    }, []);
+
     useEffect(() => {
-        runAnalysis();
-    }, [userCode, correctCode]);
+        // Run analysis for ALL questions after a delay to let iframes load
+        setIsScoring(true);
+        const timer = setTimeout(() => {
+            questionsData.forEach((_, idx) => {
+                analyzeQuestion(idx);
+            });
+            setIsScoring(false);
+        }, 3000); // 3 seconds to ensure all iframes rendered
 
-    const isPass = scores.total >= 80;
-    const issueCount = Math.max(0, Math.ceil((100 - scores.total) / 10));
+        return () => clearTimeout(timer);
+    }, [questionsData, analyzeQuestion]);
 
-    const cardStyle = "bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center h-full";
-    const circularProgress = (score, color = "text-blue-500") => (
-        <div className="relative w-24 h-24 flex items-center justify-center mb-2">
-            <svg className="w-full h-full transform -rotate-90">
-                <circle cx="48" cy="48" r="40" className="stroke-gray-100" strokeWidth="8" fill="none" />
-                <circle cx="48" cy="48" r="40" className={color} strokeWidth="8" fill="none" strokeDasharray="251.2" strokeDashoffset={251.2 - (251.2 * score) / 100} strokeLinecap="round" />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className={`text-2xl font-bold ${color}`}>{score}%</span>
+
+    // Calculate Overall Score
+    const scoredQuestionsCount = Object.keys(allScores).length;
+    const overallTotal = scoredQuestionsCount > 0
+        ? Math.round(Object.values(allScores).reduce((acc, s) => acc + s.total, 0) / scoredQuestionsCount)
+        : 0;
+
+    const isOverallPass = overallTotal >= 70;
+
+    // --- UI HELPERS ---
+    const Donut = ({ score, color, label, subLabel }) => {
+        const isPass = score >= 70;
+        const statusColor = isPass ? 'text-green-600' : 'text-orange-500';
+
+        return (
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col items-center justify-center text-center h-full">
+                <div className="relative w-32 h-32 flex items-center justify-center mb-4">
+                    <svg className="w-full h-full transform -rotate-90">
+                        <circle cx="64" cy="64" r="54" className="stroke-gray-100 dark:stroke-slate-700" strokeWidth="12" fill="none" />
+                        <circle
+                            cx="64" cy="64" r="54"
+                            className={color}
+                            strokeWidth="12"
+                            fill="none"
+                            strokeDasharray="339.29"
+                            strokeDashoffset={339.29 - (339.29 * score) / 100}
+                            strokeLinecap="round"
+                        />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-3xl font-bold text-gray-800 dark:text-white">{score}%</span>
+                        <span className={`text-xs font-bold uppercase mt-1 ${statusColor}`}>{isPass ? 'PASSED' : 'FAILED'}</span>
+                    </div>
+                </div>
+                <h3 className="font-bold text-gray-800 dark:text-white mb-1">{label}</h3>
+                {subLabel && <p className="text-xs text-gray-500 dark:text-gray-400">{subLabel}</p>}
             </div>
-        </div>
-    );
+        );
+    };
 
     return (
-        <div className="min-h-screen bg-gray-50 p-8 font-sans">
+        <div className="min-h-screen bg-gray-50 dark:bg-slate-900 p-6 font-sans transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
-                <h1 className="text-3xl font-bold text-gray-900 mb-8">Result overview</h1>
+                {/* --- 1. HEADER --- */}
+                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 mb-8">
+                    <div className="flex items-center gap-6">
+                        <div className="flex items-baseline gap-4">
+                            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Result overview</h1>
 
-                {results.questions.length > 1 && (
-                    <div className="flex items-center justify-start gap-2 mb-6 bg-white p-2 rounded-xl border border-gray-200 w-fit">
-                        {results.questions.map((_, idx) => (
-                            <button
-                                key={idx}
-                                onClick={() => setCurrentIndex(idx)}
-                                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${currentIndex === idx ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'}`}
-                            >
-                                Question {idx + 1}
-                            </button>
-                        ))}
+                            {/* Tabs container */}
+                            <div className="flex gap-2 bg-white dark:bg-slate-800 rounded-lg p-1 border border-gray-200 dark:border-slate-700">
+                                {questionsData.map((_, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => setCurrentIndex(idx)}
+                                        className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-colors ${currentIndex === idx
+                                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm border border-blue-100 dark:border-blue-800'
+                                            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700'
+                                            }`}
+                                    >
+                                        Question {idx + 1}
+                                    </button>
+                                ))}
+                                <button className="px-4 py-1.5 rounded-md text-sm font-semibold bg-blue-600 text-white shadow-sm">
+                                    Overall Result
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* LARGE OVERALL INDICATOR */}
+                        <div className="flex items-center gap-2">
+                            <span className={`text-4xl font-extrabold ${isOverallPass ? 'text-green-600 dark:text-green-400' : 'text-orange-500 dark:text-orange-400'}`}>
+                                {isScoring && scoredQuestionsCount < questionsData.length ? '...' : `${overallTotal}%`}
+                            </span>
+                            <span className={`text-2xl font-bold uppercase ${isOverallPass ? 'text-green-600 dark:text-green-400' : 'text-orange-500 dark:text-orange-400'}`}>
+                                {isOverallPass ? 'PASSED' : 'FAILED'}
+                            </span>
+                        </div>
                     </div>
-                )}
 
+                    <button onClick={onBack} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-lg shadow-sm flex items-center gap-2 transition-transform hover:scale-105">
+                        Continue to Next Lesson <ArrowRight size={18} />
+                    </button>
+                </div>
+
+                {/* --- 2. MAIN CONTENT GRID --- */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                    <div className="lg:col-span-2 bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                    {/* Left: Question Info */}
+                    <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-start">
                         <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2 bg-blue-100 rounded-lg">
-                                <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            <div className="p-2 bg-blue-50 dark:bg-slate-700/50 rounded-lg text-blue-600 dark:text-blue-400">
+                                <LayoutTemplate size={20} />
                             </div>
-                            <h2 className="text-xl font-bold text-gray-900">Question {currentIndex + 1}</h2>
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Question {currentIndex + 1}</h2>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{currentQuestion.title}</p>
+                            </div>
                         </div>
-                        <h3 className="text-lg font-semibold text-gray-800 mb-2">{question.title}</h3>
-                        <p className="text-gray-600 leading-relaxed mb-4">{question.description}</p>
+                        <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap mb-4">{currentQuestion.description}</p>
+
+                        <div style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0, overflow: 'hidden' }}>
+                            {questionsData.map((q, idx) => (
+                                <div key={`hidden-${idx}`}>
+                                    <PreviewFrame
+                                        ref={el => { if (!previewRefs.current[idx]) previewRefs.current[idx] = {}; previewRefs.current[idx].user = { current: el }; }}
+                                        code={q.userCode}
+                                        assets={q.assets}
+                                    />
+                                    <PreviewFrame
+                                        ref={el => { if (!previewRefs.current[idx]) previewRefs.current[idx] = {}; previewRefs.current[idx].correct = { current: el }; }}
+                                        code={q.correctCode}
+                                        assets={q.assets}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+
                     </div>
 
-                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center">
-                        <h2 className="text-lg font-bold text-gray-900 mb-6">Result</h2>
-                        <div className="relative w-32 h-32 flex items-center justify-center">
-                            <svg className="w-full h-full transform -rotate-90">
-                                <circle cx="64" cy="64" r="56" className="stroke-gray-100" strokeWidth="10" fill="none" />
-                                <circle cx="64" cy="64" r="56" className={isPass ? "stroke-green-500" : "stroke-orange-500"} strokeWidth="10" fill="none" strokeDasharray="351.8" strokeDashoffset={351.8 - (351.8 * scores.total) / 100} strokeLinecap="round" />
-                            </svg>
-                            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                <span className={`text-4xl font-black ${isPass ? "text-green-600" : "text-orange-500"}`}>{scores.total}%</span>
-                                <span className={`text-sm font-bold uppercase mt-1 ${isPass ? "text-green-600" : "text-orange-500"}`}>{isPass ? "PASSED" : "FAILED"}</span>
-                            </div>
-                        </div>
+                    {/* Right: Question Specific Metric */}
+                    <div className="h-full">
+                        <Donut
+                            score={currentScore.total}
+                            color={currentScore.total >= 70 ? "stroke-green-500" : "stroke-orange-500"}
+                            label={`QUESTION ${currentIndex + 1} RESULT`}
+                            subLabel="HIGH-LEVEL SUMMARY"
+                        />
                     </div>
                 </div>
 
-                <div className="flex justify-center mb-6">
-                    <div className="bg-white p-1 rounded-xl shadow-sm border border-gray-200 flex gap-2">
+                {/* --- 3. COMPARISON & EDITOR SECTION --- */}
+                <div className="mb-6 flex items-center justify-center gap-4">
+                    <div className="bg-white dark:bg-slate-800 p-1 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm flex">
                         <button
                             onClick={() => setViewMode('preview')}
-                            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium transition-all ${viewMode === 'preview' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-50'}`}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === 'preview' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700'
+                                }`}
                         >
-                            <Eye size={18} /> Visual Preview
+                            <Eye size={16} /> Visual Preview
                         </button>
                         <button
                             onClick={() => setViewMode('code')}
-                            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium transition-all ${viewMode === 'code' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-50'}`}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === 'code' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700'
+                                }`}
                         >
-                            <Code size={18} /> Source Code
+                            <Code size={16} /> Source Code
                         </button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
-                    {/* User Side */}
-                    <div className="bg-[#1e293b] rounded-2xl overflow-hidden shadow-lg flex flex-col h-[500px]">
-                        <div className="bg-[#0f172a] px-6 py-4 flex items-center justify-between border-b border-gray-800">
-                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Your Output</span>
-                            {issueCount > 0 && !isPass && (
-                                <div className="bg-red-500/10 text-red-400 text-xs px-3 py-1 rounded-full font-medium border border-red-500/20">{issueCount} ISSUES FOUND</div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 h-[500px]">
+                    {/* --- USER OUTPUT PANEL --- */}
+                    <div className="bg-[#1e293b] rounded-xl overflow-hidden shadow-lg flex flex-col border border-gray-700">
+                        <div className="bg-[#0f172a] px-4 py-3 flex items-center justify-between border-b border-gray-800">
+                            <div className="flex items-center gap-3">
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">YOUR OUTPUT</span>
+                                {viewMode === 'code' && (
+                                    <div className="flex bg-[#1e293b] rounded-md overflow-hidden ml-4">
+                                        {['html', 'css', 'javascript'].map(lang => (
+                                            <button
+                                                key={lang}
+                                                onClick={() => setCodeTab(lang === 'javascript' ? 'js' : lang)}
+                                                className={`px-3 py-1 text-[10px] font-bold uppercase transition-colors ${(lang === 'javascript' ? 'js' : lang) === codeTab
+                                                    ? 'bg-blue-600 text-white'
+                                                    : 'text-gray-500 hover:text-gray-300'
+                                                    }`}
+                                            >
+                                                {lang}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            {!isScoring && currentScore.total < 100 && (
+                                <div className="bg-red-500/20 text-red-400 text-[10px] px-2 py-0.5 rounded border border-red-500/30">
+                                    Issues Found
+                                </div>
                             )}
                         </div>
                         <div className="flex-1 overflow-hidden bg-white relative">
                             <div style={{ width: '100%', height: '100%', display: viewMode === 'preview' ? 'block' : 'none' }}>
-                                <PreviewFrame ref={userPreviewRef} code={userCode} assets={currentAssets} isRestricted={true} />
+                                <PreviewFrame ref={userPreviewRef} code={currentQuestion.userCode} assets={currentAssets} isRestricted={true} />
                             </div>
-                            <div style={{ width: '100%', height: '100%', display: viewMode === 'code' ? 'block' : 'none' }}>
-                                <div className="h-full grid grid-rows-2">
-                                    <div className="relative h-full border-b border-gray-700">
-                                        <span className="absolute right-2 top-2 text-xs text-gray-500 font-mono z-10">HTML</span>
-                                        <Editor height="100%" defaultLanguage="html" value={userCode.html} theme="vs-dark" options={{ readOnly: true, minimap: { enabled: false }, fontSize: 13 }} />
-                                    </div>
-                                    <div className="relative h-full">
-                                        <span className="absolute right-2 top-2 text-xs text-gray-500 font-mono z-10">CSS</span>
-                                        <Editor height="100%" defaultLanguage="css" value={userCode.css} theme="vs-dark" options={{ readOnly: true, minimap: { enabled: false }, fontSize: 13 }} />
-                                    </div>
-                                </div>
+
+                            {/* CODE EDITOR */}
+                            <div className={`w-full h-full bg-[#1e293b] ${viewMode === 'code' ? 'block' : 'hidden'}`}>
+                                <Editor
+                                    height="100%"
+                                    language={codeTab === 'js' ? 'javascript' : codeTab}
+                                    value={currentQuestion.userCode[codeTab]}
+                                    theme="vs-dark"
+                                    options={{
+                                        readOnly: true,
+                                        minimap: { enabled: false },
+                                        fontSize: 13,
+                                        padding: { top: 16 },
+                                        lineNumbers: 'on',
+                                        fontFamily: "'JetBrains Mono', 'Fira Code', monospace"
+                                    }}
+                                />
                             </div>
                         </div>
                     </div>
 
-                    {/* Correct Side */}
-                    <div className="bg-[#1e293b] rounded-2xl overflow-hidden shadow-lg flex flex-col h-[500px]">
-                        <div className="bg-[#0f172a] px-6 py-4 flex items-center justify-between border-b border-gray-800">
-                            <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">Expected Output</span>
-                            <div className="p-1 bg-blue-500 rounded-full"><CheckCircle size={14} className="text-white" /></div>
+                    {/* --- EXPECTED OUTPUT PANEL --- */}
+                    <div className="bg-[#1e293b] rounded-xl overflow-hidden shadow-lg flex flex-col border border-gray-700">
+                        <div className="bg-[#0f172a] px-4 py-3 flex items-center justify-between border-b border-gray-800">
+                            <div className="flex items-center gap-3">
+                                <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">EXPECTED OUTPUT</span>
+                                {viewMode === 'code' && (
+                                    <div className="flex bg-[#1e293b] rounded-md overflow-hidden ml-4">
+                                        {['html', 'css', 'javascript'].map(lang => (
+                                            <button
+                                                key={lang}
+                                                onClick={() => setCodeTab(lang === 'javascript' ? 'js' : lang)}
+                                                className={`px-3 py-1 text-[10px] font-bold uppercase transition-colors ${(lang === 'javascript' ? 'js' : lang) === codeTab
+                                                    ? 'bg-blue-600 text-white'
+                                                    : 'text-gray-500 hover:text-gray-300'
+                                                    }`}
+                                            >
+                                                {lang}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="bg-blue-500/20 p-1 rounded-full">
+                                <CheckCircle size={14} className="text-blue-400" />
+                            </div>
                         </div>
                         <div className="flex-1 overflow-hidden bg-white relative">
                             <div style={{ width: '100%', height: '100%', display: viewMode === 'preview' ? 'block' : 'none' }}>
-                                <PreviewFrame ref={correctPreviewRef} code={correctCode} assets={currentAssets} isRestricted={true} />
+                                <PreviewFrame ref={correctPreviewRef} code={currentQuestion.correctCode} assets={currentAssets} isRestricted={true} />
                             </div>
-                            <div style={{ width: '100%', height: '100%', display: viewMode === 'code' ? 'block' : 'none' }}>
-                                <div className="h-full grid grid-rows-2">
-                                    <div className="relative h-full border-b border-gray-700">
-                                        <span className="absolute right-2 top-2 text-xs text-gray-500 font-mono z-10">HTML</span>
-                                        <Editor height="100%" defaultLanguage="html" value={correctCode.html} theme="vs-dark" options={{ readOnly: true, minimap: { enabled: false }, fontSize: 13 }} />
-                                    </div>
-                                    <div className="relative h-full">
-                                        <span className="absolute right-2 top-2 text-xs text-gray-500 font-mono z-10">CSS</span>
-                                        <Editor height="100%" defaultLanguage="css" value={correctCode.css} theme="vs-dark" options={{ readOnly: true, minimap: { enabled: false }, fontSize: 13 }} />
-                                    </div>
-                                </div>
+
+                            {/* CODE EDITOR */}
+                            <div className={`w-full h-full bg-[#1e293b] ${viewMode === 'code' ? 'block' : 'hidden'}`}>
+                                <Editor
+                                    height="100%"
+                                    language={codeTab === 'js' ? 'javascript' : codeTab}
+                                    value={currentQuestion.correctCode[codeTab]}
+                                    theme="vs-dark"
+                                    options={{
+                                        readOnly: true,
+                                        minimap: { enabled: false },
+                                        fontSize: 13,
+                                        padding: { top: 16 },
+                                        lineNumbers: 'on',
+                                        fontFamily: "'JetBrains Mono', 'Fira Code', monospace"
+                                    }}
+                                />
                             </div>
                         </div>
                     </div>
                 </div>
 
+                {/* --- 4. DETAILED METRICS --- */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                    <div className={cardStyle}>
-                        {isScoring ? (
-                            <div className="h-24 flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>
-                        ) : (
-                            circularProgress(scores.structure, "stroke-green-500 text-green-500")
-                        )}
-                        <h3 className="font-bold text-gray-900 mb-2">DOM CORRECTNESS</h3>
-                        <p className="text-sm text-gray-500 leading-relaxed max-w-[200px]">Structure matches {scores.structure}%.</p>
-                    </div>
-                    <div className={cardStyle}>
-                        {isScoring ? (
-                            <div className="h-24 flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>
-                        ) : (
-                            circularProgress(scores.content, "stroke-blue-500 text-blue-500")
-                        )}
-                        <h3 className="font-bold text-gray-900 mb-2">TEXT SIMILARITY</h3>
-                        <p className="text-sm text-gray-500 leading-relaxed max-w-[200px]">Content matches {scores.content}%.</p>
-                    </div>
-                    <div className={cardStyle}>
-                        {isScoring ? (
-                            <div className="h-24 flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>
-                        ) : (
-                            circularProgress(scores.style, "stroke-orange-400 text-orange-400")
-                        )}
-                        <h3 className="font-bold text-gray-900 mb-2">PIXEL SIMILARITY</h3>
-                        <p className="text-sm text-gray-500 leading-relaxed max-w-[200px]">Style matches computed layout.</p>
-                    </div>
-                </div>
-
-                <div className="flex flex-col items-center gap-6 pb-12">
-                    <button onClick={onBack} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-12 rounded-xl text-lg shadow-lg shadow-blue-600/30 flex items-center gap-2 transition-all transform hover:scale-105">
-                        Continue to Next Lesson <ArrowRight size={20} />
-                    </button>
+                    <Donut
+                        score={currentScore.structure}
+                        color="stroke-green-500"
+                        label="DOM CORRECTNESS"
+                        subLabel={`Structure matches ${currentScore.structure}%.`}
+                    />
+                    <Donut
+                        score={currentScore.content}
+                        color="stroke-indigo-400"
+                        label="TEXT SIMILARITY"
+                        subLabel={`Content matches ${currentScore.content}%.`}
+                    />
+                    <Donut
+                        score={currentScore.style}
+                        color="stroke-orange-400"
+                        label="PIXEL SIMILARITY"
+                        subLabel="Style matches computed layout."
+                    />
                 </div>
             </div>
         </div>

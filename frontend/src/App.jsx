@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { NavigationProvider } from './context/NavigationContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -17,6 +18,7 @@ import Leaderboard from './pages/leaderboard';
 import AICoach from './pages/aiCoach';
 import LevelOverview from './pages/LevelOverview';
 import HtmlCssChallenge from './pages/HtmlCssChallenge';
+import Profile from './pages/Profile';
 
 // Admin Pages
 import AdminOverview from './pages/admin/overview';
@@ -114,6 +116,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <AICoach />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
           </ProtectedRoute>
         }
       />
@@ -220,11 +230,13 @@ const AppRoutes = () => {
 function App() {
   return (
     <Router>
-      <AuthProvider>
-        <NavigationProvider>
-          <AppRoutes />
-        </NavigationProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <NavigationProvider>
+            <AppRoutes />
+          </NavigationProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </Router>
   );
 }

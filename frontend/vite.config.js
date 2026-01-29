@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     port: 5173,
     host: '0.0.0.0', // Listen on all network interfaces
-    strictPort: false, // Try next available port if 5173 is busy
+    strictPort: true, // Fail if 5173 is busy
     open: true, // Automatically open browser
     proxy: {
       '/api': {

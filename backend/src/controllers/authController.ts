@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { login, createDefaultUsers, register, forgotPassword } from '../services/authService';
+import { login, createDefaultUsers, register, forgotPassword, changePassword } from '../services/authService';
 import { verifyGoogleToken, exchangeCodeForToken, findOrCreateGoogleUser } from '../services/googleAuthService';
 import logger from '../config/logger';
 
@@ -101,3 +101,27 @@ export const forgotPasswordController = async (req: Request, res: Response): Pro
   }
 };
 
+
+
+export const changePasswordController = async (req: any, res: Response): Promise<void> => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    if (!currentPassword || !newPassword) {
+      res.status(400).json({ error: 'Current and new password are required' });
+      return;
+    }
+
+    const result = await changePassword(userId, currentPassword, newPassword);
+    res.json(result);
+  } catch (error: any) {
+    logger.error('Change password error:', error);
+    res.status(400).json({ error: error.message || 'Failed to change password' });
+  }
+};

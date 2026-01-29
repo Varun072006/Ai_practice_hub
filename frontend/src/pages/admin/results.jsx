@@ -40,6 +40,51 @@ const StudentResults = () => {
             : 'bg-red-100 text-red-700 border-red-200';
     };
 
+    const getScoreColor = (score) => {
+        if (score >= 75) return 'text-green-600 font-bold';
+        if (score >= 60) return 'text-yellow-600 font-semibold';
+        return 'text-red-600 font-semibold';
+    };
+
+    const handleExportCSV = () => {
+        if (filteredResults.length === 0) {
+            alert('No data to export.');
+            return;
+        }
+
+        // CSV Header
+        const headers = ['Student ID', 'Student Name', 'Date & Time', 'Course', 'Level', 'Test Type', 'Score (%)', 'Status'];
+
+        // CSV Rows
+        const csvRows = filteredResults.map(result => [
+            result.student_id || 'N/A',
+            result.student_name,
+            result.date_time ? new Date(result.date_time).toLocaleString() : 'N/A',
+            result.course,
+            result.level,
+            result.test_type,
+            result.score !== undefined ? result.score : 'N/A',
+            result.status
+        ]);
+
+        // Combine headers and rows
+        const csvContent = [
+            headers.join(','),
+            ...csvRows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        ].join('\n');
+
+        // Create blob and download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `student_results_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <Layout>
             <div className="flex-1 p-8">
@@ -73,7 +118,10 @@ const StudentResults = () => {
                                 <option value="pass">Passed</option>
                                 <option value="fail">Failed</option>
                             </select>
-                            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                            <button
+                                onClick={handleExportCSV}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                            >
                                 <Download size={18} />
                                 <span className="hidden sm:inline">Export</span>
                             </button>
@@ -91,19 +139,20 @@ const StudentResults = () => {
                                     <th className="px-6 py-4">Course</th>
                                     <th className="px-6 py-4">Level</th>
                                     <th className="px-6 py-4">Test Type</th>
+                                    <th className="px-6 py-4">Score</th>
                                     <th className="px-6 py-4">Status</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                                        <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
                                             Loading results...
                                         </td>
                                     </tr>
                                 ) : filteredResults.length === 0 ? (
                                     <tr>
-                                        <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                                        <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
                                             No results found.
                                         </td>
                                     </tr>
@@ -132,12 +181,17 @@ const StudentResults = () => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${result.test_type === 'MCQ'
-                                                        ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                                        : result.test_type === 'HTML/CSS'
-                                                            ? 'bg-orange-50 text-orange-700 border-orange-200'
-                                                            : 'bg-blue-50 text-blue-700 border-blue-200'
+                                                    ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                                    : result.test_type === 'HTML/CSS'
+                                                        ? 'bg-orange-50 text-orange-700 border-orange-200'
+                                                        : 'bg-blue-50 text-blue-700 border-blue-200'
                                                     }`}>
                                                     {result.test_type}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`text-sm ${getScoreColor(result.score)}`}>
+                                                    {result.score !== undefined ? `${result.score}%` : 'N/A'}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
@@ -167,3 +221,4 @@ const StudentResults = () => {
 };
 
 export default StudentResults;
+

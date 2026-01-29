@@ -62,7 +62,7 @@ export default function HtmlCssChallenge() {
 
     const startSession = async () => {
         try {
-            const sessionTypeFromState = location.state?.sessionType || 'coding';
+            const sessionTypeFromState = location.state?.sessionType || 'html-css-challenge';
             const response = await api.post('/sessions/start', {
                 courseId,
                 levelId,

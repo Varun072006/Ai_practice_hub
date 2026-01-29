@@ -447,7 +447,7 @@ const LevelOverview = () => {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {lessonPlan.concepts.map((concept, idx) => (
-                                    <div key={idx} className="bg-white p-8 rounded-[2rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-500 border border-slate-100 flex flex-col h-full group">
+                                    <div key={idx} className="bg-white p-8 rounded-[2rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-500 border border-slate-100 flex flex-col min-h-[200px] group">
                                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 shadow-sm ${['bg-blue-50 text-blue-500', 'bg-cyan-50 text-cyan-500', 'bg-indigo-50 text-indigo-500', 'bg-purple-50 text-purple-500'][idx % 4]
                                             }`}>
                                             {[<ArrowRight size={24} className="rotate-[-45deg]" />, <Lightbulb size={24} />, <Edit size={22} />, <Sparkles size={24} />][idx % 4]}
@@ -456,7 +456,7 @@ const LevelOverview = () => {
                                             {concept.title}
                                         </h3>
                                         <p className="text-sm text-slate-500 leading-[1.6] font-medium flex-1">
-                                            {concept.explanation}
+                                            {concept.explanation || <span className="text-slate-300 italic">Description available in learning materials</span>}
                                         </p>
                                     </div>
                                 ))}

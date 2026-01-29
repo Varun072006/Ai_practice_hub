@@ -1,6 +1,20 @@
 -- AI Practice Hub Database Schema (MySQL)
 
 -- Reset tables for clean initialization (Order matters due to FKs)
+-- Clean up new tables first (dependents)
+DROP TABLE IF EXISTS faculty_alerts;
+DROP TABLE IF EXISTS learning_metrics;
+DROP TABLE IF EXISTS diagnostic_skill_scores;
+DROP TABLE IF EXISTS diagnostic_responses;
+DROP TABLE IF EXISTS diagnostic_sessions;
+DROP TABLE IF EXISTS skill_practice_attempts;
+DROP TABLE IF EXISTS skill_mastery_history;
+DROP TABLE IF EXISTS user_skill_mastery;
+DROP TABLE IF EXISTS level_skills;
+DROP TABLE IF EXISTS skill_prerequisites;
+DROP TABLE IF EXISTS skills;
+
+-- Clean up existing tables
 DROP TABLE IF EXISTS test_case_results;
 DROP TABLE IF EXISTS user_submissions;
 DROP TABLE IF EXISTS session_questions;
@@ -199,6 +213,194 @@ CREATE TABLE IF NOT EXISTS user_statistics (
     last_practice_date DATE,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Skills table
+CREATE TABLE IF NOT EXISTS skills (
+    id CHAR(36) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    category VARCHAR(100),
+    difficulty_tier VARCHAR(20) DEFAULT 'beginner',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CHECK (difficulty_tier IN ('beginner', 'intermediate', 'advanced'))
+);
+
+-- Skill Prerequisites table
+CREATE TABLE IF NOT EXISTS skill_prerequisites (
+    id CHAR(36) PRIMARY KEY,
+    skill_id CHAR(36) NOT NULL,
+    prerequisite_skill_id CHAR(36) NOT NULL,
+    relationship_type VARCHAR(20) DEFAULT 'required',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CHECK (relationship_type IN ('required', 'recommended', 'optional')),
+    FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+    FOREIGN KEY (prerequisite_skill_id) REFERENCES skills(id) ON DELETE CASCADE
+);
+
+-- Level Skills (Mapping levels to skills)
+CREATE TABLE IF NOT EXISTS level_skills (
+    id CHAR(36) PRIMARY KEY,
+    level_id CHAR(36) NOT NULL,
+    skill_id CHAR(36) NOT NULL,
+    contribution_type VARCHAR(20) DEFAULT 'teaches',
+    weight DECIMAL(4,2) DEFAULT 5.0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CHECK (contribution_type IN ('teaches', 'practices', 'assesses')),
+    FOREIGN KEY (level_id) REFERENCES levels(id) ON DELETE CASCADE,
+    FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
+);
+
+-- User Skill Mastery table
+CREATE TABLE IF NOT EXISTS user_skill_mastery (
+    id CHAR(36) PRIMARY KEY,
+    user_id CHAR(36) NOT NULL,
+    skill_id CHAR(36) NOT NULL,
+    mastery_score DECIMAL(5,2) DEFAULT 0.00,
+    total_practice_count INTEGER DEFAULT 0,
+    successful_practice_count INTEGER DEFAULT 0,
+    last_practiced_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_user_skill (user_id, skill_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
+);
+
+-- Skill Mastery History table
+CREATE TABLE IF NOT EXISTS skill_mastery_history (
+    id CHAR(36) PRIMARY KEY,
+    user_id CHAR(36) NOT NULL,
+    skill_id CHAR(36) NOT NULL,
+    previous_score DECIMAL(5,2) NOT NULL,
+    new_score DECIMAL(5,2) NOT NULL,
+    delta DECIMAL(5,2) NOT NULL,
+    source_session_id CHAR(36),
+    activity_type VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
+);
+
+-- Skill Practice Attempts table
+CREATE TABLE IF NOT EXISTS skill_practice_attempts (
+    id CHAR(36) PRIMARY KEY,
+    user_id CHAR(36) NOT NULL,
+    skill_id CHAR(36) NOT NULL,
+    question_id CHAR(36) NOT NULL,
+    attempt_type VARCHAR(20) NOT NULL,
+    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP NULL,
+    is_correct BOOLEAN DEFAULT FALSE,
+    score DECIMAL(5,2) DEFAULT 0.00,
+    answer_submitted TEXT,
+    language VARCHAR(50),
+    test_cases_passed INTEGER,
+    total_test_cases INTEGER,
+    time_taken_seconds INTEGER,
+    execution_time_ms INTEGER,
+    explanation TEXT,
+    mastery_delta DECIMAL(5,2),
+    mastery_before DECIMAL(5,2),
+    mastery_after DECIMAL(5,2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CHECK (attempt_type IN ('mcq', 'coding')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+    FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
+);
+
+-- Diagnostic Sessions
+CREATE TABLE IF NOT EXISTS diagnostic_sessions (
+    id CHAR(36) PRIMARY KEY,
+    user_id CHAR(36) NOT NULL,
+    status VARCHAR(20) DEFAULT 'in_progress', -- in_progress, completed, abandoned
+    total_questions INTEGER DEFAULT 0,
+    skills_tested INTEGER DEFAULT 0,
+    correct_answers INTEGER DEFAULT 0,
+    average_score DECIMAL(5,2),
+    recommended_path VARCHAR(50), -- remedial, standard, accelerated
+    completed_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Diagnostic Responses
+CREATE TABLE IF NOT EXISTS diagnostic_responses (
+    id CHAR(36) PRIMARY KEY,
+    session_id CHAR(36) NOT NULL,
+    question_id CHAR(36) NOT NULL,
+    skill_id CHAR(36) NOT NULL,
+    question_type VARCHAR(20) NOT NULL,
+    answer_submitted TEXT,
+    is_correct BOOLEAN DEFAULT FALSE,
+    time_taken_seconds INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (session_id) REFERENCES diagnostic_sessions(id) ON DELETE CASCADE,
+    FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE,
+    FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
+);
+
+-- Diagnostic Skill Scores
+CREATE TABLE IF NOT EXISTS diagnostic_skill_scores (
+    id CHAR(36) PRIMARY KEY,
+    session_id CHAR(36) NOT NULL,
+    user_id CHAR(36) NOT NULL,
+    skill_id CHAR(36) NOT NULL,
+    questions_asked INTEGER DEFAULT 0,
+    correct_answers INTEGER DEFAULT 0,
+    score DECIMAL(5,2) DEFAULT 0.00,
+    recommended_path VARCHAR(50),
+    applied_to_mastery BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (session_id) REFERENCES diagnostic_sessions(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
+);
+
+-- Learning Metrics
+CREATE TABLE IF NOT EXISTS learning_metrics (
+    id CHAR(36) PRIMARY KEY,
+    user_id CHAR(36) NOT NULL,
+    skill_id CHAR(36) NOT NULL,
+    avg_time_per_attempt DECIMAL(10,2),
+    attempt_frequency DECIMAL(5,2),
+    success_rate DECIMAL(5,2),
+    recent_success_rate DECIMAL(5,2),
+    improvement_velocity DECIMAL(5,2),
+    engagement_score INTEGER,
+    consistency_score INTEGER,
+    predicted_mastery_7d DECIMAL(5,2),
+    predicted_mastery_14d DECIMAL(5,2),
+    predicted_mastery_30d DECIMAL(5,2),
+    estimated_mastery_date TIMESTAMP NULL,
+    is_at_risk BOOLEAN DEFAULT FALSE,
+    risk_factors JSON,
+    computed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_user_skill_metrics (user_id, skill_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
+);
+
+-- Faculty Alerts
+CREATE TABLE IF NOT EXISTS faculty_alerts (
+    id CHAR(36) PRIMARY KEY,
+    user_id CHAR(36) NOT NULL,
+    skill_id CHAR(36),
+    course_id CHAR(36),
+    alert_type VARCHAR(50) NOT NULL,
+    severity VARCHAR(20) DEFAULT 'medium',
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    recommended_action TEXT,
+    status VARCHAR(20) DEFAULT 'new',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE SET NULL,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE SET NULL
 );
 
 -- Insert default courses

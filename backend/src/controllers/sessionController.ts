@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { startSession, submitSolution, completeSession, runCode, getAllSessions } from '../services/sessionService';
+import { startSession, submitSolution, completeSession, runCode, getAllSessions, runTestCases } from '../services/sessionService';
 import { AuthRequest } from '../middlewares/auth';
 import logger from '../config/logger';
 
@@ -27,7 +27,7 @@ export const startSessionController = async (req: AuthRequest, res: Response): P
       userId,
       courseId,
       levelId,
-      sessionType === 'coding' || sessionType === 'mcq' ? sessionType : undefined
+      sessionType === 'coding' || sessionType === 'mcq' || sessionType === 'html-css-challenge' ? sessionType : undefined
     );
 
     logger.info(`[startSessionController] Session created successfully: ${session.id}`);
@@ -130,7 +130,6 @@ export const runTestCasesController = async (req: AuthRequest, res: Response): P
       return;
     }
 
-    const { runTestCases } = await import('../services/sessionService');
     const result = await runTestCases(sessionId, questionId, code, language);
     res.json(result);
   } catch (error: any) {

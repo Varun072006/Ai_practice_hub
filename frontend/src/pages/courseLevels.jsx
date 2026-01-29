@@ -98,35 +98,35 @@ const CourseLevels = () => {
     <Layout>
       <div className="p-4 md:p-8 pb-24 md:pb-8">
         <div className="mb-6">
-          <nav className="text-sm text-gray-600 mb-4">
+          <nav className="text-sm text-gray-600 dark:text-gray-400 mb-4">
             Courses / {course?.title}
           </nav>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white mb-2">
             {course?.title}
           </h1>
-          <p className="text-gray-600 mb-4">{course?.description}</p>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">{course?.description}</p>
 
           {/* Course Overview Section */}
           {course?.overview && (
-            <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div className="mb-6 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
               <button
                 onClick={() => setShowOverview(!showOverview)}
-                className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
               >
-                <span className="flex items-center gap-2 font-semibold text-gray-800">
-                  <BookOpen size={18} className="text-blue-600" />
+                <span className="flex items-center gap-2 font-semibold text-gray-800 dark:text-white">
+                  <BookOpen size={18} className="text-blue-600 dark:text-blue-400" />
                   Course Overview
                 </span>
                 {showOverview ? (
-                  <ChevronUp size={20} className="text-gray-600" />
+                  <ChevronUp size={20} className="text-gray-600 dark:text-gray-400" />
                 ) : (
-                  <ChevronDown size={20} className="text-gray-600" />
+                  <ChevronDown size={20} className="text-gray-600 dark:text-gray-400" />
                 )}
               </button>
               {showOverview && (
-                <div className="px-4 pb-4 pt-2 border-t border-gray-200">
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                <div className="px-4 pb-4 pt-2 border-t border-gray-200 dark:border-slate-700">
+                  <div className="p-4 bg-blue-50 dark:bg-slate-700/50 rounded-lg border border-blue-200 dark:border-slate-600">
+                    <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
                       {course.overview}
                     </p>
                   </div>
@@ -140,7 +140,7 @@ const CourseLevels = () => {
           {levels.map((level) => (
             <div
               key={level.id}
-              className="bg-white rounded-lg shadow-md overflow-hidden"
+              className="bg-white dark:bg-slate-800 rounded-lg shadow-md hover:shadow-xl dark:shadow-slate-900/20 dark:hover:shadow-slate-900/50 overflow-hidden border border-transparent dark:border-slate-700/50 transition-all duration-300 transform hover:scale-[1.01]"
             >
               <div className="h-48 w-full overflow-hidden bg-gray-200 relative">
                 {level.image_url ? (
@@ -170,21 +170,21 @@ const CourseLevels = () => {
               </div>
               <div className="p-6">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-blue-600">
+                  <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
                     Level {level.level_number}
                   </span>
                   {level.status === 'completed' && (
-                    <Check className="text-green-600" size={20} />
+                    <Check className="text-green-600 dark:text-green-400" size={20} />
                   )}
                 </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-2">{level.title}</h3>
-                <p className="text-gray-600 text-sm mb-4">{level.description}</p>
+                <h3 className="text-xl font-bold text-gray-800 dark:text-slate-100 mb-2">{level.title}</h3>
+                <p className="text-gray-600 dark:text-slate-400 text-sm mb-4">{level.description}</p>
 
                 {/* Topic Description & Materials */}
                 {(level.topic_description || level.learning_materials) && (
-                  <div className="mb-4 pt-3 border-t border-gray-100 space-y-3">
+                  <div className="mb-4 pt-3 border-t border-gray-100 dark:border-slate-700 space-y-3">
                     {level.topic_description && (
-                      <p className="text-xs text-gray-600 leading-relaxed bg-gray-50 p-2 rounded">
+                      <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed bg-gray-50 dark:bg-slate-700/50 p-2 rounded">
                         {level.topic_description}
                       </p>
                     )}
@@ -197,7 +197,7 @@ const CourseLevels = () => {
 
                       return resources.length > 0 && (
                         <div className="space-y-1">
-                          <div className="flex items-center gap-1 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                          <div className="flex items-center gap-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
                             <BookOpen size={12} /> Materials
                           </div>
                           <div className="space-y-1 pl-1">
@@ -207,7 +207,7 @@ const CourseLevels = () => {
                                 href={mat.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-xs text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 truncate block"
+                                className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline flex items-center gap-1 truncate block"
                               >
                                 <ExternalLink size={10} className="flex-shrink-0" />
                                 {mat.title}
@@ -243,7 +243,7 @@ const CourseLevels = () => {
         {/* Mode selection dialog */}
         {modeSelection.open && modeSelection.level && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] animate-in fade-in duration-300">
-            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-[320px] w-full transform animate-in zoom-in-95 duration-200">
+            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-8 max-w-[320px] w-full transform animate-in zoom-in-95 duration-200">
               <div className="space-y-3">
                 <button
                   onClick={() => {
@@ -280,7 +280,7 @@ const CourseLevels = () => {
 
                 <button
                   onClick={() => setModeSelection({ open: false, level: null })}
-                  className="w-full mt-4 py-2 text-slate-400 text-sm font-medium hover:text-slate-600 transition-colors"
+                  className="w-full mt-4 py-2 text-slate-400 dark:text-slate-500 text-sm font-medium hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                 >
                   Cancel
                 </button>

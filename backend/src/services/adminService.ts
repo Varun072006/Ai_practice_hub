@@ -494,7 +494,7 @@ export const getStudentResults = async (searchTerm?: string) => {
   const rows = getRows(result);
 
   return rows.map((row: any) => {
-    // Determine Pass/Fail Status
+    // Determine Pass/Fail Status based on thresholds
     let status = 'Fail';
     let score = 0;
 
@@ -502,21 +502,28 @@ export const getStudentResults = async (searchTerm?: string) => {
     const isHtmlCss = (row.course_title && row.course_title.toLowerCase().includes('html')) ||
       (row.language === 'html' || row.language === 'css');
 
+    // Calculate overall average score across all questions
+    const totalQuestions = parseInt(row.total_questions) || 0;
+
     if (row.session_type === 'mcq') {
-      // MCQ Logic: >= 60%
-      const percentage = row.total_questions > 0 ? (row.mcq_correct / row.total_questions) * 100 : 0;
+      // MCQ Logic: >= 60% to pass
+      const mcqCorrect = parseInt(row.mcq_correct) || 0;
+      const percentage = totalQuestions > 0 ? (mcqCorrect / totalQuestions) * 100 : 0;
       score = percentage;
       if (percentage >= 60) status = 'Pass';
     } else if (isHtmlCss) {
-      // HTML/CSS Logic: >= 75%
-      const percentage = row.total_questions > 0 ? (row.coding_correct / row.total_questions) * 100 : 0;
+      // HTML/CSS Logic: >= 80% to pass
+      const codingCorrect = parseInt(row.coding_correct) || 0;
+      const percentage = totalQuestions > 0 ? (codingCorrect / totalQuestions) * 100 : 0;
       score = percentage;
-      if (percentage >= 75) status = 'Pass';
+      if (percentage >= 80) status = 'Pass';
     } else {
-      // Coding Logic (Standard): 100%
-      const percentage = row.total_questions > 0 ? (row.coding_correct / row.total_questions) * 100 : 0;
+      // Standard Coding Logic: 100% required (all test cases must pass)
+      const codingCorrect = parseInt(row.coding_correct) || 0;
+      const percentage = totalQuestions > 0 ? (codingCorrect / totalQuestions) * 100 : 0;
       score = percentage;
-      if (percentage === 100 && row.total_questions > 0) status = 'Pass';
+      // Must have 100% correct to pass
+      if (percentage === 100 && totalQuestions > 0) status = 'Pass';
     }
 
     return {
@@ -526,9 +533,10 @@ export const getStudentResults = async (searchTerm?: string) => {
       date_time: row.completed_at ? new Date(row.completed_at).toISOString() : null,
       course: row.course_title,
       level: `Level - ${row.level_number}`,
-      test_type: isHtmlCss ? 'HTML/CSS' : (row.session_type === 'mcq' ? 'MCQ' : 'Coding'),
+      test_type: row.session_type === 'mcq' ? 'MCQ' : (isHtmlCss ? 'HTML/CSS' : 'Coding'),
       status: status,
-      score: Math.round(score)
+      score: Math.min(100, Math.round(score))
     };
   });
 };
+

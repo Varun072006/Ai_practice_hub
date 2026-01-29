@@ -91,8 +91,8 @@ const Dashboard = () => {
     <Layout>
       <div className="p-4 md:p-8 pb-24 md:pb-8">
         <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Hello, {user?.name || user?.username || 'Student'}!</h1>
-          <p className="text-gray-600">Ready to code today? Your streak is on fire! 🔥</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white mb-2">Hello, {user?.name || user?.username || 'Student'}!</h1>
+          <p className="text-gray-600 dark:text-gray-400">Ready to code today? Your streak is on fire! 🔥</p>
         </div>
 
         <div className="mb-6">
@@ -103,15 +103,15 @@ const Dashboard = () => {
               placeholder="Search for a skill or language..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             />
           </div>
         </div>
 
         <div>
-          <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6">Available Courses</h2>
+          <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white mb-4 md:mb-6">Available Courses</h2>
           {loading ? (
-            <div className="text-center py-12">Loading courses...</div>
+            <div className="text-center py-12 text-gray-600 dark:text-gray-400">Loading courses...</div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {filteredCourses.map((course) => {
@@ -120,7 +120,7 @@ const Dashboard = () => {
                   <div
                     key={course.id}
                     onClick={() => navigate(`/courses/${course.id}/levels`)}
-                    className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer hover:scale-[1.02]"
+                    className="bg-white dark:bg-slate-800 rounded-lg shadow-md hover:shadow-xl dark:shadow-slate-900/20 dark:hover:shadow-slate-900/50 overflow-hidden transition-all duration-300 cursor-pointer hover:scale-[1.02] border border-transparent dark:border-slate-700/50"
                   >
                     <div className="h-48 w-full overflow-hidden bg-gray-200 relative">
                       {courseImage ? (
@@ -131,16 +131,16 @@ const Dashboard = () => {
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.style.display = 'none';
-                            e.target.parentElement.style.background = 'linear-gradient(to bottom right, #667eea, #764ba2)';
+                            e.target.parentElement.style.background = 'linear-gradient(to bottom right, #3b82f6, #1e293b)';
                           }}
                         />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900"></div>
+                        <div className="w-full h-full bg-gradient-to-br from-blue-900 to-slate-900"></div>
                       )}
                     </div>
                     <div className="p-6">
-                      <h3 className="text-xl font-bold text-gray-800 mb-2">{course.title}</h3>
-                      <p className="text-gray-600 text-sm mb-3">{course.description}</p>
+                      <h3 className="text-xl font-bold text-gray-800 dark:text-slate-100 mb-2">{course.title}</h3>
+                      <p className="text-gray-600 dark:text-slate-400 text-sm mb-3">{course.description}</p>
 
                       {/* Course Overview Section */}
                       {course.overview && (
@@ -150,7 +150,7 @@ const Dashboard = () => {
                               e.stopPropagation();
                               setExpandedOverview(expandedOverview === course.id ? null : course.id);
                             }}
-                            className="flex items-center justify-between w-full text-left text-sm font-medium text-blue-600 hover:text-blue-800 mb-2"
+                            className="flex items-center justify-between w-full text-left text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 mb-2 transition-colors"
                           >
                             <span className="flex items-center gap-2">
                               <BookOpen size={16} />
@@ -163,8 +163,8 @@ const Dashboard = () => {
                             )}
                           </button>
                           {expandedOverview === course.id && (
-                            <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                            <div className="mt-2 p-3 bg-blue-50 dark:bg-slate-700/30 rounded-lg border border-blue-200 dark:border-slate-600/50">
+                              <p className="text-sm text-gray-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
                                 {course.overview}
                               </p>
                             </div>

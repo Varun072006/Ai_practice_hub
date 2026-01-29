@@ -203,3 +203,35 @@ export const createDefaultUsers = async () => {
   }
 };
 
+export const changePassword = async (userId: string, currentPassword: string, newPassword: string) => {
+  // Get user's current password hash
+  const userResult = await pool.query(
+    'SELECT password_hash FROM users WHERE id = ?',
+    [userId]
+  );
+
+  const rows = getRows(userResult);
+  if (rows.length === 0) {
+    throw new Error('User not found');
+  }
+
+  const user = rows[0];
+
+  // Verify current password
+  const isValid = await comparePassword(currentPassword, user.password_hash);
+  if (!isValid) {
+    throw new Error('Invalid current password');
+  }
+
+  // Hash new password
+  const hashedPassword = await hashPassword(newPassword);
+
+  // Update password in DB
+  await pool.query(
+    'UPDATE users SET password_hash = ? WHERE id = ?',
+    [hashedPassword, userId]
+  );
+
+  return { success: true, message: 'Password updated successfully' };
+};
+

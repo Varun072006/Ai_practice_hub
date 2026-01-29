@@ -17,36 +17,37 @@ body {
 
 /* Responsive utilities */
 @layer utilities {
+
   /* Safe area padding for mobile devices with notches */
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
-  
+
   /* Prevent content overflow on mobile */
   .mobile-padding {
     @apply px-4 md:px-6 lg:px-8;
   }
-  
+
   /* Responsive text scaling */
   .text-responsive-heading {
     @apply text-xl sm:text-2xl md:text-3xl;
   }
-  
+
   .text-responsive-subheading {
     @apply text-lg sm:text-xl md:text-2xl;
   }
-  
+
   /* Responsive card grid */
   .grid-responsive {
     @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6;
   }
-  
+
   /* Hide scrollbar but keep functionality */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  
+
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
@@ -54,14 +55,42 @@ body {
 
 /* Mobile-first responsive adjustments */
 @media (max-width: 640px) {
+
   /* Smaller touch targets */
-  input, button, select, textarea {
-    font-size: 16px; /* Prevents zoom on iOS */
+  input,
+  button,
+  select,
+  textarea {
+    font-size: 16px;
+    /* Prevents zoom on iOS */
   }
-  
+
   /* Better spacing on mobile */
   .container {
     padding-left: 1rem;
     padding-right: 1rem;
   }
+}
+
+
+/* Custom Scrollbar for Dark Mode */
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #0f172a;
+  /* slate-900 */
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+  /* slate-700 */
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+  /* slate-600 */
 }
