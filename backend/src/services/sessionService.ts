@@ -82,7 +82,7 @@ export const startSession = async (
   userId: string,
   courseId: string,
   levelId: string,
-  requestedSessionType?: 'coding' | 'mcq'
+  requestedSessionType?: 'coding' | 'mcq' | 'html-css-challenge'
 ): Promise<PracticeSession> => {
   try {
     console.log(`[startSession] Starting session for userId: ${userId}, courseId: ${courseId}, levelId: ${levelId}, sessionType: ${requestedSessionType || 'auto'}`);
@@ -109,9 +109,9 @@ export const startSession = async (
       throw new Error(`Failed to fetch course: ${courseError.message}`);
     }
 
-    let sessionType: 'coding' | 'mcq';
+    let sessionType: 'coding' | 'mcq' | 'html-css-challenge';
 
-    if (requestedSessionType === 'coding' || requestedSessionType === 'mcq') {
+    if (requestedSessionType === 'coding' || requestedSessionType === 'mcq' || requestedSessionType === 'html-css-challenge') {
       sessionType = requestedSessionType;
     } else {
       // Fallback: preserve original behaviour – ML Level 1 as MCQ, everything else coding
@@ -124,33 +124,107 @@ export const startSession = async (
 
     console.log(`[startSession] Session type determined: ${sessionType}`);
 
-    // Get questions for this level (with error handling)
-    let query = `SELECT id, question_type, title, description, input_format, output_format, constraints, reference_solution
-               FROM questions
-               WHERE level_id = ?`;
-    const params: any[] = [levelId];
+    // Determine strict limits and types
+    let limit = 10; // Default (e.g. for MCQs)
 
-    if (sessionType === 'coding') {
-      query += ' AND question_type = ? ORDER BY RAND() LIMIT 2';
-      params.push('coding');
+    if (sessionType === 'coding' || sessionType === 'html-css-challenge') {
+      limit = 2; // Coding/HTML-CSS limit
     } else if (sessionType === 'mcq') {
-      query += ' AND question_type = ? ORDER BY created_at ASC';
-      params.push('mcq');
-    } else {
-      query += ' ORDER BY created_at ASC';
+      limit = 10; // MCQ limit
     }
 
-    let questionsRows: any[] = [];
-    try {
-      const questionsResult = await pool.query(query, params);
-      questionsRows = getRows(questionsResult);
-      console.log(`[startSession] Found ${questionsRows.length} questions for level ${levelId}`);
-    } catch (questionsError: any) {
-      console.error(`[startSession] Error fetching questions:`, questionsError.message);
-      console.error(`[startSession] Query was:`, query);
-      console.error(`[startSession] Params were:`, params);
-      throw new Error(`Failed to fetch questions: ${questionsError.message}`);
+    const dbQuestionType = sessionType === 'mcq' ? 'mcq' : 'coding';
+
+    // 1. Fetch ALL valid question IDs for this level/type
+    const allQuestionsQuery = `SELECT id FROM questions WHERE level_id = ? AND question_type = ?`;
+    const allQuestionsResult = await pool.query(allQuestionsQuery, [levelId, dbQuestionType]);
+    const allQuestionIds = getRows(allQuestionsResult).map((r: any) => r.id);
+
+    if (allQuestionIds.length === 0) {
+      console.warn(`[startSession] No questions found for level ${levelId} with type ${dbQuestionType}`);
+      // Fallback logic handled below
     }
+
+    // 2. Fetch history (questions user has already seen in sessions)
+    // We look at ALL sessions for this user+level to avoid repeats
+    const historyQuery = `
+      SELECT DISTINCT sq.question_id 
+      FROM session_questions sq
+      JOIN practice_sessions s ON sq.session_id = s.id
+      WHERE s.user_id = ? AND s.level_id = ?
+    `;
+    const historyResult = await pool.query(historyQuery, [userId, levelId]);
+    const seenQuestionIds = new Set(getRows(historyResult).map((r: any) => r.question_id));
+
+    // 3. Filter candidates (Unseen questions)
+    let candidateIds = allQuestionIds.filter((id: string) => !seenQuestionIds.has(id));
+
+    // 4. Selection Logic
+    // If we have exhausted all questions (candidateIds is empty), or we need more than available
+    // The requirement is "until all questions should appear dont repeaat".
+    // This implies we reset/recycle only when we run out of unseen questions.
+
+    let selectedIds: string[] = [];
+
+    // Shuffle helper
+    const shuffle = (array: string[]) => array.sort(() => 0.5 - Math.random());
+
+    if (candidateIds.length === 0) {
+      // All questions seen. Reset pool to ALL questions.
+      // We start a new cycle of randomness.
+      candidateIds = shuffle([...allQuestionIds]);
+      selectedIds = candidateIds.slice(0, limit);
+    } else {
+      // We have some unseen questions.
+      // Shuffle them first.
+      candidateIds = shuffle(candidateIds);
+
+      if (candidateIds.length >= limit) {
+        // Enough unseen questions to fill the quota
+        selectedIds = candidateIds.slice(0, limit);
+      } else {
+        // Not enough unseen. Take ALL unseen, then fill remainder from SEEN (shuffled).
+        selectedIds = [...candidateIds];
+        const needed = limit - selectedIds.length;
+
+        // Get seen questions to fill the gap
+        const seenAvailable = allQuestionIds.filter((id: string) => !selectedIds.includes(id));
+        const shuffledSeen = shuffle(seenAvailable);
+
+        selectedIds = [...selectedIds, ...shuffledSeen.slice(0, needed)];
+      }
+    }
+
+    console.log(`[startSession] Selected ${selectedIds.length} questions (Pool: ${allQuestionIds.length}, Seen: ${seenQuestionIds.size})`);
+
+    // 5. Fetch full details for selected questions
+    // Note: We want to maintain our randomized order, but SQL 'IN' doesn't guarantee order.
+    // We will fetch them and then re-order in JS map.
+    let questionsRows: any[] = [];
+
+    if (selectedIds.length > 0) {
+      // Create placeholders for IN clause
+      const placeholders = selectedIds.map(() => '?').join(',');
+      const fetchQuery = `
+        SELECT id, question_type, title, description, input_format, output_format, constraints, reference_solution, created_at
+        FROM questions
+        WHERE id IN (${placeholders})
+      `;
+
+      try {
+        const fetchResult = await pool.query(fetchQuery, selectedIds);
+        const unsortedRows = getRows(fetchResult);
+
+        // Re-order to match selectedIds (which are shuffled)
+        questionsRows = selectedIds.map(id => unsortedRows.find((r: any) => r.id === id)).filter(x => x);
+
+      } catch (fetchError: any) {
+        console.error(`[startSession] Error fetching question details:`, fetchError.message);
+        throw new Error(`Failed to fetch question details`);
+      }
+    }
+
+
 
     if (questionsRows.length === 0) {
       console.warn(`[startSession] No questions found for level ${levelId} with sessionType ${sessionType}`);
