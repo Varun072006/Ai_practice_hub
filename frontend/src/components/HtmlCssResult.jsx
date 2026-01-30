@@ -1,11 +1,15 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { ArrowRight, CheckCircle, Code, Eye, XCircle, LayoutTemplate } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { ArrowRight, CheckCircle, Code, Eye, XCircle, LayoutTemplate, MessageSquare, Send, X, Sparkles, Sun, Moon } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import PreviewFrame from './PreviewFrame';
+import AIAnalysisCard from './AIAnalysisCard';
+import api from '../services/api';
 
 const HtmlCssResult = ({ results, onBack }) => {
     const navigate = useNavigate();
+    const { theme, toggleTheme } = useTheme();
     const [viewMode, setViewMode] = useState('preview'); // 'preview' or 'code'
     const [codeTab, setCodeTab] = useState('html'); // 'html', 'css', 'js'
 
@@ -14,6 +18,52 @@ const HtmlCssResult = ({ results, onBack }) => {
     // Store scores for ALL questions: { [index]: { structure, content, style, total } }
     const [allScores, setAllScores] = useState({});
     const [isScoring, setIsScoring] = useState(true);
+
+    // AI Tutor State
+    const [showTutor, setShowTutor] = useState(false);
+    const [tutorMessages, setTutorMessages] = useState([]);
+    const [tutorInput, setTutorInput] = useState('');
+    const [tutorLoading, setTutorLoading] = useState(false);
+
+    const fetchInitialHint = async () => {
+        try {
+            const response = await api.get(`/ai-tutor/hint/${results.session.id}`);
+            if (response.data.hint) {
+                setTutorMessages([{ role: 'assistant', content: response.data.hint }]);
+            }
+        } catch (error) {
+            console.error('Failed to fetch initial hint:', error);
+        }
+    };
+
+    const handleTutorSubmit = async (e) => {
+        e.preventDefault();
+        if (!tutorInput.trim() || tutorLoading) return;
+
+        const userMessage = tutorInput.trim();
+        setTutorInput('');
+        setTutorMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
+        setTutorLoading(true);
+
+        try {
+            const response = await api.post('/ai-tutor/chat', {
+                sessionId: results.session.id,
+                message: userMessage,
+            });
+            setTutorMessages((prev) => [
+                ...prev,
+                { role: 'assistant', content: response.data.message },
+            ]);
+        } catch (error) {
+            console.error('Failed to get tutor response:', error);
+            setTutorMessages((prev) => [
+                ...prev,
+                { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' },
+            ]);
+        } finally {
+            setTutorLoading(false);
+        }
+    };
 
     // Refs for ALL questions to run parallel/hidden analysis
     // Structure: refs.current[index] = { user: ref, correct: ref }
@@ -193,32 +243,46 @@ const HtmlCssResult = ({ results, onBack }) => {
     const isOverallPass = overallTotal >= 70;
 
     // --- UI HELPERS ---
-    const Donut = ({ score, color, label, subLabel }) => {
+    const Donut = ({ score, color, label, subLabel, size = 'normal' }) => {
         const isPass = score >= 70;
         const statusColor = isPass ? 'text-green-600' : 'text-orange-500';
 
+        // Size configurations
+        const isSmall = size === 'small';
+        const containerPadding = isSmall ? 'p-4' : 'p-6';
+        const ringSize = isSmall ? 'w-20 h-20' : 'w-32 h-32';
+        const strokeWidth = isSmall ? '8' : '12';
+        const fontSizeStats = isSmall ? 'text-xl' : 'text-3xl';
+        const fontSizeLabel = isSmall ? 'text-xs' : 'text-sm';
+        const mb = isSmall ? 'mb-2' : 'mb-4';
+
+        // SVG Params
+        const center = isSmall ? 40 : 64;
+        const radius = isSmall ? 34 : 54;
+        const circumference = 2 * Math.PI * radius;
+
         return (
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col items-center justify-center text-center h-full">
-                <div className="relative w-32 h-32 flex items-center justify-center mb-4">
+            <div className={`bg-white dark:bg-slate-800 ${containerPadding} rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col items-center justify-center text-center h-full`}>
+                <div className={`relative ${ringSize} flex items-center justify-center ${mb}`}>
                     <svg className="w-full h-full transform -rotate-90">
-                        <circle cx="64" cy="64" r="54" className="stroke-gray-100 dark:stroke-slate-700" strokeWidth="12" fill="none" />
+                        <circle cx={center} cy={center} r={radius} className="stroke-gray-100 dark:stroke-slate-700" strokeWidth={strokeWidth} fill="none" />
                         <circle
-                            cx="64" cy="64" r="54"
+                            cx={center} cy={center} r={radius}
                             className={color}
-                            strokeWidth="12"
+                            strokeWidth={strokeWidth}
                             fill="none"
-                            strokeDasharray="339.29"
-                            strokeDashoffset={339.29 - (339.29 * score) / 100}
+                            strokeDasharray={circumference}
+                            strokeDashoffset={circumference - (circumference * score) / 100}
                             strokeLinecap="round"
                         />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-3xl font-bold text-gray-800 dark:text-white">{score}%</span>
-                        <span className={`text-xs font-bold uppercase mt-1 ${statusColor}`}>{isPass ? 'PASSED' : 'FAILED'}</span>
+                        <span className={`${fontSizeStats} font-bold text-gray-800 dark:text-white`}>{score}%</span>
+                        <span className={`text-[10px] font-bold uppercase mt-0.5 ${statusColor}`}>{isPass ? 'PASSED' : 'FAILED'}</span>
                     </div>
                 </div>
-                <h3 className="font-bold text-gray-800 dark:text-white mb-1">{label}</h3>
-                {subLabel && <p className="text-xs text-gray-500 dark:text-gray-400">{subLabel}</p>}
+                <h3 className={`font-bold text-gray-800 dark:text-white mb-0.5 ${isSmall ? 'text-xs' : ''}`}>{label}</h3>
+                {subLabel && <p className={`${fontSizeLabel} text-gray-500 dark:text-gray-400`}>{subLabel}</p>}
             </div>
         );
     };
@@ -227,62 +291,139 @@ const HtmlCssResult = ({ results, onBack }) => {
         <div className="min-h-screen bg-gray-50 dark:bg-slate-900 p-6 font-sans transition-colors duration-300">
             <div className="max-w-7xl mx-auto">
                 {/* --- 1. HEADER --- */}
-                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 mb-8">
-                    <div className="flex items-center gap-6">
-                        <div className="flex items-baseline gap-4">
-                            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Result overview</h1>
-
-                            {/* Tabs container */}
-                            <div className="flex gap-2 bg-white dark:bg-slate-800 rounded-lg p-1 border border-gray-200 dark:border-slate-700">
-                                {questionsData.map((_, idx) => (
-                                    <button
-                                        key={idx}
-                                        onClick={() => setCurrentIndex(idx)}
-                                        className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-colors ${currentIndex === idx
-                                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm border border-blue-100 dark:border-blue-800'
-                                            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700'
-                                            }`}
-                                    >
-                                        Question {idx + 1}
-                                    </button>
-                                ))}
-                                <button className="px-4 py-1.5 rounded-md text-sm font-semibold bg-blue-600 text-white shadow-sm">
-                                    Overall Result
-                                </button>
+                <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 mb-8">
+                    <div className="flex flex-col md:flex-row items-start md:items-center gap-6 w-full xl:w-auto">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2.5 bg-blue-600 rounded-xl shadow-lg shadow-blue-600/20">
+                                <LayoutTemplate size={24} className="text-white" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Result Overview</h1>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">HTML & CSS Challenge</p>
                             </div>
                         </div>
 
-                        {/* LARGE OVERALL INDICATOR */}
-                        <div className="flex items-center gap-2">
-                            <span className={`text-4xl font-extrabold ${isOverallPass ? 'text-green-600 dark:text-green-400' : 'text-orange-500 dark:text-orange-400'}`}>
-                                {isScoring && scoredQuestionsCount < questionsData.length ? '...' : `${overallTotal}%`}
-                            </span>
-                            <span className={`text-2xl font-bold uppercase ${isOverallPass ? 'text-green-600 dark:text-green-400' : 'text-orange-500 dark:text-orange-400'}`}>
-                                {isOverallPass ? 'PASSED' : 'FAILED'}
-                            </span>
+                        {/* Divider */}
+                        <div className="hidden md:block h-10 w-px bg-gray-200 dark:bg-slate-700 mx-2"></div>
+
+                        {/* Tabs container - Segmented Control Style */}
+                        <div className="flex p-1 bg-gray-100 dark:bg-slate-800/80 rounded-xl border border-gray-200 dark:border-slate-700/50 w-full md:w-auto overflow-x-auto">
+                            {questionsData.map((_, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => setCurrentIndex(idx)}
+                                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 whitespace-nowrap ${currentIndex === idx
+                                        ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-slate-700/50'
+                                        }`}
+                                >
+                                    Question {idx + 1}
+                                </button>
+                            ))}
+                            <div className="w-px h-5 bg-gray-300 dark:bg-slate-600 mx-1 self-center"></div>
+                            <button className="px-4 py-2 rounded-lg text-sm font-bold bg-gray-900 dark:bg-blue-600 text-white shadow-md hover:bg-gray-800 dark:hover:bg-blue-500 transition-all flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                                Overall Result
+                            </button>
                         </div>
                     </div>
 
-                    <button onClick={onBack} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-lg shadow-sm flex items-center gap-2 transition-transform hover:scale-105">
-                        Continue to Next Lesson <ArrowRight size={18} />
-                    </button>
+                    {/* Right Side: Score & Actions */}
+                    <div className="flex items-center gap-5 w-full xl:w-auto justify-between xl:justify-end">
+                        {/* LARGE OVERALL INDICATOR */}
+                        <div className="flex flex-col items-end mr-2">
+                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5">Total Score</span>
+                            <div className="flex items-center gap-2">
+                                <span className={`text-3xl font-black ${isOverallPass ? 'text-green-600 dark:text-green-400' : 'text-orange-500 dark:text-orange-400'}`}>
+                                    {isScoring && scoredQuestionsCount < questionsData.length ? '...' : `${overallTotal}%`}
+                                </span>
+                                <div className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${isOverallPass ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'}`}>
+                                    {isOverallPass ? 'PASSED' : 'FAILED'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={toggleTheme}
+                                className="p-3 rounded-xl bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 transition-all shadow-sm hover:shadow-md active:scale-95"
+                                title="Toggle Theme"
+                            >
+                                {theme === 'dark' ? <Sun size={20} className="text-amber-400" /> : <Moon size={20} className="text-slate-600" />}
+                            </button>
+                            <button onClick={onBack} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg shadow-blue-600/20 flex items-center gap-2 transition-all hover:-translate-y-0.5 active:translate-y-0">
+                                Next Lesson <ArrowRight size={18} />
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 {/* --- 2. MAIN CONTENT GRID --- */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                    {/* Left: Question Info */}
-                    <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-start">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2 bg-blue-50 dark:bg-slate-700/50 rounded-lg text-blue-600 dark:text-blue-400">
-                                <LayoutTemplate size={20} />
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+                    {/* Left: Question Info & Metrics */}
+                    <div className="lg:col-span-2 flex flex-col gap-5">
+                        <div className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col justify-start h-full">
+                            {/* Question Header */}
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="p-2 bg-blue-50 dark:bg-slate-700/50 rounded-lg text-blue-600 dark:text-blue-400">
+                                    <LayoutTemplate size={20} />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">Question {currentIndex + 1}</h2>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{currentQuestion.title}</p>
+                                </div>
                             </div>
-                            <div>
-                                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Question {currentIndex + 1}</h2>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{currentQuestion.title}</p>
+                            <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap mb-5 font-normal">
+                                {currentQuestion.description}
+                            </p>
+
+                            {/* Explanation Section */}
+                            {currentQuestion.explanation && (
+                                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl relative overflow-hidden mb-6">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                                        <Sparkles size={80} className="text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                    <div className="relative z-10">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="p-1.5 bg-blue-100 dark:bg-blue-800 rounded-lg">
+                                                <Sparkles size={16} className="text-blue-600 dark:text-blue-300" />
+                                            </div>
+                                            <h3 className="font-bold text-blue-900 dark:text-blue-100 text-xs tracking-wide uppercase">Explanation</h3>
+                                        </div>
+                                        <p className="text-blue-800 dark:text-blue-200 text-sm leading-relaxed">
+                                            {currentQuestion.explanation}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Metrics inside the card */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-auto">
+                                <Donut
+                                    score={currentScore.structure}
+                                    color="stroke-green-500"
+                                    label="DOM CORRECTNESS"
+                                    subLabel="Structure"
+                                    size="small"
+                                />
+                                <Donut
+                                    score={currentScore.content}
+                                    color="stroke-indigo-400"
+                                    label="TEXT SIMILARITY"
+                                    subLabel="Content"
+                                    size="small"
+                                />
+                                <Donut
+                                    score={currentScore.style}
+                                    color="stroke-orange-400"
+                                    label="PIXEL SIMILARITY"
+                                    subLabel="Style"
+                                    size="small"
+                                />
                             </div>
                         </div>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap mb-4">{currentQuestion.description}</p>
 
+                        {/* Hidden Previews */}
                         <div style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0, overflow: 'hidden' }}>
                             {questionsData.map((q, idx) => (
                                 <div key={`hidden-${idx}`}>
@@ -299,22 +440,56 @@ const HtmlCssResult = ({ results, onBack }) => {
                                 </div>
                             ))}
                         </div>
-
                     </div>
 
-                    {/* Right: Question Specific Metric */}
-                    <div className="h-full">
-                        <Donut
-                            score={currentScore.total}
-                            color={currentScore.total >= 70 ? "stroke-green-500" : "stroke-orange-500"}
-                            label={`QUESTION ${currentIndex + 1} RESULT`}
-                            subLabel="HIGH-LEVEL SUMMARY"
-                        />
+                    {/* Right: Score, Tutor, Analysis */}
+                    <div className="flex flex-col gap-5 h-full">
+                        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
+                            <Donut
+                                score={currentScore.total}
+                                color={currentScore.total >= 70 ? "stroke-green-500" : "stroke-orange-500"}
+                                label={`QUESTION ${currentIndex + 1}`}
+                                subLabel="RESULT SCORE"
+                            />
+                        </div>
+
+                        <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-xl p-5 text-white shadow-lg relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-4 opacity-20 transform group-hover:scale-110 transition-transform duration-500">
+                                <MessageSquare size={80} />
+                            </div>
+                            <div className="relative z-10">
+                                <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+                                    <MessageSquare size={20} className="text-blue-200" />
+                                    AI Tutor
+                                </h3>
+                                <p className="text-blue-100 text-sm mb-5 leading-relaxed">
+                                    Stuck or confused? Get instant, personalized help with this question.
+                                </p>
+                                <button
+                                    onClick={() => {
+                                        setShowTutor(true);
+                                        fetchInitialHint();
+                                    }}
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-blue-700 rounded-lg hover:bg-blue-50 transition-all font-bold text-sm shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
+                                >
+                                    Chat with AI Tutor
+                                    <ArrowRight size={16} />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1">
+                            <AIAnalysisCard
+                                sessionId={results.session.id}
+                                score={overallTotal}
+                                isPass={isOverallPass}
+                            />
+                        </div>
                     </div>
                 </div>
 
                 {/* --- 3. COMPARISON & EDITOR SECTION --- */}
-                <div className="mb-6 flex items-center justify-center gap-4">
+                < div className="mb-5 flex items-center justify-center gap-4" >
                     <div className="bg-white dark:bg-slate-800 p-1 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm flex">
                         <button
                             onClick={() => setViewMode('preview')}
@@ -331,9 +506,9 @@ const HtmlCssResult = ({ results, onBack }) => {
                             <Code size={16} /> Source Code
                         </button>
                     </div>
-                </div>
+                </div >
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 h-[500px]">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8 h-[500px]">
                     {/* --- USER OUTPUT PANEL --- */}
                     <div className="bg-[#1e293b] rounded-xl overflow-hidden shadow-lg flex flex-col border border-gray-700">
                         <div className="bg-[#0f172a] px-4 py-3 flex items-center justify-between border-b border-gray-800">
@@ -438,29 +613,95 @@ const HtmlCssResult = ({ results, onBack }) => {
                         </div>
                     </div>
                 </div>
+            </div >
 
-                {/* --- 4. DETAILED METRICS --- */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                    <Donut
-                        score={currentScore.structure}
-                        color="stroke-green-500"
-                        label="DOM CORRECTNESS"
-                        subLabel={`Structure matches ${currentScore.structure}%.`}
-                    />
-                    <Donut
-                        score={currentScore.content}
-                        color="stroke-indigo-400"
-                        label="TEXT SIMILARITY"
-                        subLabel={`Content matches ${currentScore.content}%.`}
-                    />
-                    <Donut
-                        score={currentScore.style}
-                        color="stroke-orange-400"
-                        label="PIXEL SIMILARITY"
-                        subLabel="Style matches computed layout."
-                    />
-                </div>
-            </div>
+            {/* AI Tutor Chat Modal */}
+            {
+                showTutor && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+                        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-2xl h-[600px] flex flex-col overflow-hidden animate-fade-in-up">
+                            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+                                        <MessageSquare className="text-blue-600 dark:text-blue-400" size={20} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-gray-800 dark:text-white">AI Tutor</h3>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">Always here to help</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setShowTutor(false)}
+                                    className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full transition-colors text-gray-500 dark:text-gray-400"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50 dark:bg-slate-900/50">
+                                {tutorMessages.length === 0 && (
+                                    <div className="text-center text-gray-500 dark:text-gray-400 py-12">
+                                        <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                            <MessageSquare className="text-blue-500 dark:text-blue-400" size={32} />
+                                        </div>
+                                        <p className="font-medium">Ask me anything about this question!</p>
+                                        <p className="text-sm mt-1">I can explain the solution or help you optimize your code.</p>
+                                    </div>
+                                )}
+                                {tutorMessages.map((msg, index) => (
+                                    <div
+                                        key={index}
+                                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                                    >
+                                        <div
+                                            className={`max-w-[80%] rounded-2xl p-4 shadow-sm ${msg.role === 'user'
+                                                ? 'bg-blue-600 text-white rounded-br-none'
+                                                : 'bg-white dark:bg-slate-700 text-gray-800 dark:text-white border border-gray-100 dark:border-slate-600 rounded-bl-none'
+                                                }`}
+                                        >
+                                            <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                                {tutorLoading && (
+                                    <div className="flex justify-start">
+                                        <div className="bg-white dark:bg-slate-700 border border-gray-100 dark:border-slate-600 rounded-2xl p-4 rounded-bl-none shadow-sm">
+                                            <div className="flex gap-1.5">
+                                                <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"></div>
+                                                <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce delay-100"></div>
+                                                <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce delay-200"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="p-4 border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                                <form
+                                    onSubmit={handleTutorSubmit}
+                                    className="flex gap-2"
+                                >
+                                    <input
+                                        type="text"
+                                        value={tutorInput}
+                                        onChange={(e) => setTutorInput(e.target.value)}
+                                        placeholder="Ask a question..."
+                                        className="flex-1 px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 dark:bg-slate-700 focus:bg-white dark:focus:bg-slate-600 transition-colors text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                                        disabled={tutorLoading}
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={!tutorInput.trim() || tutorLoading}
+                                        className="px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                                    >
+                                        <Send size={20} />
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
         </div>
     );
 };

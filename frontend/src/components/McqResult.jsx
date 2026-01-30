@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Layout from './Layout';
 import { CheckCircle, XCircle, MessageSquare, Send, X } from 'lucide-react';
 import api from '../services/api';
+import AIAnalysisCard from './AIAnalysisCard';
 
 const McqResult = ({ results, onBack }) => {
     const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0);
@@ -78,14 +79,14 @@ const McqResult = ({ results, onBack }) => {
 
                 {/* Score Summary Card with Pass/Fail */}
                 <div className={`mb-6 p-6 rounded-lg shadow-sm border-2 flex flex-col md:flex-row items-center justify-between gap-4 ${isPassing
-                        ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
-                        : 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
+                    ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
+                    : 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
                     }`}>
                     <div className="flex items-center gap-6">
                         {/* Pass/Fail Badge */}
                         <div className={`px-6 py-3 rounded-xl font-bold text-2xl shadow-md ${isPassing
-                                ? 'bg-green-500 text-white'
-                                : 'bg-red-500 text-white'
+                            ? 'bg-green-500 text-white'
+                            : 'bg-red-500 text-white'
                             }`}>
                             {isPassing ? '✓ PASS' : '✗ FAIL'}
                         </div>
@@ -108,6 +109,15 @@ const McqResult = ({ results, onBack }) => {
                                 : '📚 Keep practicing! (60% needed to pass)'}
                         </div>
                     </div>
+                </div>
+
+                {/* AI Performance Analysis */}
+                <div className="mb-8">
+                    <AIAnalysisCard
+                        sessionId={results.session.id}
+                        score={scorePercentage}
+                        isPass={isPassing}
+                    />
                 </div>
 
                 {/* Question Navigation */}

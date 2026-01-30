@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import Editor from '@monaco-editor/react';
 import api from '../services/api';
-import { Play, Send, CheckCircle, Lock, Check, X } from 'lucide-react';
+import { Play, Send, CheckCircle, Lock, Check, X, Lightbulb, X as CloseIcon } from 'lucide-react';
 
 // Course-to-language mapping (must match backend validation)
 const COURSE_LANGUAGE_MAP = {
@@ -42,6 +42,11 @@ const Practice = () => {
     const [userCodeByQuestion, setUserCodeByQuestion] = useState({});
     // LeetCode-style result state
     const [submitResult, setSubmitResult] = useState(null); // { status: 'Accepted'|'Wrong Answer'|'Runtime Error'|'Time Limit Exceeded', passed: number, total: number, runtime?: number }
+    // AI Hint state
+    const [hint, setHint] = useState(null);
+    const [loadingHint, setLoadingHint] = useState(false);
+    const [showHint, setShowHint] = useState(false);
+    const [hintAttemptCount, setHintAttemptCount] = useState(1);
 
     useEffect(() => {
         startSession();
@@ -272,11 +277,38 @@ const Practice = () => {
         return session?.questions || [];
     };
 
+    const handleGetHint = async () => {
+        if (hint) {
+            setShowHint(true);
+            return;
+        }
+
+        setLoadingHint(true);
+        setShowHint(true);
+        try {
+            const questionsForTest = getActiveQuestions();
+            const currentQ = questionsForTest[currentQuestionIndex];
+            const response = await api.post('/ai-tutor/coding-hint', {
+                questionId: currentQ.question_id,
+                userCode: code || null,
+                attemptCount: hintAttemptCount,
+                questionType: 'coding'
+            });
+            setHint(response.data.hint);
+            setHintAttemptCount(prev => prev + 1);
+        } catch (error) {
+            console.error('Failed to get hint:', error);
+            setHint("Read the problem carefully. Think about the algorithm step by step. Consider edge cases like empty input.");
+        } finally {
+            setLoadingHint(false);
+        }
+    };
+
 
     if (loading || !session) {
         return (
             <Layout>
-                <div className="p-8">Loading...</div>
+                <div className="p-8 text-gray-900 dark:text-white">Loading...</div>
             </Layout>
         );
     }
@@ -295,8 +327,8 @@ const Practice = () => {
 
     return (
         <Layout>
-            <div className="flex-1 flex flex-col md:flex-row pb-20 md:pb-0 h-full">
-                <div className="w-full md:flex-1 p-6 overflow-y-auto">
+            <div className="flex-1 flex flex-col md:flex-row pb-20 md:pb-0 h-full bg-white dark:bg-slate-900">
+                <div className="w-full md:flex-1 p-6 overflow-y-auto bg-gray-50 dark:bg-slate-900">
                     {/* Question selection row */}
                     <div className="mb-4 flex gap-2 flex-wrap">
                         {session.questions.map((q, index) => {
@@ -320,10 +352,14 @@ const Practice = () => {
                                         setSubmitResult(null);
                                         setOutput('');
                                         setLastRunError(null);
+                                        // Clear hints for new question
+                                        setHint(null);
+                                        setShowHint(false);
+                                        setHintAttemptCount(1);
                                     }}
                                     className={`px-4 py-2 rounded-lg font-medium border ${index === currentQuestionIndex
                                         ? 'bg-blue-600 text-white border-blue-600'
-                                        : 'bg-gray-100 text-gray-700 border-gray-300'
+                                        : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 border-gray-300 dark:border-slate-600'
                                         }`}
                                 >
                                     Q{index + 1}
@@ -332,16 +368,16 @@ const Practice = () => {
                         })}
                     </div>
 
-                    <div className="bg-white rounded-lg shadow-md p-6 mb-4">
-                        <h2 className="text-2xl font-bold text-gray-800 mb-4">{currentQuestion.title}</h2>
-                        <div className="prose max-w-none mb-4">
-                            <p className="text-gray-700 whitespace-pre-wrap">{currentQuestion.description}</p>
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 mb-4 border dark:border-slate-700">
+                        <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">{currentQuestion.title}</h2>
+                        <div className="prose dark:prose-invert max-w-none mb-4">
+                            <p className="text-gray-700 dark:text-slate-300 whitespace-pre-wrap">{currentQuestion.description}</p>
                         </div>
 
                         {currentQuestion.constraints && (
                             <div className="mb-4">
-                                <h3 className="font-semibold text-gray-800 mb-2">Constraints:</h3>
-                                <p className="text-gray-600 text-sm whitespace-pre-wrap">{currentQuestion.constraints}</p>
+                                <h3 className="font-semibold text-gray-800 dark:text-white mb-2">Constraints:</h3>
+                                <p className="text-gray-600 dark:text-slate-400 text-sm whitespace-pre-wrap">{currentQuestion.constraints}</p>
                             </div>
                         )}
 
@@ -351,16 +387,16 @@ const Practice = () => {
                                 <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {currentQuestion.input_format && (
                                         <div>
-                                            <h3 className="font-semibold text-gray-800 mb-1">Sample Input</h3>
-                                            <pre className="bg-gray-50 p-3 rounded text-sm text-gray-700 whitespace-pre-wrap">
+                                            <h3 className="font-semibold text-gray-800 dark:text-white mb-1">Sample Input</h3>
+                                            <pre className="bg-gray-50 dark:bg-slate-900 p-3 rounded text-sm text-gray-700 dark:text-slate-300 whitespace-pre-wrap border dark:border-slate-700">
                                                 {currentQuestion.input_format}
                                             </pre>
                                         </div>
                                     )}
                                     {currentQuestion.output_format && (
                                         <div>
-                                            <h3 className="font-semibold text-gray-800 mb-1">Sample Output</h3>
-                                            <pre className="bg-gray-50 p-3 rounded text-sm text-gray-700 whitespace-pre-wrap">
+                                            <h3 className="font-semibold text-gray-800 dark:text-white mb-1">Sample Output</h3>
+                                            <pre className="bg-gray-50 dark:bg-slate-900 p-3 rounded text-sm text-gray-700 dark:text-slate-300 whitespace-pre-wrap border dark:border-slate-700">
                                                 {currentQuestion.output_format}
                                             </pre>
                                         </div>
@@ -368,7 +404,7 @@ const Practice = () => {
                                 </div>
                             )}
 
-                            <h3 className="font-semibold text-gray-800 mb-2">Test Cases:</h3>
+                            <h3 className="font-semibold text-gray-800 dark:text-white mb-2">Test Cases:</h3>
                             <style>{`
             @keyframes blink-green {
               0%, 100% { opacity: 1; }
@@ -393,14 +429,14 @@ const Practice = () => {
                                         <div
                                             key={tc.id}
                                             className={`p-3 rounded border text-sm ${status === 'passed'
-                                                ? 'border-green-500 bg-green-50 test-case-passed'
+                                                ? 'border-green-500 bg-green-50 dark:bg-green-900/20 test-case-passed'
                                                 : status === 'failed'
-                                                    ? 'border-red-500 bg-red-50 test-case-failed'
-                                                    : 'border-gray-200 bg-gray-50'
+                                                    ? 'border-red-500 bg-red-50 dark:bg-red-900/20 test-case-failed'
+                                                    : 'border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800'
                                                 }`}
                                         >
                                             <div className="flex items-center justify-between mb-1">
-                                                <span className="font-medium">
+                                                <span className="font-medium text-gray-900 dark:text-white">
                                                     Test Case {index + 1}
                                                 </span>
                                                 {status === 'passed' && (
@@ -412,14 +448,14 @@ const Practice = () => {
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                                 <div>
-                                                    <span className="font-medium">Input:</span>
-                                                    <pre className="mt-1 text-gray-700 whitespace-pre-wrap">
+                                                    <span className="font-medium text-gray-900 dark:text-white">Input:</span>
+                                                    <pre className="mt-1 text-gray-700 dark:text-slate-300 whitespace-pre-wrap">
                                                         {tc.input_data}
                                                     </pre>
                                                 </div>
                                                 <div>
-                                                    <span className="font-medium">Expected Output:</span>
-                                                    <pre className="mt-1 text-gray-700 whitespace-pre-wrap">
+                                                    <span className="font-medium text-gray-900 dark:text-white">Expected Output:</span>
+                                                    <pre className="mt-1 text-gray-700 dark:text-slate-300 whitespace-pre-wrap">
                                                         {tc.expected_output}
                                                     </pre>
                                                 </div>
@@ -447,13 +483,13 @@ const Practice = () => {
                                         <div
                                             key={tc.id}
                                             className={`p-3 rounded border flex items-center justify-between text-sm ${status === 'passed'
-                                                ? 'border-green-500 bg-green-50'
+                                                ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
                                                 : status === 'failed'
-                                                    ? 'border-red-500 bg-red-50'
-                                                    : 'border-gray-300 bg-gray-100'
+                                                    ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
+                                                    : 'border-gray-300 dark:border-slate-700 bg-gray-100 dark:bg-slate-800'
                                                 }`}
                                         >
-                                            <span className="font-medium">
+                                            <span className="font-medium text-gray-900 dark:text-white">
                                                 Hidden Test Case {visibleTestCases.length + index + 1}
                                             </span>
                                             <div className="flex items-center gap-2">
@@ -471,8 +507,8 @@ const Practice = () => {
                                                 )}
                                                 {status === 'pending' && (
                                                     <>
-                                                        <Lock size={16} className="text-gray-600" />
-                                                        <span className="text-gray-600">Locked</span>
+                                                        <Lock size={16} className="text-gray-600 dark:text-slate-400" />
+                                                        <span className="text-gray-600 dark:text-slate-400">Locked</span>
                                                     </>
                                                 )}
                                             </div>
@@ -484,22 +520,35 @@ const Practice = () => {
                     </div>
                 </div>
 
-                <div className="w-full md:w-1/2 bg-white border-t md:border-t-0 md:border-l border-gray-200 flex flex-col h-[500px] md:h-auto">
+                <div className="w-full md:w-1/2 bg-white dark:bg-slate-800 border-t md:border-t-0 md:border-l border-gray-200 dark:border-slate-700 flex flex-col h-[500px] md:h-auto">
                     {/* Top Bar: Timer, Run, Submit, Finish Test */}
-                    <div className="p-4 border-b border-gray-200 flex items-center justify-between gap-3 bg-gray-50">
+                    <div className="p-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between gap-3 bg-gray-50 dark:bg-slate-800">
                         <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-300 rounded-lg">
-                                <span className="text-sm font-medium text-gray-600">Time:</span>
-                                <span className="text-lg font-semibold text-gray-800 font-mono">
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg">
+                                <span className="text-sm font-medium text-gray-600 dark:text-slate-400">Time:</span>
+                                <span className="text-lg font-semibold text-gray-800 dark:text-white font-mono">
                                     {formatTime(timeLeft)}
                                 </span>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
                             <button
+                                onClick={handleGetHint}
+                                disabled={loadingHint}
+                                className="flex items-center justify-center gap-2 px-3 py-2.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-medium"
+                                title="Get AI Hint"
+                            >
+                                {loadingHint ? (
+                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                    <Lightbulb size={18} />
+                                )}
+                                <span className="hidden md:inline">Hint</span>
+                            </button>
+                            <button
                                 onClick={handleRun}
                                 disabled={isRunning}
-                                className={`flex items-center justify-center p-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors ${isRunning ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`flex items-center justify-center p-2.5 bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-slate-200 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors ${isRunning ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 title={isRunning ? 'Running...' : 'Run'}
                             >
                                 {isRunning ? (
@@ -551,7 +600,7 @@ const Practice = () => {
                     </div>
 
                     {/* Terminal/Input Area - Enlarged */}
-                    <div className="border-t border-gray-200 bg-gray-900 flex flex-col" style={{ minHeight: '200px', maxHeight: '300px' }}>
+                    <div className="border-t border-gray-200 dark:border-slate-700 bg-gray-900 flex flex-col" style={{ minHeight: '200px', maxHeight: '300px' }}>
                         <div className="px-4 py-2 border-b border-gray-700 flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Custom Input Terminal</span>
@@ -579,13 +628,45 @@ const Practice = () => {
                     </div>
 
                     {/* Bottom Section: Results and Output */}
-                    <div className="p-4 border-t border-gray-200 space-y-4 bg-white">
+                    <div className="p-4 border-t border-gray-200 dark:border-slate-700 space-y-4 bg-white dark:bg-slate-800">
+
+                        {/* AI Hint Panel */}
+                        {showHint && (
+                            <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <Lightbulb size={18} className="text-amber-600" />
+                                        <span className="font-semibold text-amber-700 dark:text-amber-400">AI Hint</span>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowHint(false)}
+                                        className="text-amber-600 hover:text-amber-800 dark:hover:text-amber-300"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                                {loadingHint ? (
+                                    <div className="flex items-center gap-2 text-amber-600">
+                                        <div className="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin"></div>
+                                        <span>Generating hint...</span>
+                                    </div>
+                                ) : (
+                                    <p className="text-gray-700 dark:text-slate-300 whitespace-pre-wrap">{hint}</p>
+                                )}
+                                <button
+                                    onClick={() => { setHint(null); handleGetHint(); }}
+                                    className="mt-2 text-xs text-amber-600 hover:text-amber-800 dark:hover:text-amber-300"
+                                >
+                                    Get another hint
+                                </button>
+                            </div>
+                        )}
 
                         {/* LeetCode-style Submit Result Panel */}
                         {submitResult && (
                             <div className={`p-4 rounded-lg border-l-4 ${submitResult.status === 'Accepted'
-                                ? 'bg-green-50 border-green-500'
-                                : 'bg-red-50 border-red-500'
+                                ? 'bg-green-50 dark:bg-green-900/20 border-green-500'
+                                : 'bg-red-50 dark:bg-red-900/20 border-red-500'
                                 }`}>
                                 <div className="flex items-center justify-between mb-2">
                                     <span className={`text-lg font-bold ${submitResult.status === 'Accepted' ? 'text-green-600' : 'text-red-600'
@@ -598,7 +679,7 @@ const Practice = () => {
                                         </span>
                                     )}
                                 </div>
-                                <div className="text-sm text-gray-700">
+                                <div className="text-sm text-gray-700 dark:text-slate-300">
                                     <span className="font-medium">{submitResult.passed}</span> / <span>{submitResult.total}</span> test cases passed
                                 </div>
                                 <button

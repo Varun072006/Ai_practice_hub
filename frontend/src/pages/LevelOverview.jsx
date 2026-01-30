@@ -198,12 +198,12 @@ const LevelOverview = () => {
         return (
             <Layout>
                 <div className="flex-1 flex flex-col items-center justify-center p-8">
-                    <div className="bg-white p-8 rounded-2xl shadow-lg border border-purple-100 max-w-md w-full text-center">
-                        <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6 relative">
-                            <Sparkles className="text-purple-600 animate-pulse" size={32} />
-                            <div className="absolute inset-0 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+                    <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-lg border border-purple-100 dark:border-slate-700 max-w-md w-full text-center">
+                        <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-6 relative">
+                            <Sparkles className="text-purple-600 dark:text-purple-400 animate-pulse" size={32} />
+                            <div className="absolute inset-0 border-4 border-purple-200 dark:border-purple-700 border-t-purple-600 dark:border-t-purple-400 rounded-full animate-spin"></div>
                         </div>
-                        <h2 className="text-xl font-bold text-gray-800 mb-2">Loading Lesson Plan...</h2>
+                        <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Loading Lesson Plan...</h2>
                     </div>
                 </div>
             </Layout>
@@ -228,9 +228,9 @@ const LevelOverview = () => {
 
                 {/* Edit Mode Overlay */}
                 {isEditing ? (
-                    <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-4xl mx-auto border border-gray-200 animate-in fade-in slide-in-from-bottom-10">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 max-w-4xl mx-auto border border-gray-200 dark:border-slate-700 animate-in fade-in slide-in-from-bottom-10">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-2xl font-bold">Edit Level Content</h2>
+                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Edit Level Content</h2>
                             <button onClick={handleSave} className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
                                 <Save size={18} /> Save Changes
                             </button>
@@ -238,9 +238,9 @@ const LevelOverview = () => {
 
                         <div className="space-y-6">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Introduction</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Introduction</label>
                                 <textarea
-                                    className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 min-h-[100px]"
+                                    className="w-full p-4 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-purple-500 min-h-[100px] bg-white dark:bg-slate-900 text-gray-900 dark:text-white"
                                     value={editData.introduction}
                                     onChange={(e) => setEditData({ ...editData, introduction: e.target.value })}
                                 />
@@ -248,21 +248,21 @@ const LevelOverview = () => {
 
                             <div>
                                 <div className="flex justify-between items-center mb-2">
-                                    <label className="block text-sm font-medium text-gray-700">Concepts</label>
-                                    <button onClick={addConcept} className="text-sm text-purple-600 flex items-center gap-1 hover:underline"><Plus size={14} /> Add</button>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Concepts</label>
+                                    <button onClick={addConcept} className="text-sm text-purple-600 dark:text-purple-400 flex items-center gap-1 hover:underline"><Plus size={14} /> Add</button>
                                 </div>
                                 <div className="space-y-3">
                                     {editData.concepts.map((c, idx) => (
-                                        <div key={idx} className="flex gap-2 items-start p-3 bg-gray-50 rounded-lg border">
+                                        <div key={idx} className="flex gap-2 items-start p-3 bg-gray-50 dark:bg-slate-900 rounded-lg border dark:border-slate-700">
                                             <div className="flex-1 space-y-2">
                                                 <input
-                                                    className="w-full p-2 border rounded"
+                                                    className="w-full p-2 border dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
                                                     placeholder="Title"
                                                     value={c.title}
                                                     onChange={(e) => updateConcept(idx, 'title', e.target.value)}
                                                 />
                                                 <textarea
-                                                    className="w-full p-2 border rounded text-sm"
+                                                    className="w-full p-2 border dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
                                                     placeholder="Explanation"
                                                     value={c.explanation}
                                                     onChange={(e) => updateConcept(idx, 'explanation', e.target.value)}
@@ -276,25 +276,25 @@ const LevelOverview = () => {
 
                             <div>
                                 <div className="flex justify-between items-center mb-2">
-                                    <label className="block text-sm font-medium text-gray-700">Resources</label>
-                                    <button onClick={addResource} className="text-sm text-purple-600 flex items-center gap-1 hover:underline"><Plus size={14} /> Add</button>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Resources</label>
+                                    <button onClick={addResource} className="text-sm text-purple-600 dark:text-purple-400 flex items-center gap-1 hover:underline"><Plus size={14} /> Add</button>
                                 </div>
                                 <div className="space-y-2">
                                     {editData.resources.map((r, idx) => (
                                         <div key={idx} className="flex gap-2 items-center">
                                             <input
-                                                className="flex-1 p-2 border rounded"
+                                                className="flex-1 p-2 border dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
                                                 placeholder="Title"
                                                 value={r.title}
                                                 onChange={(e) => updateResource(idx, 'title', e.target.value)}
                                             />
                                             <input
-                                                className="flex-1 p-2 border rounded"
+                                                className="flex-1 p-2 border dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white"
                                                 placeholder="URL"
                                                 value={r.url}
                                                 onChange={(e) => updateResource(idx, 'url', e.target.value)}
                                             />
-                                            <button onClick={() => removeResource(idx)} className="text-red-500 p-1 hover:bg-red-50 rounded"><Trash2 size={16} /></button>
+                                            <button onClick={() => removeResource(idx)} className="text-red-500 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"><Trash2 size={16} /></button>
                                         </div>
                                     ))}
                                 </div>
@@ -302,12 +302,12 @@ const LevelOverview = () => {
 
                             <div>
                                 <div className="flex justify-between items-center mb-2">
-                                    <label className="block text-sm font-medium text-gray-700">Key Terms</label>
-                                    <button onClick={addKeyTerm} className="text-sm text-purple-600 flex items-center gap-1 hover:underline"><Plus size={14} /> Add</button>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Key Terms</label>
+                                    <button onClick={addKeyTerm} className="text-sm text-purple-600 dark:text-purple-400 flex items-center gap-1 hover:underline"><Plus size={14} /> Add</button>
                                 </div>
                                 <div className="flex flex-wrap gap-2">
                                     {editData.key_terms.map((term, idx) => (
-                                        <span key={idx} className="px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-full text-gray-700 text-sm font-medium flex items-center gap-2">
+                                        <span key={idx} className="px-3 py-1.5 bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-full text-gray-700 dark:text-slate-300 text-sm font-medium flex items-center gap-2">
                                             {term}
                                             <button onClick={() => removeKeyTerm(idx)} className="text-red-400 hover:text-red-600">
                                                 <X size={14} />
@@ -315,26 +315,26 @@ const LevelOverview = () => {
                                         </span>
                                     ))}
                                     {editData.key_terms.length === 0 && (
-                                        <span className="text-gray-400 text-sm italic">No key terms added yet</span>
+                                        <span className="text-gray-400 dark:text-slate-500 text-sm italic">No key terms added yet</span>
                                     )}
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">YouTube Video URL</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">YouTube Video URL</label>
                                 <div className="space-y-2">
                                     <textarea
-                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 min-h-[100px] font-mono text-sm"
+                                        className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 min-h-[100px] font-mono text-sm bg-white dark:bg-slate-900 text-gray-900 dark:text-white"
                                         placeholder="Paste one or more YouTube URLs here (one per line)..."
                                         value={editData.youtube_url}
                                         onChange={(e) => setEditData({ ...editData, youtube_url: e.target.value })}
                                     />
-                                    <p className="text-xs text-gray-500">
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
                                         💡 Tip: Paste multiple video URLs (one per line) to create a playlist automatically. Or paste a single standard Playlist URL.
                                     </p>
                                     {editData.youtube_url && (
-                                        <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                                            <p className="text-xs font-medium text-green-700 mb-2">✅ Preview:</p>
+                                        <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                                            <p className="text-xs font-medium text-green-700 dark:text-green-400 mb-2">✅ Preview:</p>
                                             <div className="aspect-video bg-black rounded-lg overflow-hidden">
                                                 <iframe
                                                     width="100%"
@@ -352,9 +352,9 @@ const LevelOverview = () => {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Example Code</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Example Code</label>
                                 <textarea
-                                    className="w-full p-4 border border-gray-300 rounded-lg font-mono text-sm min-h-[200px] bg-slate-900 text-white"
+                                    className="w-full p-4 border border-gray-300 dark:border-slate-700 rounded-lg font-mono text-sm min-h-[200px] bg-slate-900 text-white"
                                     value={editData.example_code}
                                     onChange={(e) => setEditData({ ...editData, example_code: e.target.value })}
                                 />
@@ -370,19 +370,19 @@ const LevelOverview = () => {
                             <div className="lg:col-span-7 space-y-8">
                                 <div className="space-y-6">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
+                                        <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                                             <BookOpen size={20} />
                                         </div>
-                                        <span className="text-[10px] font-black tracking-[0.2em] uppercase bg-blue-50 text-blue-600 px-3 py-1 rounded-md border border-blue-100/50">
+                                        <span className="text-[10px] font-black tracking-[0.2em] uppercase bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-md border border-blue-100/50 dark:border-blue-800">
                                             LEVEL {lessonPlan.level_number ?? levelId}
                                         </span>
                                     </div>
 
                                     <div className="space-y-4">
-                                        <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-[1.1]">
+                                        <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.1]">
                                             {lessonPlan.title || `Level ${levelId} Overview`}
                                         </h1>
-                                        <p className="text-base md:text-lg text-slate-500 leading-relaxed font-medium max-w-2xl">
+                                        <p className="text-base md:text-lg text-slate-500 dark:text-slate-400 leading-relaxed font-medium max-w-2xl">
                                             {lessonPlan.introduction}
                                         </p>
                                     </div>
@@ -390,12 +390,12 @@ const LevelOverview = () => {
                                     {/* Key Terms */}
                                     {lessonPlan.key_terms && lessonPlan.key_terms.length > 0 && (
                                         <div className="space-y-3">
-                                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                            <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
                                                 KEY TERMS
                                             </h4>
                                             <div className="flex flex-wrap gap-2">
                                                 {lessonPlan.key_terms.map((term, idx) => (
-                                                    <span key={idx} className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-bold shadow-sm hover:border-slate-300 transition-colors cursor-default">
+                                                    <span key={idx} className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-bold shadow-sm hover:border-slate-300 dark:hover:border-slate-600 transition-colors cursor-default">
                                                         {term}
                                                     </span>
                                                 ))}
@@ -408,17 +408,17 @@ const LevelOverview = () => {
                             {/* Right: Video */}
                             {lessonPlan.youtube_url && lessonPlan.youtube_url.trim() && (
                                 <div className="lg:col-span-5">
-                                    <div className="bg-white rounded-[2rem] shadow-2xl shadow-slate-200/50 overflow-hidden border border-slate-100 flex flex-col group h-full max-h-[400px]">
-                                        <div className="p-5 bg-white border-b border-slate-50 flex items-center justify-between">
+                                    <div className="bg-white dark:bg-slate-800 rounded-[2rem] shadow-2xl shadow-slate-200/50 dark:shadow-slate-900/50 overflow-hidden border border-slate-100 dark:border-slate-700 flex flex-col group h-full max-h-[400px]">
+                                        <div className="p-5 bg-white dark:bg-slate-800 border-b border-slate-50 dark:border-slate-700 flex items-center justify-between">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center">
+                                                <div className="w-8 h-8 rounded-full bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 flex items-center justify-center">
                                                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                                                         <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
                                                     </svg>
                                                 </div>
-                                                <span className="font-bold text-slate-800 text-sm">Video Tutorial</span>
+                                                <span className="font-bold text-slate-800 dark:text-white text-sm">Video Tutorial</span>
                                             </div>
-                                            <ExternalLink size={16} className="text-slate-300 group-hover:text-red-500 transition-colors" />
+                                            <ExternalLink size={16} className="text-slate-300 dark:text-slate-600 group-hover:text-red-500 transition-colors" />
                                         </div>
                                         <div className="flex-1 bg-black relative">
                                             <iframe
@@ -440,23 +440,23 @@ const LevelOverview = () => {
                         {/* Core Topics Grid */}
                         <div className="space-y-8">
                             <div className="flex items-center gap-3">
-                                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
                                     CORE TOPICS
                                 </h3>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {lessonPlan.concepts.map((concept, idx) => (
-                                    <div key={idx} className="bg-white p-8 rounded-[2rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-500 border border-slate-100 flex flex-col min-h-[200px] group">
-                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 shadow-sm ${['bg-blue-50 text-blue-500', 'bg-cyan-50 text-cyan-500', 'bg-indigo-50 text-indigo-500', 'bg-purple-50 text-purple-500'][idx % 4]
+                                    <div key={idx} className="bg-white dark:bg-slate-800 p-8 rounded-[2rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-500 border border-slate-100 dark:border-slate-700 flex flex-col min-h-[200px] group">
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 shadow-sm ${['bg-blue-50 dark:bg-blue-900/30 text-blue-500 dark:text-blue-400', 'bg-cyan-50 dark:bg-cyan-900/30 text-cyan-500 dark:text-cyan-400', 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400', 'bg-purple-50 dark:bg-purple-900/30 text-purple-500 dark:text-purple-400'][idx % 4]
                                             }`}>
                                             {[<ArrowRight size={24} className="rotate-[-45deg]" />, <Lightbulb size={24} />, <Edit size={22} />, <Sparkles size={24} />][idx % 4]}
                                         </div>
-                                        <h3 className="font-black text-slate-900 mb-4 text-xl group-hover:text-blue-600 transition-colors leading-tight">
+                                        <h3 className="font-black text-slate-900 dark:text-white mb-4 text-xl group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-tight">
                                             {concept.title}
                                         </h3>
-                                        <p className="text-sm text-slate-500 leading-[1.6] font-medium flex-1">
-                                            {concept.explanation || <span className="text-slate-300 italic">Description available in learning materials</span>}
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 leading-[1.6] font-medium flex-1">
+                                            {concept.explanation || <span className="text-slate-300 dark:text-slate-600 italic">Description available in learning materials</span>}
                                         </p>
                                     </div>
                                 ))}
@@ -490,12 +490,12 @@ const LevelOverview = () => {
                             <div className="lg:col-span-8 space-y-6">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-slate-100/50 flex items-center justify-center text-slate-400">
+                                        <div className="w-10 h-10 rounded-xl bg-slate-100/50 dark:bg-slate-700 flex items-center justify-center text-slate-400 dark:text-slate-400">
                                             <FolderIcon size={20} />
                                         </div>
-                                        <h3 className="font-black text-slate-900 text-xl tracking-tight">Course Materials</h3>
+                                        <h3 className="font-black text-slate-900 dark:text-white text-xl tracking-tight">Course Materials</h3>
                                     </div>
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                                    <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700">
                                         {lessonPlan.resources.length} ASSETS
                                     </span>
                                 </div>
@@ -507,30 +507,30 @@ const LevelOverview = () => {
                                             href={res.url}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="group bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:border-blue-200 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-5"
+                                            className="group bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm hover:border-blue-200 dark:hover:border-blue-800 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-5"
                                         >
-                                            <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center group-hover:bg-blue-50 group-hover:text-blue-500 transition-all shadow-sm border border-orange-100/30">
+                                            <div className="w-12 h-12 rounded-2xl bg-orange-50 dark:bg-orange-900/30 text-orange-500 dark:text-orange-400 flex items-center justify-center group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-all shadow-sm border border-orange-100/30 dark:border-orange-800/30">
                                                 <BookOpen size={24} />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <h4 className="font-black text-slate-800 text-base truncate group-hover:text-blue-700 transition-colors">
+                                                <h4 className="font-black text-slate-800 dark:text-white text-base truncate group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">
                                                     {res.title}
                                                 </h4>
-                                                <p className="text-xs text-slate-400 truncate flex items-center gap-2 mt-1 font-bold">
+                                                <p className="text-xs text-slate-400 dark:text-slate-500 truncate flex items-center gap-2 mt-1 font-bold">
                                                     <span>External Resource</span>
-                                                    <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                                                    <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
                                                     <span className="text-blue-400">Click to view</span>
                                                 </p>
                                             </div>
-                                            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-blue-50 group-hover:text-blue-500 transition-all border border-transparent group-hover:border-blue-100">
+                                            <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-700 flex items-center justify-center text-slate-300 dark:text-slate-500 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-all border border-transparent group-hover:border-blue-100 dark:group-hover:border-blue-800">
                                                 <ExternalLink size={18} />
                                             </div>
                                         </a>
                                     ))}
                                     {lessonPlan.resources.length === 0 && (
-                                        <div className="py-12 px-6 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200 text-center space-y-3">
-                                            <BookOpen size={24} className="mx-auto text-slate-300" />
-                                            <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No materials added yet</p>
+                                        <div className="py-12 px-6 bg-slate-50/50 dark:bg-slate-800/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-700 text-center space-y-3">
+                                            <BookOpen size={24} className="mx-auto text-slate-300 dark:text-slate-600" />
+                                            <p className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-xs">No materials added yet</p>
                                         </div>
                                     )}
                                 </div>
@@ -538,18 +538,18 @@ const LevelOverview = () => {
 
                             {/* New Assessment Card */}
                             <div className="lg:col-span-4">
-                                <div className="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-2xl shadow-slate-200/60 space-y-8 relative overflow-hidden group">
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full blur-3xl opacity-50 -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
+                                <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-10 border border-slate-100 dark:border-slate-700 shadow-2xl shadow-slate-200/60 dark:shadow-slate-900/60 space-y-8 relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 dark:bg-blue-900/20 rounded-full blur-3xl opacity-50 -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
 
                                     <div className="space-y-2 relative z-10">
-                                        <div className="flex items-center gap-2 text-blue-600 font-black text-[10px] uppercase tracking-[0.2em] mb-4">
+                                        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-black text-[10px] uppercase tracking-[0.2em] mb-4">
                                             <CheckCircle size={14} />
                                             ASSESSMENT READY
                                         </div>
-                                        <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-tight">
+                                        <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
                                             Ready to test?
                                         </h2>
-                                        <p className="text-sm text-slate-500 font-medium leading-[1.6]">
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-[1.6]">
                                             Complete the assessment to validate your knowledge of Level {lessonPlan.level_number ?? levelId} fundamentals and earn your badge.
                                         </p>
                                     </div>
@@ -575,7 +575,7 @@ const LevelOverview = () => {
                 {/* Mode selection dialog */}
                 {modeSelection.open && (
                     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] animate-in fade-in duration-300">
-                        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-[320px] w-full transform animate-in zoom-in-95 duration-200">
+                        <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-8 max-w-[320px] w-full transform animate-in zoom-in-95 duration-200 border dark:border-slate-700">
                             <div className="space-y-3">
                                 <button
                                     onClick={() => {
@@ -612,7 +612,7 @@ const LevelOverview = () => {
 
                                 <button
                                     onClick={() => setModeSelection({ open: false })}
-                                    className="w-full mt-4 py-2 text-slate-400 text-sm font-medium hover:text-slate-600 transition-colors"
+                                    className="w-full mt-4 py-2 text-slate-400 dark:text-slate-500 text-sm font-medium hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                                 >
                                     Cancel
                                 </button>

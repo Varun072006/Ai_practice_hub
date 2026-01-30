@@ -1,10 +1,42 @@
 import { Request, Response } from 'express';
-import { getTutorResponse, getInitialHint, generateLessonPlan, getFreeChatResponse, TutorContext } from '../services/aiTutorService';
+import {
+  getTutorResponse,
+  getInitialHint,
+  getFreeChatResponse,
+  getMCQHint,
+  getCodingHint,
+  checkOllamaHealth,
+  TutorContext,
+  TutorMessage,
+  generatePerformanceAnalysis
+} from '../services/aiTutorService';
 import { AuthRequest } from '../middlewares/auth';
 import logger from '../config/logger';
 import pool from '../config/database';
 import { getRows, getFirstRow } from '../utils/mysqlHelper';
 
+/**
+ * GET /api/ai-tutor/health
+ * Check Ollama connection status
+ */
+export const healthCheckController = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const health = await checkOllamaHealth();
+    res.json(health);
+  } catch (error: any) {
+    logger.error('Health check error:', error);
+    res.status(500).json({
+      isOnline: false,
+      modelAvailable: false,
+      error: 'Failed to check Ollama status'
+    });
+  }
+};
+
+/**
+ * POST /api/ai-tutor/chat
+ * Session-aware tutor chat (from Results page)
+ */
 export const chatWithTutor = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { sessionId, message } = req.body;
@@ -20,7 +52,7 @@ export const chatWithTutor = async (req: AuthRequest, res: Response): Promise<vo
     if (sessionId) {
       // Get session and question context from DB
       const sessionResult = await pool.query(
-        `SELECT s.id, s.session_type, sq.question_id, q.title, q.description, q.question_type
+        `SELECT s.id, s.session_type, sq.question_id, q.title, q.description, q.question_type, q.explanation
          FROM practice_sessions s
          JOIN session_questions sq ON s.id = sq.session_id
          JOIN questions q ON sq.question_id = q.id
@@ -53,7 +85,7 @@ export const chatWithTutor = async (req: AuthRequest, res: Response): Promise<vo
       const submission = submissionRows[0] || null;
 
       // Get failed test cases if coding question
-      let failedTestCases = [];
+      let failedTestCases: Array<{ input: string; expected: string; actual: string; error?: string }> = [];
       if (session.question_type === 'coding' && submission) {
         const testResults = await pool.query(
           `SELECT tc.input_data, tc.expected_output, tcr.actual_output, tcr.error_message
@@ -67,7 +99,12 @@ export const chatWithTutor = async (req: AuthRequest, res: Response): Promise<vo
            AND tcr.passed = false`,
           [sessionId, questionId, userId]
         );
-        failedTestCases = getRows(testResults);
+        failedTestCases = getRows(testResults).map((tc: any) => ({
+          input: tc.input_data,
+          expected: tc.expected_output,
+          actual: tc.actual_output || '',
+          error: tc.error_message || undefined,
+        }));
       }
 
       // Get correct answer for MCQ
@@ -94,24 +131,20 @@ export const chatWithTutor = async (req: AuthRequest, res: Response): Promise<vo
       context = {
         questionTitle: session.title,
         questionDescription: session.description,
-        userCode: submission?.submitted_code || null,
-        correctCode: correctCode,
-        failedTestCases: failedTestCases.map((tc: any) => ({
-          input: tc.input_data,
-          expected: tc.expected_output,
-          actual: tc.actual_output || '',
-          error: tc.error_message || undefined,
-        })),
+        userCode: submission?.submitted_code || undefined,
+        correctCode: correctCode || undefined,
+        failedTestCases,
         questionType: session.question_type as 'coding' | 'mcq',
-        selectedAnswer: submission?.selected_option_id || null,
-        correctAnswer: correctAnswer,
+        selectedAnswer: submission?.selected_option_id || undefined,
+        correctAnswer: correctAnswer || undefined,
+        explanation: session.explanation || undefined,
       };
     } else {
-      // General chat context (no session support)
+      // General chat context (no session)
       context = {
         questionTitle: "General Coding Help",
-        questionDescription: "The user is asking for general assistance with programming concepts, debugging, or advice unrelated to a specific practice session.",
-        questionType: 'coding', // Default type
+        questionDescription: "The user is asking for general assistance.",
+        questionType: 'coding',
       };
     }
 
@@ -123,6 +156,10 @@ export const chatWithTutor = async (req: AuthRequest, res: Response): Promise<vo
   }
 };
 
+/**
+ * GET /api/ai-tutor/hint/:sessionId
+ * Get initial hint for a session
+ */
 export const getInitialHintController = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { sessionId } = req.params;
@@ -133,9 +170,9 @@ export const getInitialHintController = async (req: AuthRequest, res: Response):
       return;
     }
 
-    // Get session context (similar to chatWithTutor)
+    // Get session context
     const sessionResult = await pool.query(
-      `SELECT s.session_type, sq.question_id, q.title, q.question_type
+      `SELECT s.session_type, sq.question_id, q.title, q.description, q.question_type
        FROM practice_sessions s
        JOIN session_questions sq ON s.id = sq.session_id
        JOIN questions q ON sq.question_id = q.id
@@ -155,7 +192,7 @@ export const getInitialHintController = async (req: AuthRequest, res: Response):
 
     const context: TutorContext = {
       questionTitle: session.title,
-      questionDescription: '',
+      questionDescription: session.description || '',
       questionType: session.question_type as 'coding' | 'mcq',
     };
 
@@ -168,53 +205,18 @@ export const getInitialHintController = async (req: AuthRequest, res: Response):
   }
 };
 
-export const generateLessonController = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const { courseId, levelId } = req.body;
-    const userId = req.user?.userId;
-
-    if (!userId) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
-
-    // Fetch Course & Level details
-    const courseResult = await pool.query('SELECT title FROM courses WHERE id = ?', [courseId]);
-    const levelResult = await pool.query('SELECT title, description FROM levels WHERE id = ?', [levelId]);
-
-    const courseRows = getRows(courseResult);
-    const levelRows = getRows(levelResult);
-
-    if (courseRows.length === 0 || levelRows.length === 0) {
-      res.status(404).json({ error: 'Course or Level not found' });
-      return;
-    }
-
-    const courseTitle = courseRows[0].title;
-    const levelTitle = levelRows[0].title;
-    const levelDescription = levelRows[0].description;
-
-    const lessonPlan = await generateLessonPlan(courseTitle, levelTitle, levelDescription, levelId);
-    res.json(lessonPlan);
-
-  } catch (error: any) {
-    logger.error('Generate Lesson Plan error:', error);
-    res.status(500).json({ error: 'Failed to generate lesson plan' });
-  }
-};
-
 /**
- * Lightweight free-form AI coach endpoint that is not tied to a specific session.
- * This lets the user ask general programming or course-related questions from the
- * dedicated AI Coach page while reusing the same tutor logic.
+ * POST /api/ai-tutor/free-chat
+ * Free-form AI coach chat (from AI Coach page)
+ * Supports conversation history for contextual responses
  */
 export const freeChatWithTutor = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
-    const { message, topic, questionType } = req.body as {
+    const { message, conversationHistory, topic } = req.body as {
       message?: string;
+      conversationHistory?: TutorMessage[];
       topic?: string;
-      questionType?: 'coding' | 'mcq';
     };
 
     if (!userId) {
@@ -227,15 +229,221 @@ export const freeChatWithTutor = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    const safeQuestionType: 'coding' | 'mcq' =
-      questionType === 'mcq' ? 'mcq' : 'coding';
+    // Validate and sanitize conversation history
+    const sanitizedHistory: TutorMessage[] = (conversationHistory || [])
+      .filter(msg => msg.role && msg.content && ['user', 'assistant'].includes(msg.role))
+      .map(msg => ({
+        role: msg.role as 'user' | 'assistant',
+        content: String(msg.content).slice(0, 4000) // Limit message length
+      }));
 
-    // Get AI tutor response
-    const response = await getFreeChatResponse(message, topic, safeQuestionType);
+    // Get AI tutor response with conversation context
+    const response = await getFreeChatResponse(message, sanitizedHistory, topic);
 
-    res.json({ message: response });
+    res.json({ message: response, reply: response });
   } catch (error: any) {
     logger.error('AI Coach free-chat error:', error);
     res.status(500).json({ error: 'Failed to get tutor response' });
+  }
+};
+
+/**
+ * POST /api/ai-tutor/mcq-hint
+ * Get AI-powered hint for MCQ questions
+ */
+export const getMCQHintController = async (req: AuthRequest, res: Response): Promise<void> => {
+  const DEFAULT_FALLBACK = "Review the question's key terms. Try to eliminate obviously incorrect options first, then compare the remaining choices carefully.";
+
+  try {
+    const userId = req.user?.userId;
+    const { questionId, attemptCount } = req.body;
+
+    logger.info(`[MCQ Hint] Request for questionId: ${questionId}, attemptCount: ${attemptCount}`);
+
+    if (!userId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    if (!questionId) {
+      res.status(400).json({ error: 'Question ID is required' });
+      return;
+    }
+
+    // Get question details
+    const cleanQuestionId = typeof questionId === 'string' ? questionId.replace(/\s+/g, '') : questionId;
+
+    let question = null;
+    let options: string[] = [];
+
+    try {
+      const questionResult = await pool.query(
+        `SELECT q.title, q.description, 
+                GROUP_CONCAT(mo.option_text ORDER BY mo.option_label SEPARATOR '|||') as options
+         FROM questions q
+         LEFT JOIN mcq_options mo ON q.id = mo.question_id
+         WHERE q.id = ?
+         GROUP BY q.id`,
+        [cleanQuestionId]
+      );
+      question = getFirstRow(questionResult);
+    } catch (dbError: any) {
+      logger.error(`[MCQ Hint DB ERROR] Failed to fetch question ${cleanQuestionId}: ${dbError.message}`);
+      // Don't fail the request, just use fallback if we can't get question details
+    }
+
+    if (!question) {
+      logger.warn(`[MCQ Hint] Question not found or DB error for ID: ${cleanQuestionId}. Returning fallback.`);
+      // Return fallback instead of 404 to keep UI smooth
+      res.json({ hint: DEFAULT_FALLBACK });
+      return;
+    }
+
+    logger.info(`[MCQ Hint] Question found: ${question.title}`);
+    options = question.options ? question.options.split('|||') : [];
+
+    try {
+      const hint = await getMCQHint(
+        question.title || '',
+        question.description || '',
+        options,
+        attemptCount || 1
+      );
+
+      logger.info(`[MCQ Hint] Hint generated successfully`);
+      res.json({ hint });
+    } catch (aiError: any) {
+      logger.error(`[MCQ Hint AI ERROR] Service failed: ${aiError.message}`);
+      res.json({ hint: DEFAULT_FALLBACK });
+    }
+
+  } catch (error: any) {
+    logger.error(`[MCQ Hint CRITICAL ERROR] Unexpected error: ${error.message}`, { stack: error.stack });
+    // Even in critical error, try to return a hint to the user
+    res.json({ hint: DEFAULT_FALLBACK });
+  }
+};
+
+/**
+ * POST /api/ai-tutor/coding-hint
+ * Get AI-powered hint for coding questions (including HTML/CSS)
+ */
+export const getCodingHintController = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    const { questionId, userCode, attemptCount, questionType } = req.body;
+
+    if (!userId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    if (!questionId) {
+      res.status(400).json({ error: 'Question ID is required' });
+      return;
+    }
+
+    // Get question details
+    const questionResult = await pool.query(
+      `SELECT q.title, q.description, q.question_type FROM questions q WHERE q.id = ?`,
+      [questionId]
+    );
+
+    const question = getFirstRow(questionResult);
+    if (!question) {
+      res.status(404).json({ error: 'Question not found' });
+      return;
+    }
+
+    // Get sample test cases (non-hidden)
+    const testCasesResult = await pool.query(
+      `SELECT input_data, expected_output FROM test_cases 
+       WHERE question_id = ? AND is_hidden = false 
+       ORDER BY id LIMIT 2`,
+      [questionId]
+    );
+    const testCases = getRows(testCasesResult).map((tc: any) => ({
+      input: tc.input_data,
+      expected: tc.expected_output
+    }));
+
+    const hint = await getCodingHint(
+      question.title,
+      question.description,
+      userCode || null,
+      testCases,
+      attemptCount || 1,
+      questionType || question.question_type || 'coding'
+    );
+
+    res.json({ hint });
+  } catch (error: any) {
+    logger.error('Coding hint error:', error);
+    res.status(500).json({ error: 'Failed to get hint' });
+  }
+};
+
+/**
+ * GET /api/ai-tutor/analysis/:sessionId
+ * Generate comprehensive performance analysis
+ */
+export const getAnalysisController = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { sessionId } = req.params;
+    const userId = req.user?.userId;
+
+    if (!sessionId) {
+      res.status(400).json({ error: 'Session ID is required' });
+      return;
+    }
+
+    // 1. Fetch Session Details (JOIN for course/level info)
+    const sessionResult = await pool.query(
+      `SELECT s.id, s.session_type, 
+              c.title as course_title, l.title as level_title,
+              (SELECT COUNT(*) FROM user_progress WHERE session_id = s.id AND is_correct = 1) as correct_count,
+              (SELECT COUNT(*) FROM user_progress WHERE session_id = s.id) as total_questions
+       FROM practice_sessions s
+       JOIN levels l ON s.level_id = l.id
+       JOIN courses c ON l.course_id = c.id
+       WHERE s.id = ? AND s.user_id = ?`,
+      [sessionId, userId]
+    );
+
+    const session = getFirstRow(sessionResult);
+
+    if (!session) {
+      res.status(404).json({ error: 'Session not found' });
+      return;
+    }
+
+    // 2. Fetch Questions & Performance
+    const questionsResult = await pool.query(
+      `SELECT q.title, q.concepts, up.is_correct, up.submission_data, 
+              COALESCE(TIMESTAMPDIFF(SECOND, up.started_at, up.completed_at), 60) as time_taken
+       FROM user_progress up
+       JOIN questions q ON up.question_id = q.id
+       WHERE up.session_id = ?`,
+      [sessionId]
+    );
+    const questions = getRows(questionsResult);
+
+    // Calculate score
+    const score = Math.round((session.correct_count / (session.total_questions || 1)) * 100);
+
+    // 3. Generate Analysis
+    const analysis = await generatePerformanceAnalysis(
+      session.session_type,
+      session.course_title,
+      session.level_title,
+      score,
+      questions
+    );
+
+    res.json(analysis);
+
+  } catch (error: any) {
+    logger.error(`[Performance Analysis ERROR] Failed for session ${req.params.sessionId}: ${error.message}`);
+    res.status(500).json({ error: `Failed: ${error.message}` });
   }
 };

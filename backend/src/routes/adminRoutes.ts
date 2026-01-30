@@ -21,7 +21,7 @@ import {
   updateLevelTimeLimitController,
   uploadCSVQuestionsController,
   uploadCSVMiddleware,
-  generateQuestionsWithAIController,
+
   updateLevelDetailsController,
   createUserController,
   updateUserController,
@@ -60,7 +60,7 @@ router.put('/levels/:levelId/time-limit', updateLevelTimeLimitController);
 router.put('/levels/:levelId/details', updateLevelDetailsController);
 router.post('/questions/bulk-delete', deleteQuestionsController);
 router.post('/questions/upload-csv', uploadCSVMiddleware, uploadCSVQuestionsController);
-router.post('/questions/generate-ai', generateQuestionsWithAIController);
+
 
 
 export default router;

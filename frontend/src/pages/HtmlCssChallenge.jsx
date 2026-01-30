@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { Clock, CheckCircle, ChevronLeft, Trophy } from "lucide-react";
+import { Clock, CheckCircle, ChevronLeft, Trophy, Lightbulb, X, Sun, Moon } from "lucide-react";
+import { useTheme } from "../context/ThemeContext";
 import CodeEditor from "../components/CodeEditor";
 import PreviewFrame from "../components/PreviewFrame";
 import api from "../services/api";
@@ -9,6 +10,7 @@ export default function HtmlCssChallenge() {
     const { courseId, levelId } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
+    const { theme, toggleTheme } = useTheme();
 
     const [session, setSession] = useState(null);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -28,6 +30,11 @@ export default function HtmlCssChallenge() {
     const previewRef = useRef();
     const expectedPreviewRef = useRef();
     const [fullScreenView, setFullScreenView] = useState(null);
+    // AI Hint state
+    const [hint, setHint] = useState(null);
+    const [loadingHint, setLoadingHint] = useState(false);
+    const [showHint, setShowHint] = useState(false);
+    const [hintAttemptCount, setHintAttemptCount] = useState(1);
 
     // Start session on mount - same as existing practice page
     useEffect(() => {
@@ -191,6 +198,11 @@ export default function HtmlCssChallenge() {
         // Load expected code for this question
         setExpectedCode(expectedCodeByQuestion[index] || { html: '', css: '', js: '' });
 
+        // Clear hints for new question
+        setHint(null);
+        setShowHint(false);
+        setHintAttemptCount(1);
+
         setPreviewTab("live");
     };
 
@@ -353,11 +365,37 @@ export default function HtmlCssChallenge() {
         return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     };
 
+    const handleGetHint = async () => {
+        if (hint) {
+            setShowHint(true);
+            return;
+        }
+
+        setLoadingHint(true);
+        setShowHint(true);
+        try {
+            const currentQ = session.questions[currentQuestionIndex];
+            const response = await api.post('/ai-tutor/coding-hint', {
+                questionId: currentQ.question_id,
+                userCode: code.html + code.css + code.js || null,
+                attemptCount: hintAttemptCount,
+                questionType: 'html-css-challenge'
+            });
+            setHint(response.data.hint);
+            setHintAttemptCount(prev => prev + 1);
+        } catch (error) {
+            console.error('Failed to get hint:', error);
+            setHint("Think about the HTML structure first. What elements do you need? For CSS, consider using Flexbox or Grid for layout.");
+        } finally {
+            setLoadingHint(false);
+        }
+    };
+
     if (loading || !session) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50">
-                <div className="w-12 h-12 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-4" />
-                <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Loading Challenge...</p>
+            <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900">
+                <div className="w-12 h-12 border-4 border-slate-200 dark:border-slate-700 border-t-blue-600 rounded-full animate-spin mb-4" />
+                <p className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-[10px]">Loading Challenge...</p>
             </div>
         );
     }
@@ -366,29 +404,37 @@ export default function HtmlCssChallenge() {
     const currentAssets = assetsByQuestion[currentQuestionIndex] || [];
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300">
             {/* Header */}
-            <header className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+            <header className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 sticky top-0 z-10 shadow-sm">
                 <div className="px-6 py-4">
                     <div className="flex items-center justify-between mb-3">
                         <div>
                             <div className="flex items-center gap-3">
-                                <h1 className="text-2xl font-bold">{currentQuestion.title || 'HTML/CSS Challenge'}</h1>
-                                <span className="px-2 py-0.5 bg-slate-100 text-slate-400 text-[10px] font-mono rounded border border-slate-200">
+                                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{currentQuestion.title || 'HTML/CSS Challenge'}</h1>
+                                <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-300 text-[10px] font-mono rounded border border-slate-200 dark:border-slate-600">
                                     Level {levelId} - Q{currentQuestionIndex + 1}
                                 </span>
                             </div>
-                            <p className="text-gray-600">
+                            <p className="text-gray-600 dark:text-gray-400">
                                 {session.questions.length > 1 &&
                                     `Question ${currentQuestionIndex + 1} of ${session.questions.length}`}
                             </p>
                         </div>
 
                         <div className="flex items-center gap-3">
+                            <button
+                                onClick={toggleTheme}
+                                className="p-2 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-slate-600 hover:bg-gray-200 dark:hover:bg-slate-600 transition-all font-medium flex items-center justify-center mr-2"
+                                title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                            >
+                                {theme === 'dark' ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-600" />}
+                            </button>
+
                             <div
                                 className={`px-3 py-2 rounded border font-mono font-bold flex items-center gap-2 ${timeLeft <= 300
-                                    ? "bg-red-50 border-red-300 text-red-600"
-                                    : "bg-blue-50 border-blue-300 text-blue-600"
+                                    ? "bg-red-50 dark:bg-red-900/30 border-red-300 dark:border-red-700 text-red-600 dark:text-red-400"
+                                    : "bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400"
                                     }`}
                             >
                                 <Clock size={16} /> {formatTime(timeLeft)}
@@ -403,10 +449,10 @@ export default function HtmlCssChallenge() {
                                                 key={q.question_id}
                                                 onClick={() => handleQuestionChange(index)}
                                                 className={`w-10 h-10 rounded flex items-center justify-center font-semibold ${index === currentQuestionIndex
-                                                    ? "bg-blue-600 text-white ring-2 ring-blue-300"
+                                                    ? "bg-blue-600 text-white ring-2 ring-blue-300 dark:ring-blue-500"
                                                     : isSubmitted
                                                         ? "bg-green-500 text-white"
-                                                        : "bg-gray-200 text-gray-700"
+                                                        : "bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300"
                                                     }`}
                                                 title={`Question ${index + 1}`}
                                             >
@@ -423,13 +469,25 @@ export default function HtmlCssChallenge() {
                     <div className="flex gap-3 flex-wrap">
                         <button
                             onClick={() => navigate(`/courses/${courseId}/levels`)}
-                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium flex items-center gap-2"
+                            className="px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 font-medium flex items-center gap-2 transition-colors"
                         >
                             <ChevronLeft size={18} />
                             Back to Levels
                         </button>
 
-
+                        <button
+                            onClick={handleGetHint}
+                            disabled={loadingHint}
+                            className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-medium flex items-center gap-2 transition-colors"
+                            title="Get AI Hint"
+                        >
+                            {loadingHint ? (
+                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                                <Lightbulb size={18} />
+                            )}
+                            Hint
+                        </button>
                         <button
                             onClick={handleSubmit}
                             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold flex items-center gap-2"
@@ -447,7 +505,7 @@ export default function HtmlCssChallenge() {
                         </button>
 
                         {lastSaveTime && (
-                            <span className="text-xs text-slate-400 self-center">
+                            <span className="text-xs text-slate-400 dark:text-slate-500 self-center">
                                 Saved {lastSaveTime.toLocaleTimeString()}
                             </span>
                         )}
@@ -462,7 +520,7 @@ export default function HtmlCssChallenge() {
                     {/* Toggle Instructions */}
                     <button
                         onClick={() => setShowInstructions(!showInstructions)}
-                        className="flex items-center justify-between px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                        className="flex items-center justify-between px-4 py-2 bg-indigo-600 dark:bg-indigo-700 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors"
                     >
                         <span className="font-semibold">
                             {showInstructions ? "📖 Hide Instructions" : "📖 Show Instructions"}
@@ -479,34 +537,66 @@ export default function HtmlCssChallenge() {
 
                     {/* Instructions */}
                     {showInstructions && (
-                        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                            <h2 className="text-lg font-bold mb-3">
+                        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
+                            <h2 className="text-lg font-bold mb-3 text-gray-900 dark:text-white">
                                 {currentQuestion.title || "Challenge Instructions"}
                             </h2>
-                            <div className="text-gray-700 whitespace-pre-wrap mb-4">
+                            <div className="text-gray-700 dark:text-slate-300 whitespace-pre-wrap mb-4">
                                 {currentQuestion.description}
                             </div>
 
+                            {/* AI Hint Panel */}
+                            {showHint && (
+                                <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 mb-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <Lightbulb size={18} className="text-amber-600" />
+                                            <span className="font-semibold text-amber-700 dark:text-amber-400">AI Hint</span>
+                                        </div>
+                                        <button
+                                            onClick={() => setShowHint(false)}
+                                            className="text-amber-600 hover:text-amber-800 dark:hover:text-amber-300"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    </div>
+                                    {loadingHint ? (
+                                        <div className="flex items-center gap-2 text-amber-600">
+                                            <div className="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin"></div>
+                                            <span>Generating hint...</span>
+                                        </div>
+                                    ) : (
+                                        <p className="text-gray-700 dark:text-slate-300 whitespace-pre-wrap">{hint}</p>
+                                    )}
+                                    <button
+                                        onClick={() => { setHint(null); handleGetHint(); }}
+                                        className="mt-2 text-xs text-amber-600 hover:text-amber-800 dark:hover:text-amber-300"
+                                    >
+                                        Get another hint
+                                    </button>
+                                </div>
+                            )}
+
                             {/* Constraints */}
                             {currentQuestion.constraints && (
-                                <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                                    <h3 className="font-semibold text-orange-900 mb-2">Constraints:</h3>
-                                    <p className="text-sm text-orange-800">{currentQuestion.constraints}</p>
+                                <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50 rounded-lg">
+                                    <h3 className="font-semibold text-orange-900 dark:text-orange-300 mb-2">Constraints:</h3>
+                                    <p className="text-sm text-orange-800 dark:text-orange-400">{currentQuestion.constraints}</p>
                                 </div>
                             )}
 
                             {/* Assets Section */}
                             {currentAssets.length > 0 && (
-                                <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                                <div className="mt-4 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/50 rounded-lg">
                                     <div className="flex items-center gap-2 mb-3">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-600"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                                        <h3 className="font-semibold text-purple-900">Description</h3>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-600 dark:text-purple-400"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                                        <h3 className="font-semibold text-purple-900 dark:text-purple-300">Description</h3>
                                     </div>
                                     <div className="space-y-2">
                                         {currentAssets.map((asset, idx) => (
-                                            <div key={idx} className="flex items-center justify-between p-2 bg-white rounded border border-purple-100">
-                                                <span className="text-purple-700 font-medium text-sm">{asset.name}</span>
-                                                <code className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">{asset.path}</code>
+                                            <div key={idx} className="flex items-center justify-between p-2 bg-white dark:bg-slate-700 rounded border border-purple-100 dark:border-purple-800/50">
+                                                <span className="text-purple-700 dark:text-purple-300 font-medium text-sm">{asset.name}</span>
+                                                <code className="text-xs bg-gray-100 dark:bg-slate-800 px-2 py-1 rounded text-gray-600 dark:text-slate-400">{asset.path}</code>
                                             </div>
                                         ))}
                                     </div>
@@ -515,9 +605,9 @@ export default function HtmlCssChallenge() {
 
                             {/* Output Format - Hide Output if it contains assets */}
                             {currentQuestion.output_format && currentAssets.length === 0 && (
-                                <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                                    <h3 className="font-semibold text-green-900 mb-2">Sample Output:</h3>
-                                    <pre className="text-sm text-green-800 whitespace-pre-wrap">{currentQuestion.output_format}</pre>
+                                <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-lg">
+                                    <h3 className="font-semibold text-green-900 dark:text-green-300 mb-2">Sample Output:</h3>
+                                    <pre className="text-sm text-green-800 dark:text-green-400 whitespace-pre-wrap">{currentQuestion.output_format}</pre>
                                 </div>
                             )}
                         </div>
@@ -525,7 +615,7 @@ export default function HtmlCssChallenge() {
 
                     {/* Code Editor */}
                     <div
-                        className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex-1"
+                        className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm flex-1"
                         style={!showInstructions ? { minHeight: "calc(100vh - 250px)" } : {}}
                     >
                         <CodeEditor code={code} onChange={setCode} />
@@ -535,14 +625,14 @@ export default function HtmlCssChallenge() {
                 {/* Right Panel: Preview */}
                 <div className="flex flex-col h-full overflow-hidden relative">
                     <div className="flex-1 flex flex-col min-h-0">
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex-1 flex flex-col min-h-0 overflow-hidden">
-                            <div className="p-3 border-b flex flex-wrap gap-3 items-center justify-between bg-gray-50 rounded-t-xl">
-                                <div className="inline-flex rounded-md border bg-white p-1 shadow-sm">
+                        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-0 overflow-hidden">
+                            <div className="p-3 border-b dark:border-slate-700 flex flex-wrap gap-3 items-center justify-between bg-gray-50 dark:bg-slate-900 rounded-t-xl">
+                                <div className="inline-flex rounded-md border dark:border-slate-600 bg-white dark:bg-slate-800 p-1 shadow-sm">
                                     <button
                                         onClick={() => setPreviewTab("live")}
                                         className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${previewTab === "live"
                                             ? "bg-blue-600 text-white shadow"
-                                            : "text-gray-600 hover:text-gray-900"
+                                            : "text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white"
                                             }`}
                                     >
                                         Live Preview
@@ -551,7 +641,7 @@ export default function HtmlCssChallenge() {
                                         onClick={() => setPreviewTab("expected")}
                                         className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${previewTab === "expected"
                                             ? "bg-green-600 text-white shadow"
-                                            : "text-gray-600 hover:text-gray-900"
+                                            : "text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white"
                                             }`}
                                     >
                                         Expected Result
@@ -559,12 +649,12 @@ export default function HtmlCssChallenge() {
                                 </div>
                                 <button
                                     onClick={() => setFullScreenView(previewTab)}
-                                    className="text-xs px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 flex items-center gap-1"
+                                    className="text-xs px-3 py-1 rounded bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300 flex items-center gap-1 transition-colors"
                                 >
                                     ⤢ Full Screen
                                 </button>
                             </div>
-                            <div className="flex-1 relative overflow-auto bg-gray-100">
+                            <div className="flex-1 relative overflow-auto bg-gray-100 dark:bg-slate-700">
                                 {previewTab === "live" ? (
                                     <PreviewFrame ref={previewRef} code={code} assets={currentAssets} />
                                 ) : (
@@ -572,10 +662,10 @@ export default function HtmlCssChallenge() {
                                     expectedCode.html || expectedCode.css || expectedCode.js ? (
                                         <PreviewFrame ref={expectedPreviewRef} code={expectedCode} assets={currentAssets} />
                                     ) : (
-                                        <div className="h-full flex items-center justify-center text-sm text-gray-500 p-8">
+                                        <div className="h-full flex items-center justify-center text-sm text-gray-500 dark:text-slate-400 p-8">
                                             <div className="text-center">
                                                 <p className="mb-2">Expected design preview will be shown here when available.</p>
-                                                <p className="text-xs text-gray-400">Compare your output with the expected result to verify your solution.</p>
+                                                <p className="text-xs text-gray-400 dark:text-slate-500">Compare your output with the expected result to verify your solution.</p>
                                             </div>
                                         </div>
                                     )
@@ -588,14 +678,14 @@ export default function HtmlCssChallenge() {
 
             {/* Full Screen Modal */}
             {fullScreenView && (
-                <div className="fixed inset-0 z-50 bg-white flex flex-col">
-                    <div className={`p-4 border-b flex justify-between items-center ${fullScreenView === "expected" ? "bg-green-50" : "bg-gray-50"}`}>
-                        <h2 className="text-xl font-bold flex items-center gap-2">
+                <div className="fixed inset-0 z-50 bg-white dark:bg-slate-900 flex flex-col">
+                    <div className={`p-4 border-b dark:border-slate-700 flex justify-between items-center ${fullScreenView === "expected" ? "bg-green-50 dark:bg-green-900/20" : "bg-gray-50 dark:bg-slate-800"}`}>
+                        <h2 className="text-xl font-bold flex items-center gap-2 text-gray-900 dark:text-white">
                             {fullScreenView === "live" ? "🖥️ Live Preview (Full Screen)" : "✅ Expected Result (Full Screen)"}
                         </h2>
                         <button
                             onClick={() => setFullScreenView(null)}
-                            className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 flex items-center gap-2"
+                            className="px-4 py-2 bg-gray-800 dark:bg-slate-700 text-white rounded hover:bg-gray-700 dark:hover:bg-slate-600 flex items-center gap-2 transition-colors"
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -603,8 +693,8 @@ export default function HtmlCssChallenge() {
                             Exit Full Screen
                         </button>
                     </div>
-                    <div className="flex-1 relative bg-gray-100 overflow-hidden p-4">
-                        <div className="h-full w-full bg-white shadow-xl rounded-lg overflow-hidden border">
+                    <div className="flex-1 relative bg-gray-100 dark:bg-slate-800 overflow-hidden p-4">
+                        <div className="h-full w-full bg-white shadow-xl rounded-lg overflow-hidden border dark:border-slate-600">
                             {/* Show live preview or expected result based on mode */}
                             <PreviewFrame
                                 ref={fullScreenView === "expected" ? expectedPreviewRef : previewRef}

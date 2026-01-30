@@ -192,21 +192,21 @@ const AdminCourseLevels = () => {
   };
 
 
-  if (loading) return <div className="flex min-h-screen items-center justify-center text-blue-600">Loading...</div>;
+  if (loading) return <div className="flex min-h-screen items-center justify-center text-blue-600 bg-gray-50 dark:bg-slate-900"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
 
   return (
-    <div className="flex min-h-screen bg-gray-50 font-sans">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-slate-900 font-sans">
       <Sidebar />
       <div className="flex-1 p-8 overflow-y-auto">
 
         {/* Header Section */}
         <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <button onClick={() => navigate('/admin/courses')} className="flex items-center text-gray-500 hover:text-blue-600 transition-colors mb-2">
+            <button onClick={() => navigate('/admin/courses')} className="flex items-center text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mb-2">
               <ArrowLeft size={18} className="mr-1" /> Back
             </button>
-            <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">{course?.title}</h1>
-            <p className="text-gray-500 mt-1">{course?.levels?.length || 0} Levels • Last updated {new Date().toLocaleDateString()}</p>
+            <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">{course?.title}</h1>
+            <p className="text-gray-500 dark:text-slate-400 mt-1">{course?.levels?.length || 0} Levels • Last updated {new Date().toLocaleDateString()}</p>
           </div>
           <button
             onClick={handleAddLevel}
@@ -219,23 +219,23 @@ const AdminCourseLevels = () => {
         {/* Levels Grid */}
         <div className="space-y-8">
           {levels.length === 0 && (
-            <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-gray-200">
-              <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-500">
+            <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-700">
+              <div className="bg-blue-50 dark:bg-blue-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-500 dark:text-blue-400">
                 <Sparkles size={32} />
               </div>
-              <h3 className="text-xl font-bold text-gray-800">No Levels Yet</h3>
-              <p className="text-gray-500 max-w-md mx-auto mt-2 mb-6">Start building your course structure by adding the first level.</p>
-              <button onClick={handleAddLevel} className="text-blue-600 font-semibold hover:underline">Create First Level</button>
+              <h3 className="text-xl font-bold text-gray-800 dark:text-white">No Levels Yet</h3>
+              <p className="text-gray-500 dark:text-slate-400 max-w-md mx-auto mt-2 mb-6">Start building your course structure by adding the first level.</p>
+              <button onClick={handleAddLevel} className="text-blue-600 dark:text-blue-400 font-semibold hover:underline">Create First Level</button>
             </div>
           )}
 
           {levels.map((level, idx) => (
-            <div key={level.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
+            <div key={level.id} className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm dark:shadow-slate-900/50 border border-gray-100 dark:border-slate-700 overflow-hidden hover:shadow-md transition-shadow">
 
               {/* Level Header */}
-              <div className="p-6 border-b border-gray-50 flex items-start justify-between bg-gradient-to-r from-white to-gray-50/50">
+              <div className="p-6 border-b border-gray-50 dark:border-slate-700 flex items-start justify-between bg-gradient-to-r from-white dark:from-slate-800 to-gray-50/50 dark:to-slate-800/50">
                 <div className="flex items-center gap-4">
-                  <div className="bg-blue-100 text-blue-700 w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold border border-blue-200">
+                  <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold border border-blue-200 dark:border-blue-800">
                     {idx + 1}
                   </div>
                   <div className="flex-1">
@@ -272,17 +272,17 @@ const AdminCourseLevels = () => {
                               setEditingLevel(null);
                             }
                           }}
-                          className="text-xl font-bold text-gray-800 border-2 border-blue-500 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="text-xl font-bold text-gray-800 dark:text-white border-2 border-blue-500 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700"
                           autoFocus
                         />
                       ) : (
                         <div className="flex items-center gap-2">
-                          <h3 className="text-xl font-bold text-gray-800">
+                          <h3 className="text-xl font-bold text-gray-800 dark:text-white">
                             {level.title || levelTitleMap[level.level_number]}
                           </h3>
                           <button
                             onClick={() => setEditingLevel(level.id)}
-                            className="text-gray-400 hover:text-blue-600 transition-colors p-1"
+                            className="text-gray-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-1"
                             title="Edit title"
                           >
                             <Edit size={16} />
@@ -292,7 +292,7 @@ const AdminCourseLevels = () => {
                       {editingLevel === level.id ? (
                         <button
                           onClick={() => setEditingLevel(null)}
-                          className="text-gray-400 hover:text-gray-600"
+                          className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300"
                           title="Cancel editing"
                         >
                           <X size={18} />
@@ -331,20 +331,20 @@ const AdminCourseLevels = () => {
                               setEditingDescription(null);
                             }
                           }}
-                          className="w-full text-sm text-gray-700 border-2 border-blue-500 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                          className="w-full text-sm text-gray-700 dark:text-slate-300 border-2 border-blue-500 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-white dark:bg-slate-700"
                           rows={3}
                           autoFocus
                           placeholder="Enter level description..."
                         />
-                        <p className="text-xs text-gray-400 mt-1">Press Ctrl+Enter to save, Esc to cancel</p>
+                        <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Press Ctrl+Enter to save, Esc to cancel</p>
                       </div>
                     ) : (
                       <div className="flex flex-col gap-2 mt-0.5">
                         <div className="flex items-start gap-2">
-                          <p className="text-gray-500 text-sm flex-1">{level.description || 'No description'}</p>
+                          <p className="text-gray-500 dark:text-slate-400 text-sm flex-1">{level.description || 'No description'}</p>
                           <button
                             onClick={() => setEditingDescription(level.id)}
-                            className="text-gray-400 hover:text-blue-600 transition-colors p-1 flex-shrink-0"
+                            className="text-gray-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-1 flex-shrink-0"
                             title="Edit details"
                           >
                             <Edit size={14} />
@@ -352,9 +352,9 @@ const AdminCourseLevels = () => {
                         </div>
                         {/* Image Preview if exists */}
                         {level.image_url && (
-                          <div className="mt-2 text-xs text-gray-400 flex items-center gap-2">
-                            <span className="font-semibold text-xs border border-gray-200 px-1 rounded bg-gray-50">IMAGE</span>
-                            <a href={level.image_url} target="_blank" rel="noopener noreferrer" className="truncate max-w-[200px] hover:underline hover:text-blue-500">{level.image_url}</a>
+                          <div className="mt-2 text-xs text-gray-400 dark:text-slate-500 flex items-center gap-2">
+                            <span className="font-semibold text-xs border border-gray-200 dark:border-slate-600 px-1 rounded bg-gray-50 dark:bg-slate-700">IMAGE</span>
+                            <a href={level.image_url} target="_blank" rel="noopener noreferrer" className="truncate max-w-[200px] hover:underline hover:text-blue-500 dark:hover:text-blue-400">{level.image_url}</a>
                           </div>
                         )}
                       </div>
@@ -364,26 +364,26 @@ const AdminCourseLevels = () => {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => navigate(`/courses/${courseId}/level/${level.id}/learn`)}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border border-blue-100 font-medium text-sm"
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors border border-blue-100 dark:border-blue-800 font-medium text-sm"
                   >
                     <Edit size={16} /> View Overview
                   </button>
                   <button
                     onClick={() => setCsvUploadModal({ show: true, levelId: level.id, uploading: false, questionType: null })}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors border border-green-100 font-medium text-sm"
+                    className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors border border-green-100 dark:border-green-800 font-medium text-sm"
                   >
                     <Upload size={16} /> Import CSV
                   </button>
                   <button
                     onClick={() => navigate(`/admin/questions/create?levelId=${level.id}&courseId=${courseId}`)}
-                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                    className="p-2 text-gray-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"
                     title="Add Manual Question"
                   >
                     <Plus size={20} />
                   </button>
                   <button
                     onClick={() => handleDeleteLevel(level.id)}
-                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg"
+                    className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"
                     title="Delete Level"
                   >
                     <Trash2 size={20} />
@@ -392,7 +392,7 @@ const AdminCourseLevels = () => {
               </div>
 
               {/* Questions Body - Navigate to questions page when buttons are clicked */}
-              <div className="p-6 bg-gray-50/30">
+              <div className="p-6 bg-gray-50/30 dark:bg-slate-800/50">
                 <div className="flex items-center gap-4">
                   <button
                     onClick={() => navigate(`/admin/courses/${courseId}/levels/${level.id}/questions?type=coding`)}
@@ -418,15 +418,15 @@ const AdminCourseLevels = () => {
         {/* COURSE EDIT MODAL */}
         {showCourseEditModal && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-              <div className="p-6 border-b border-gray-100">
-                <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                  <Edit className="text-blue-600" /> Edit Course
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl dark:shadow-slate-900/50 w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200 border dark:border-slate-700">
+              <div className="p-6 border-b border-gray-100 dark:border-slate-700">
+                <h3 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                  <Edit className="text-blue-600 dark:text-blue-400" /> Edit Course
                 </h3>
               </div>
               <form onSubmit={handleCourseUpdate} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                     Course Title
                   </label>
                   <input
@@ -434,24 +434,24 @@ const AdminCourseLevels = () => {
                     value={courseFormData.title}
                     onChange={(e) => setCourseFormData({ ...courseFormData, title: e.target.value })}
                     placeholder="e.g., Introduction to C"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-800 dark:text-white"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                     Description
                   </label>
                   <textarea
                     value={courseFormData.description}
                     onChange={(e) => setCourseFormData({ ...courseFormData, description: e.target.value })}
                     placeholder="Course description..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-800 dark:text-white"
                     rows={3}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                     Number of Levels
                   </label>
                   <input
@@ -459,7 +459,7 @@ const AdminCourseLevels = () => {
                     value={courseFormData.total_levels}
                     onChange={(e) => setCourseFormData({ ...courseFormData, total_levels: parseInt(e.target.value) })}
                     placeholder="e.g., 10"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-800 dark:text-white"
                     required
                     min="1"
                   />
@@ -468,7 +468,7 @@ const AdminCourseLevels = () => {
                   <button
                     type="button"
                     onClick={() => setShowCourseEditModal(false)}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    className="px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700"
                   >
                     Cancel
                   </button>
@@ -487,10 +487,10 @@ const AdminCourseLevels = () => {
         {/* CSV UPLOAD MODAL */}
         {csvUploadModal.show && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-              <div className="p-6 border-b border-gray-100">
-                <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                  <Upload className="text-green-600" /> Upload CSV
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl dark:shadow-slate-900/50 w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200 border dark:border-slate-700">
+              <div className="p-6 border-b border-gray-100 dark:border-slate-700">
+                <h3 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                  <Upload className="text-green-600 dark:text-green-400" /> Upload CSV
                 </h3>
               </div>
               <div className="p-6 space-y-6">
@@ -498,47 +498,47 @@ const AdminCourseLevels = () => {
                   <div className="grid gap-4 grid-cols-2">
                     {/* For HTML/CSS course: show HTML/CSS option instead of Coding */}
                     {isHtmlCssCourse ? (
-                      <button onClick={() => setCsvUploadModal({ ...csvUploadModal, questionType: 'htmlcss' })} className="flex-1 py-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all flex flex-col items-center gap-2 text-gray-600 hover:text-purple-600">
+                      <button onClick={() => setCsvUploadModal({ ...csvUploadModal, questionType: 'htmlcss' })} className="flex-1 py-4 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl hover:border-purple-500 dark:hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-all flex flex-col items-center gap-2 text-gray-600 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400">
                         <span className="font-bold">HTML/CSS</span>
                       </button>
                     ) : (
-                      <button onClick={() => setCsvUploadModal({ ...csvUploadModal, questionType: 'coding' })} className="flex-1 py-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all flex flex-col items-center gap-2 text-gray-600 hover:text-blue-600">
+                      <button onClick={() => setCsvUploadModal({ ...csvUploadModal, questionType: 'coding' })} className="flex-1 py-4 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all flex flex-col items-center gap-2 text-gray-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400">
                         <span className="font-bold">Coding</span>
                       </button>
                     )}
                     {/* MCQ option stays the same for all courses */}
-                    <button onClick={() => setCsvUploadModal({ ...csvUploadModal, questionType: 'mcq' })} className="flex-1 py-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all flex flex-col items-center gap-2 text-gray-600 hover:text-green-600">
+                    <button onClick={() => setCsvUploadModal({ ...csvUploadModal, questionType: 'mcq' })} className="flex-1 py-4 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl hover:border-green-500 dark:hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition-all flex flex-col items-center gap-2 text-gray-600 dark:text-slate-400 hover:text-green-600 dark:hover:text-green-400">
                       <span className="font-bold">MCQ</span>
                     </button>
                   </div>
                 ) : (
                   <div>
-                    <p className="text-sm text-gray-500 mb-3">
+                    <p className="text-sm text-gray-500 dark:text-slate-400 mb-3">
                       Upload <b>{csvUploadModal.questionType}</b> questions CSV.
                     </p>
                     {csvUploadModal.questionType === 'mcq' && (
-                      <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-                        <p className="text-sm font-semibold text-gray-700 mb-2">Required columns (exact):</p>
-                        <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
+                      <div className="mb-4 rounded-lg border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 px-4 py-3">
+                        <p className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Required columns (exact):</p>
+                        <ul className="text-sm text-gray-600 dark:text-slate-400 list-disc list-inside space-y-1">
                           {mcqHeaders.map(header => (
-                            <li key={header}><code className="bg-white px-1 py-0.5 rounded text-xs">{header}</code></li>
+                            <li key={header}><code className="bg-white dark:bg-slate-600 px-1 py-0.5 rounded text-xs">{header}</code></li>
                           ))}
                         </ul>
-                        <p className="text-xs text-gray-500 mt-2">
+                        <p className="text-xs text-gray-500 dark:text-slate-500 mt-2">
                           <code>correct_option</code> must exactly match one of <code>option1</code>, <code>option2</code>, <code>option3</code>, or <code>option4</code> (case-insensitive).
                           <code>difficulty</code> must be one of: <code>easy</code>, <code>medium</code>, or <code>hard</code>.
                         </p>
                       </div>
                     )}
                     {csvUploadModal.questionType === 'coding' && (
-                      <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-                        <p className="text-sm font-semibold text-gray-700 mb-2">Required columns (exact):</p>
-                        <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
+                      <div className="mb-4 rounded-lg border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 px-4 py-3">
+                        <p className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Required columns (exact):</p>
+                        <ul className="text-sm text-gray-600 dark:text-slate-400 list-disc list-inside space-y-1">
                           {codingHeaders.map(header => (
-                            <li key={header}><code className="bg-white px-1 py-0.5 rounded text-xs">{header}</code></li>
+                            <li key={header}><code className="bg-white dark:bg-slate-600 px-1 py-0.5 rounded text-xs">{header}</code></li>
                           ))}
                         </ul>
-                        <p className="text-xs text-gray-500 mt-2">
+                        <p className="text-xs text-gray-500 dark:text-slate-500 mt-2">
                           Required: <code>title</code>, <code>description</code>, <code>reference_solution</code>, <code>difficulty</code>.
                           Optional: <code>input_format</code>, <code>output_format</code>, <code>constraints</code>, test case columns.
                           <code>difficulty</code> must be one of: <code>easy</code>, <code>medium</code>, or <code>hard</code>.
@@ -546,14 +546,14 @@ const AdminCourseLevels = () => {
                       </div>
                     )}
                     {csvUploadModal.questionType === 'htmlcss' && (
-                      <div className="mb-4 rounded-lg border border-purple-200 bg-purple-50 px-4 py-3">
-                        <p className="text-sm font-semibold text-purple-700 mb-2">Required columns (exact):</p>
-                        <ul className="text-sm text-purple-600 list-disc list-inside space-y-1">
+                      <div className="mb-4 rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/30 px-4 py-3">
+                        <p className="text-sm font-semibold text-purple-700 dark:text-purple-400 mb-2">Required columns (exact):</p>
+                        <ul className="text-sm text-purple-600 dark:text-purple-400 list-disc list-inside space-y-1">
                           {htmlCssHeaders.map(header => (
-                            <li key={header}><code className="bg-white px-1 py-0.5 rounded text-xs">{header}</code></li>
+                            <li key={header}><code className="bg-white dark:bg-slate-700 px-1 py-0.5 rounded text-xs">{header}</code></li>
                           ))}
                         </ul>
-                        <p className="text-xs text-purple-500 mt-2">
+                        <p className="text-xs text-purple-500 dark:text-purple-400 mt-2">
                           Required: <code>description</code>, <code>expectedHtml</code>.
                           Optional: <code>instructions</code>, <code>tags</code>, <code>assets</code>, <code>expectedCss</code>, <code>expectedJs</code>.
                         </p>
@@ -564,12 +564,12 @@ const AdminCourseLevels = () => {
                       accept=".csv"
                       onChange={handleCsvFileSelect}
                       disabled={csvUploadModal.uploading}
-                      className="w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                      className="w-full text-sm text-gray-500 dark:text-slate-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 dark:file:bg-blue-900/30 file:text-blue-700 dark:file:text-blue-400 hover:file:bg-blue-100 dark:hover:file:bg-blue-900/50 cursor-pointer"
                     />
-                    {csvUploadModal.uploading && <div className="mt-4 text-center text-blue-600 text-sm font-medium animate-pulse">Uploading and processing...</div>}
+                    {csvUploadModal.uploading && <div className="mt-4 text-center text-blue-600 dark:text-blue-400 text-sm font-medium animate-pulse">Uploading and processing...</div>}
                   </div>
                 )}
-                <button onClick={() => setCsvUploadModal({ show: false, levelId: null, uploading: false, questionType: null })} className="w-full py-2.5 text-gray-500 hover:bg-gray-100 rounded-lg">Cancel</button>
+                <button onClick={() => setCsvUploadModal({ show: false, levelId: null, uploading: false, questionType: null })} className="w-full py-2.5 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">Cancel</button>
               </div>
             </div>
           </div>

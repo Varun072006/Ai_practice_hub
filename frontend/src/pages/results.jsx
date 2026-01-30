@@ -5,6 +5,7 @@ import HtmlCssResult from '../components/HtmlCssResult';
 import McqResult from '../components/McqResult';
 import api from '../services/api';
 import { CheckCircle, XCircle, MessageSquare, Send, X } from 'lucide-react';
+import AIAnalysisCard from '../components/AIAnalysisCard';
 
 const Results = () => {
   const { sessionId } = useParams();
@@ -103,7 +104,7 @@ const Results = () => {
   if (loading || !results) {
     return (
       <Layout>
-        <div className="p-8">Loading...</div>
+        <div className="p-8 text-gray-900 dark:text-white">Loading...</div>
       </Layout>
     );
   }
@@ -141,7 +142,7 @@ const Results = () => {
 
   return (
     <Layout>
-      <div className="flex-1 p-6 overflow-y-auto">
+      <div className="flex-1 p-6 overflow-y-auto bg-gray-50 dark:bg-slate-900">
         <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-1">Practice Session Results</h1>
@@ -181,6 +182,16 @@ const Results = () => {
 
         {/* Right Sidebar Content - Moved below question numbers */}
         <div className="w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-6 mb-4">
+
+          {/* AI Analysis Integration */}
+          <div className="mb-8">
+            <AIAnalysisCard
+              sessionId={sessionId}
+              score={Math.round((results.questions.filter(q => q.submission?.is_correct).length / results.questions.length) * 100)}
+              isPass={(results.questions.filter(q => q.submission?.is_correct).length / results.questions.length) >= 0.7}
+            />
+          </div>
+
           <div>
             <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4">Analysis & Help</h3>
 
@@ -317,16 +328,16 @@ const Results = () => {
         {/* AI Tutor Chat Modal */}
         {showTutor && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl h-[600px] flex flex-col">
-              <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl h-[600px] flex flex-col border dark:border-slate-700">
+              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
                 <div className="flex items-center gap-3">
-                  <MessageSquare className="text-blue-600" size={24} />
-                  <h3 className="text-lg font-bold text-gray-800">AI Tutor</h3>
-                  <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">Online</span>
+                  <MessageSquare className="text-blue-600 dark:text-blue-400" size={24} />
+                  <h3 className="text-lg font-bold text-gray-800 dark:text-white">AI Tutor</h3>
+                  <span className="text-xs text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full">Online</span>
                 </div>
                 <button
                   onClick={() => setShowTutor(false)}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                 >
                   <X size={20} />
                 </button>
@@ -334,7 +345,7 @@ const Results = () => {
 
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {tutorMessages.length === 0 && (
-                  <div className="text-center text-gray-500 py-8">
+                  <div className="text-center text-gray-500 dark:text-gray-400 py-8">
                     <p>Ask me anything about this question!</p>
                   </div>
                 )}
@@ -346,7 +357,7 @@ const Results = () => {
                     <div
                       className={`max-w-[80%] rounded-lg p-3 ${msg.role === 'user'
                         ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-800'
+                        : 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200'
                         }`}
                     >
                       <p className="whitespace-pre-wrap">{msg.content}</p>
@@ -355,14 +366,14 @@ const Results = () => {
                 ))}
                 {tutorLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-gray-100 rounded-lg p-3">
-                      <p className="text-gray-600">Thinking...</p>
+                    <div className="bg-gray-100 dark:bg-slate-700 rounded-lg p-3">
+                      <p className="text-gray-600 dark:text-gray-300">Thinking...</p>
                     </div>
                   </div>
                 )}
               </div>
 
-              <div className="p-4 border-t border-gray-200">
+              <div className="p-4 border-t border-gray-200 dark:border-slate-700">
                 <form
                   onSubmit={handleTutorSubmit}
                   className="flex gap-2"
@@ -372,7 +383,7 @@ const Results = () => {
                     value={tutorInput}
                     onChange={(e) => setTutorInput(e.target.value)}
                     placeholder="Ask a question about your code or the test results..."
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-900 text-gray-900 dark:text-white"
                     disabled={tutorLoading}
                   />
                   <button
@@ -383,7 +394,7 @@ const Results = () => {
                     <Send size={18} />
                   </button>
                 </form>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                   AI can make mistakes. Review generated code carefully.
                 </p>
               </div>

@@ -358,19 +358,19 @@ const CreateQuestion = () => {
 
   return (
     <Layout>
-      <div className="flex-1 p-4 md:p-8 pb-20 md:pb-8">
+      <div className="flex-1 p-4 md:p-8 pb-20 md:pb-8 bg-gray-50 dark:bg-slate-900 min-h-screen">
         <div className="mb-6">
-          <nav className="text-sm text-gray-600 mb-4">
+          <nav className="text-sm text-gray-600 dark:text-slate-400 mb-4">
             Home / Questions / {isEditMode ? 'Edit' : 'Create New'}
           </nav>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">
               {isEditMode ? 'Edit Question' : 'Create New Question'}
             </h1>
             <div className="flex gap-3">
               <button
                 onClick={() => navigate(`/admin/courses/${courseId}/levels`)}
-                className="flex-1 md:flex-none px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="flex-1 md:flex-none px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700"
               >
                 Cancel
               </button>
@@ -389,16 +389,16 @@ const CreateQuestion = () => {
         {/* Success Popup */}
         {showSuccess && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-8 max-w-md text-center">
-              <CheckCircle size={48} className="mx-auto text-green-600 mb-4" />
-              <h3 className="text-xl font-bold text-gray-800 mb-2">Question Saved Successfully!</h3>
-              <p className="text-gray-600">The question has been {isEditMode ? 'updated' : 'created'} successfully.</p>
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-8 max-w-md text-center border dark:border-slate-700">
+              <CheckCircle size={48} className="mx-auto text-green-600 dark:text-green-400 mb-4" />
+              <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Question Saved Successfully!</h3>
+              <p className="text-gray-600 dark:text-slate-400">The question has been {isEditMode ? 'updated' : 'created'} successfully.</p>
             </div>
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">Question Type</h2>
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 mb-6 border border-transparent dark:border-slate-700">
+          <h2 className="text-lg font-bold text-gray-800 dark:text-white mb-4">Question Type</h2>
           <div className="flex gap-4">
             {/* For HTML/CSS course: show HTML/CSS instead of Coding, but keep MCQ */}
             {isHtmlCssCourse ? (
@@ -407,7 +407,7 @@ const CreateQuestion = () => {
                   onClick={() => setQuestionType('coding')}
                   className={`px-6 py-3 rounded-lg font-medium ${questionType === 'coding'
                     ? 'bg-purple-600 text-white'
-                    : 'bg-gray-100 text-gray-700'
+                    : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
                     }`}
                 >
                   HTML/CSS Challenge
@@ -416,7 +416,7 @@ const CreateQuestion = () => {
                   onClick={() => setQuestionType('mcq')}
                   className={`px-6 py-3 rounded-lg font-medium ${questionType === 'mcq'
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700'
+                    : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
                     }`}
                 >
                   MCQ Question
@@ -428,7 +428,7 @@ const CreateQuestion = () => {
                   onClick={() => setQuestionType('coding')}
                   className={`px-6 py-3 rounded-lg font-medium ${questionType === 'coding'
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700'
+                    : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
                     }`}
                 >
                   Coding Question
@@ -437,7 +437,7 @@ const CreateQuestion = () => {
                   onClick={() => setQuestionType('mcq')}
                   className={`px-6 py-3 rounded-lg font-medium ${questionType === 'mcq'
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700'
+                    : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
                     }`}
                 >
                   MCQ Question
@@ -448,8 +448,8 @@ const CreateQuestion = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
               Problem Title *
             </label>
             <input
@@ -457,20 +457,20 @@ const CreateQuestion = () => {
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               placeholder="e.g., Binary Search Implementation"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
               required
             />
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
               Question Description *
             </label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Enter the problem description, constraints, and examples..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
               rows={6}
               required
             />
@@ -481,10 +481,10 @@ const CreateQuestion = () => {
               {isHtmlCssCourse ? (
                 /* HTML/CSS Course - Show HTML, CSS, JS editors */
                 <>
-                  <div className="bg-white rounded-lg shadow-md p-6">
+                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">
                         Expected HTML Code *
                       </label>
                     </div>
@@ -493,7 +493,7 @@ const CreateQuestion = () => {
                       language="html"
                       value={htmlCssCode.html}
                       onChange={(value) => setHtmlCssCode({ ...htmlCssCode, html: value || '' })}
-                      theme="vs-light"
+                      theme="vs-dark"
                       options={{
                         minimap: { enabled: false },
                         fontSize: 14,
@@ -502,10 +502,10 @@ const CreateQuestion = () => {
                     />
                   </div>
 
-                  <div className="bg-white rounded-lg shadow-md p-6">
+                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">
                         Expected CSS Code
                       </label>
                     </div>
@@ -514,7 +514,7 @@ const CreateQuestion = () => {
                       language="css"
                       value={htmlCssCode.css}
                       onChange={(value) => setHtmlCssCode({ ...htmlCssCode, css: value || '' })}
-                      theme="vs-light"
+                      theme="vs-dark"
                       options={{
                         minimap: { enabled: false },
                         fontSize: 14,
@@ -523,10 +523,10 @@ const CreateQuestion = () => {
                     />
                   </div>
 
-                  <div className="bg-white rounded-lg shadow-md p-6">
+                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">
                         Expected JavaScript Code
                       </label>
                     </div>
@@ -535,7 +535,7 @@ const CreateQuestion = () => {
                       language="javascript"
                       value={htmlCssCode.js}
                       onChange={(value) => setHtmlCssCode({ ...htmlCssCode, js: value || '' })}
-                      theme="vs-light"
+                      theme="vs-dark"
                       options={{
                         minimap: { enabled: false },
                         fontSize: 14,
@@ -545,11 +545,11 @@ const CreateQuestion = () => {
                   </div>
 
                   {/* Image Assets Section */}
-                  <div className="bg-white rounded-lg shadow-md p-6">
+                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                        <label className="block text-sm font-medium text-gray-700">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">
                           Image Assets
                         </label>
                       </div>
@@ -562,17 +562,17 @@ const CreateQuestion = () => {
                         Add Asset
                       </button>
                     </div>
-                    <p className="text-xs text-gray-500 mb-4">
+                    <p className="text-xs text-gray-500 dark:text-slate-500 mb-4">
                       Define image assets that students can use in their HTML code (e.g., dog1.jpg → /assets/images/dog1.jpg)
                     </p>
                     {assets.length === 0 ? (
-                      <div className="text-center py-4 text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-lg">
+                      <div className="text-center py-4 text-gray-400 dark:text-slate-500 text-sm border-2 border-dashed border-gray-200 dark:border-slate-600 rounded-lg">
                         No assets defined. Click "Add Asset" to add image references.
                       </div>
                     ) : (
                       <div className="space-y-3">
                         {assets.map((asset, index) => (
-                          <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                          <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
                             <input
                               type="text"
                               value={asset.name}
@@ -582,9 +582,9 @@ const CreateQuestion = () => {
                                 setAssets(newAssets);
                               }}
                               placeholder="Asset name (e.g., dog1.jpg)"
-                              className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+                              className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
                             />
-                            <span className="text-gray-400">→</span>
+                            <span className="text-gray-400 dark:text-slate-500">→</span>
                             <input
                               type="text"
                               value={asset.path}
@@ -594,7 +594,7 @@ const CreateQuestion = () => {
                                 setAssets(newAssets);
                               }}
                               placeholder="Path (e.g., /assets/images/dog1.jpg)"
-                              className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+                              className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
                             />
                             <button
                               type="button"
@@ -602,7 +602,7 @@ const CreateQuestion = () => {
                                 const newAssets = assets.filter((_, i) => i !== index);
                                 setAssets(newAssets);
                               }}
-                              className="text-red-600 hover:text-red-700 p-1"
+                              className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-1"
                             >
                               <Trash2 size={18} />
                             </button>
@@ -612,8 +612,8 @@ const CreateQuestion = () => {
                     )}
                   </div>
 
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                    <p className="text-sm text-purple-700">
+                  <div className="bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+                    <p className="text-sm text-purple-700 dark:text-purple-400">
                       <strong>HTML/CSS Challenge Mode:</strong> Students will write HTML, CSS, and JS code to match the expected output. The expected code above serves as the reference solution.
                     </p>
                   </div>
@@ -622,34 +622,34 @@ const CreateQuestion = () => {
                 /* Regular Coding Course */
                 <>
                   <div className="grid grid-cols-2 gap-6">
-                    <div className="bg-white rounded-lg shadow-md p-6">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                         Input Format
                       </label>
                       <textarea
                         value={formData.input_format}
                         onChange={(e) => setFormData({ ...formData, input_format: e.target.value })}
                         placeholder="Describe the expected input structure..."
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
                         rows={4}
                       />
                     </div>
-                    <div className="bg-white rounded-lg shadow-md p-6">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                         Output Format
                       </label>
                       <textarea
                         value={formData.output_format}
                         onChange={(e) => setFormData({ ...formData, output_format: e.target.value })}
                         placeholder="Describe the expected output structure..."
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
                         rows={4}
                       />
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-lg shadow-md p-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                       Correct Solution ({getLanguageLabel()})
                     </label>
                     <Editor
@@ -657,13 +657,13 @@ const CreateQuestion = () => {
                       language={getEditorLanguage()}
                       value={formData.reference_solution}
                       onChange={(value) => setFormData({ ...formData, reference_solution: value || '' })}
-                      theme="vs-light"
+                      theme="vs-dark"
                     />
                   </div>
 
-                  <div className="bg-white rounded-lg shadow-md p-6">
+                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-bold text-gray-800">Test Cases</h3>
+                      <h3 className="text-lg font-bold text-gray-800 dark:text-white">Test Cases</h3>
                       <button
                         type="button"
                         onClick={addTestCase}
@@ -675,9 +675,9 @@ const CreateQuestion = () => {
                     </div>
                     <div className="space-y-4">
                       {formData.test_cases.map((testCase, index) => (
-                        <div key={index} className="border border-gray-200 rounded-lg p-4">
+                        <div key={index} className="border border-gray-200 dark:border-slate-600 rounded-lg p-4 bg-gray-50 dark:bg-slate-700/50">
                           <div className="flex items-center justify-between mb-3">
-                            <span className="font-medium">Test Case {index + 1}</span>
+                            <span className="font-medium text-gray-800 dark:text-white">Test Case {index + 1}</span>
                             <div className="flex items-center gap-4">
                               <label className="flex items-center">
                                 <input
@@ -688,13 +688,13 @@ const CreateQuestion = () => {
                                   }
                                   className="mr-2"
                                 />
-                                <span className="text-sm text-gray-600">Hidden</span>
+                                <span className="text-sm text-gray-600 dark:text-slate-400">Hidden</span>
                               </label>
                               {formData.test_cases.length > 1 && (
                                 <button
                                   type="button"
                                   onClick={() => removeTestCase(index)}
-                                  className="text-red-600 hover:text-red-700"
+                                  className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
                                 >
                                   <Trash2 size={18} />
                                 </button>
@@ -703,7 +703,7 @@ const CreateQuestion = () => {
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                                 Input
                               </label>
                               <textarea
@@ -711,13 +711,13 @@ const CreateQuestion = () => {
                                 onChange={(e) =>
                                   updateTestCase(index, 'input_data', e.target.value)
                                 }
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
                                 rows={3}
                                 required
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
                                 Expected Output
                               </label>
                               <textarea
@@ -725,7 +725,7 @@ const CreateQuestion = () => {
                                 onChange={(e) =>
                                   updateTestCase(index, 'expected_output', e.target.value)
                                 }
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
                                 rows={3}
                                 required
                               />
@@ -741,12 +741,12 @@ const CreateQuestion = () => {
           )}
 
           {questionType === 'mcq' && (
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-bold text-gray-800 mb-4">Answer Options</h3>
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
+              <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4">Answer Options</h3>
               <div className="space-y-3 mb-6">
                 {formData.options.map((option, index) => (
-                  <div key={index} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
-                    <span className="font-medium">{String.fromCharCode(65 + index)}.</span>
+                  <div key={index} className="flex items-center gap-3 p-3 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700/50">
+                    <span className="font-medium text-gray-800 dark:text-white">{String.fromCharCode(65 + index)}.</span>
                     <input
                       type="text"
                       value={option.option_text}
@@ -756,14 +756,14 @@ const CreateQuestion = () => {
                         setFormData({ ...formData, options: newOptions });
                       }}
                       placeholder="Enter option text..."
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
                       required
                     />
                   </div>
                 ))}
               </div>
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-600">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                   Correct Answer (Text) *
                 </label>
                 <input
@@ -773,10 +773,10 @@ const CreateQuestion = () => {
                     setFormData({ ...formData, correct_answer: e.target.value });
                   }}
                   placeholder="Enter the correct answer text (must match one of the options)"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
                   required
                 />
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-gray-500 dark:text-slate-500 mt-2">
                   This should exactly match the text of the correct option (for example: "
                   <span className="italic">0</span>" or "
                   <span className="italic">Depends on language</span>").
@@ -785,14 +785,14 @@ const CreateQuestion = () => {
             </div>
           )}
 
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
               Difficulty
             </label>
             <select
               value={formData.difficulty}
               onChange={(e) => setFormData({ ...formData, difficulty: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white"
             >
               <option value="easy">Easy</option>
               <option value="medium">Medium</option>

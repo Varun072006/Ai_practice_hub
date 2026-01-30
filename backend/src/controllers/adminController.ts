@@ -407,24 +407,7 @@ export const uploadCSVQuestionsController = async (req: MulterRequest, res: Resp
 // Export multer middleware for use in routes
 export const uploadCSVMiddleware = upload.single('file');
 
-import { generateQuestionsWithAI } from '../services/aiTutorService';
 
-export const generateQuestionsWithAIController = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const { topic, count, difficulty, type } = req.body;
-
-    if (!topic || !count || !difficulty || !type) {
-      res.status(400).json({ error: 'Missing required fields' });
-      return;
-    }
-
-    const questions = await generateQuestionsWithAI(topic, count, difficulty, type);
-    res.json({ questions });
-  } catch (error: any) {
-    logger.error('AI generate questions error:', error);
-    res.status(500).json({ error: 'Failed to generate questions' });
-  }
-};
 
 
 
