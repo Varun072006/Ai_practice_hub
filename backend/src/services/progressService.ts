@@ -250,44 +250,49 @@ export const getUserRecentActivity = async (userId: string, limit: number = 20) 
  */
 export const getUserTasks = async (userId: string) => {
   try {
-    // Get incomplete sessions
-    const incompleteResult = await pool.query(
+    // Get assigned tasks (pending)
+    const result = await pool.query(
       `SELECT 
-        s.id,
-        s.course_id,
-        s.level_id,
-        s.session_type,
-        s.status,
-        s.started_at,
+        st.id,
+        st.status as task_status,
+        a.title as assignment_title,
+        c.id as course_id,
         c.title as course_title,
+        l.id as level_id,
         l.title as level_title,
-        COUNT(DISTINCT sq.question_id) as total_questions,
+        l.level_number,
+        COUNT(DISTINCT q.id) as total_questions,
+        -- Check if there's an active session for this level
+        ps.id as session_id,
+        ps.status as session_status,
         COUNT(DISTINCT CASE WHEN sq.status = 'completed' THEN sq.question_id END) as completed_questions
-      FROM practice_sessions s
-      JOIN courses c ON s.course_id = c.id
-      JOIN levels l ON s.level_id = l.id
-      LEFT JOIN session_questions sq ON s.id = sq.session_id
-      WHERE s.user_id = ? AND s.status = 'in_progress'
-      GROUP BY s.id, s.course_id, s.level_id, s.session_type, s.status, s.started_at, c.title, l.title
-      ORDER BY s.started_at DESC
-      LIMIT 5`,
+      FROM student_tasks st
+      JOIN assignments a ON st.assignment_id = a.id
+      JOIN courses c ON a.course_id = c.id
+      JOIN levels l ON a.level_id = l.id
+      LEFT JOIN questions q ON l.id = q.level_id
+      LEFT JOIN practice_sessions ps ON st.user_id = ps.user_id AND l.id = ps.level_id AND ps.status = 'in_progress'
+      LEFT JOIN session_questions sq ON ps.id = sq.session_id
+      WHERE st.user_id = ? AND st.status = 'pending'
+      GROUP BY st.id, st.status, a.title, c.id, c.title, l.id, l.title, l.level_number, ps.id, ps.status
+      ORDER BY st.created_at DESC`,
       [userId]
     );
 
-    const incompleteRows = getRows(incompleteResult);
+    const rows = getRows(result);
 
-    return incompleteRows.map((row: any) => ({
+    return rows.map((row: any) => ({
       id: row.id,
       course_id: row.course_id,
       level_id: row.level_id,
-      type: row.session_type,
-      title: `${row.course_title} - ${row.level_title}`,
+      type: 'coding', // Default or fetch from level/questions
+      title: row.assignment_title, // Use assignment title
       course: row.course_title,
       level: row.level_title,
       total_questions: parseInt(row.total_questions) || 0,
       completed_questions: parseInt(row.completed_questions) || 0,
-      status: 'in_progress',
-      started_at: row.started_at,
+      status: row.session_status || 'assigned', // 'assigned' or 'in_progress'
+      started_at: row.created_at,
     }));
   } catch (error: any) {
     console.error('[getUserTasks] Error:', error);

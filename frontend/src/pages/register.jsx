@@ -8,7 +8,9 @@ const Register = () => {
         name: '',
         email: '',
         password: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        department: '',
+        year: ''
     });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -28,7 +30,9 @@ const Register = () => {
         const result = await register({
             name: formData.name,
             email: formData.email,
-            password: formData.password
+            password: formData.password,
+            department: formData.department,
+            year: parseInt(formData.year)
         });
         setLoading(false);
 
@@ -137,6 +141,42 @@ const Register = () => {
                                     value={formData.confirmPassword}
                                     onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                                 />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Department</label>
+                                <select
+                                    required
+                                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-slate-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                    value={formData.department}
+                                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                                >
+                                    <option value="" disabled>Select Dept</option>
+                                    <option value="CSE">CSE</option>
+                                    <option value="ECE">ECE</option>
+                                    <option value="EEE">EEE</option>
+                                    <option value="MECH">MECH</option>
+                                    <option value="CIVIL">CIVIL</option>
+                                    <option value="IT">IT</option>
+                                    <option value="AI&DS">AI&DS</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Year</label>
+                                <select
+                                    required
+                                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-slate-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
+                                    value={formData.year}
+                                    onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+                                >
+                                    <option value="" disabled>Select Year</option>
+                                    <option value="1">1st Year</option>
+                                    <option value="2">2nd Year</option>
+                                    <option value="3">3rd Year</option>
+                                    <option value="4">4th Year</option>
+                                </select>
                             </div>
                         </div>
 

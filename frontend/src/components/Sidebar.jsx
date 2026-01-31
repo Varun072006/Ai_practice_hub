@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { Home, LayoutDashboard, TrendingUp, Bot, Trophy, LogOut, Users, GraduationCap, ClipboardList, User, Moon, Sun } from 'lucide-react';
+import { Home, LayoutDashboard, TrendingUp, Bot, Trophy, LogOut, Users, GraduationCap, ClipboardList, User, Moon, Sun, BookOpen } from 'lucide-react';
 
 const Sidebar = () => {
   const { user, logout } = useAuth();
@@ -19,6 +19,7 @@ const Sidebar = () => {
   const adminMenuItems = [
     { path: '/admin/overview', label: 'Overview', icon: Home },
     { path: '/admin/users', label: 'User Management', icon: Users },
+    { path: '/admin/assignments', label: 'Assignments', icon: BookOpen },
     { path: '/admin/courses', label: 'Courses & Questions', icon: GraduationCap },
     { path: '/admin/results', label: 'Student Results', icon: ClipboardList },
     { path: '/admin/leaderboard', label: 'Leaderboard', icon: Trophy },

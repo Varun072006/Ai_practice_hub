@@ -69,14 +69,14 @@ export const initializeUsers = async (): Promise<void> => {
 
 export const registerController = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, department, year } = req.body;
 
     if (!name || !email || !password) {
       res.status(400).json({ error: 'Name, email, and password are required' });
       return;
     }
 
-    const result = await register({ name, email, password });
+    const result = await register({ name, email, password, department, year });
     res.json(result);
   } catch (error: any) {
     logger.error('Registration error:', error);

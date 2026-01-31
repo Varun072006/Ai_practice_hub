@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { AuthRequest } from '../middlewares/auth';
 import { getAllUsers, getUserById } from '../services/userService';
 import logger from '../config/logger';
 
@@ -45,7 +46,7 @@ export const getUserByIdController = async (req: Request, res: Response): Promis
     });
   } catch (error: any) {
     logger.error('Get user by ID error:', error);
-    
+
     if (error.message === 'User not found') {
       res.status(404).json({
         success: false,
@@ -57,6 +58,43 @@ export const getUserByIdController = async (req: Request, res: Response): Promis
         error: error.message || 'Failed to fetch user',
       });
     }
+  }
+};
+
+/**
+ * Update user profile
+ * PUT /api/users/:id
+ */
+export const updateUserController = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { name, department, year, roll_number } = req.body;
+    const requestUserId = req.user?.userId;
+
+    if (!id) {
+      res.status(400).json({ success: false, error: 'User ID is required' });
+      return;
+    }
+
+    // Authorization check: Users can only update their own profile unless admin (logic can be expanded)
+    // For now assuming the route middleware handles generic auth, but we should ensure users don't update others
+    if (requestUserId !== id && req.user?.role !== 'admin') {
+      res.status(403).json({ success: false, error: 'Unauthorized to update this profile' });
+      return;
+    }
+
+    const updatedUser = await import('../services/userService').then(s => s.updateUser(id, { name, department, year, roll_number }));
+
+    res.json({
+      success: true,
+      data: updatedUser,
+    });
+  } catch (error: any) {
+    logger.error('Update user error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to update user',
+    });
   }
 };
 

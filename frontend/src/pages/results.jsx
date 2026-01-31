@@ -4,8 +4,9 @@ import Layout from '../components/Layout';
 import HtmlCssResult from '../components/HtmlCssResult';
 import McqResult from '../components/McqResult';
 import api from '../services/api';
-import { CheckCircle, XCircle, MessageSquare, Send, X } from 'lucide-react';
+import { CheckCircle, XCircle, MessageSquare, Send, X, Trophy } from 'lucide-react';
 import AIAnalysisCard from '../components/AIAnalysisCard';
+import Confetti from 'react-confetti';
 
 const Results = () => {
   const { sessionId } = useParams();
@@ -157,6 +158,25 @@ const Results = () => {
             Back to Course
           </button>
         </div>
+
+        {/* Assignment Completion Popup */}
+        {results.session.is_assignment_completed && (
+          <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="p-3 bg-yellow-100 dark:bg-yellow-900/40 rounded-full text-yellow-600 dark:text-yellow-400">
+              <Trophy size={24} />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900 dark:text-white text-lg">Assignment Completed!</h3>
+              <p className="text-gray-600 dark:text-gray-300">Great job! You have successfully completed the assigned task for this level.</p>
+            </div>
+            <Confetti
+              width={window.innerWidth}
+              height={window.innerHeight}
+              recycle={false}
+              numberOfPieces={500}
+            />
+          </div>
+        )}
 
         <div className="mb-4 flex gap-2 flex-wrap">
           {results.questions.map((q, index) => (
@@ -402,7 +422,7 @@ const Results = () => {
           </div>
         )}
       </div>
-    </Layout>
+    </Layout >
   );
 };
 

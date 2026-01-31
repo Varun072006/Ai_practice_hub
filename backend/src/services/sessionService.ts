@@ -603,6 +603,29 @@ export const completeSession = async (sessionId: string, userId: string) => {
          ON DUPLICATE KEY UPDATE status = 'completed', completed_at = CURRENT_TIMESTAMP`,
         [completedProgressId, userId, course_id, level_id]
       );
+
+      // Check if BOTH MCQ and Coding/HTML-CSS are completed for this level
+      // This is required to mark the *Assignment* as completed
+      const typesResult = await pool.query(
+        `SELECT DISTINCT session_type FROM practice_sessions 
+         WHERE user_id = ? AND level_id = ? AND status = 'completed'`,
+        [userId, level_id]
+      );
+      const completedTypes = getRows(typesResult).map((r: any) => r.session_type);
+
+      const hasMcq = completedTypes.includes('mcq');
+      const hasCoding = completedTypes.includes('coding') || completedTypes.includes('html-css-challenge');
+
+      if (hasMcq && hasCoding) {
+        // Both parts done, mark assignment as completed
+        await pool.query(
+          `UPDATE student_tasks st
+             JOIN assignments a ON st.assignment_id = a.id
+             SET st.status = 'completed', st.completed_at = CURRENT_TIMESTAMP
+             WHERE st.user_id = ? AND a.level_id = ? AND st.status = 'pending'`,
+          [userId, level_id]
+        );
+      }
     }
   }
 };
