@@ -16,6 +16,7 @@ const MCQPractice = () => {
   const [timeLeft, setTimeLeft] = useState(1200); // 20 minutes
   const [autoSubmitted, setAutoSubmitted] = useState(false);
   const [hint, setHint] = useState(null);
+  const [previousHints, setPreviousHints] = useState([]); // Track hints to prevent repetition
   const [loadingHint, setLoadingHint] = useState(false);
   const [showHint, setShowHint] = useState(false);
 
@@ -63,7 +64,7 @@ const MCQPractice = () => {
   };
 
   const handleGetHint = async () => {
-    if (hint) {
+    if (hint && !loadingHint) {
       setShowHint(true);
       return;
     }
@@ -71,13 +72,17 @@ const MCQPractice = () => {
     setShowHint(true);
     try {
       const currentQuestion = session.questions[currentQuestionIndex];
-      const attemptCount = Object.keys(selectedOptions).filter(k => selectedOptions[k]).length + 1;
+      const attemptCount = previousHints.length + 1;
 
       const response = await api.post('/ai-tutor/mcq-hint', {
         questionId: currentQuestion.question_id,
         attemptCount: attemptCount,
+        previousHints: previousHints, // Send previous hints to avoid repetition
       });
-      setHint(response.data.hint);
+
+      const newHint = response.data.hint;
+      setHint(newHint);
+      setPreviousHints(prev => [...prev, newHint]); // Track this hint
     } catch (error) {
       console.error('Failed to get hint:', error);
       setHint("Review the question's key terms. Try to eliminate obviously incorrect options first.");
@@ -103,6 +108,7 @@ const MCQPractice = () => {
       if (currentQuestionIndex < session.questions.length - 1) {
         setCurrentQuestionIndex(prev => prev + 1);
         setHint(null);
+        setPreviousHints([]); // Reset hints for new question
         setShowHint(false);
       } else {
         handleFinish(false);
@@ -184,7 +190,7 @@ const MCQPractice = () => {
                 return (
                   <button
                     key={index}
-                    onClick={() => { setCurrentQuestionIndex(index); setHint(null); setShowHint(false); }}
+                    onClick={() => { setCurrentQuestionIndex(index); setHint(null); setPreviousHints([]); setShowHint(false); }}
                     className={`
                       relative flex items-center justify-center w-12 h-12 rounded-xl text-sm font-bold transition-all duration-200
                       ${isCurrent

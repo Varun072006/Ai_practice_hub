@@ -5,45 +5,52 @@ import api from '../services/api';
 const AIAnalysisCard = ({ sessionId, score, isPass }) => {
     const [analysis, setAnalysis] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [isExpanded, setIsExpanded] = useState(true);
+
+    // Fallback analysis when AI fails
+    const getFallbackAnalysis = () => ({
+        analysis: isPass
+            ? `Great job! You scored ${score}%. You've demonstrated a solid understanding of the concepts covered in this session.`
+            : `You scored ${score}%. There are some areas that need more practice. Review the questions you missed and try again.`,
+        suggestions: [
+            "Review the explanations for any incorrect answers",
+            "Practice similar questions to reinforce your understanding",
+            "Focus on the concepts that were challenging"
+        ],
+        nextSteps: isPass
+            ? "Continue to the next lesson to build on what you've learned!"
+            : "Review the material and try the practice session again."
+    });
 
     useEffect(() => {
         const fetchAnalysis = async () => {
+            if (!sessionId) {
+                setAnalysis(getFallbackAnalysis());
+                setLoading(false);
+                return;
+            }
+
             try {
                 setLoading(true);
-                // Add a small artificial delay to let the user see the "AI thinking" state (UX)
-                await new Promise(resolve => setTimeout(resolve, 800));
 
                 const response = await api.get(`/ai-tutor/analysis/${sessionId}`);
-                setAnalysis(response.data);
+
+                if (response.data && response.data.analysis) {
+                    setAnalysis(response.data);
+                } else {
+                    setAnalysis(getFallbackAnalysis());
+                }
             } catch (err) {
                 console.error('Failed to fetch AI analysis:', err);
-                setError('Failed to generate analysis. Please try again later.');
+                setAnalysis(getFallbackAnalysis());
             } finally {
                 setLoading(false);
             }
         };
 
-        if (sessionId) {
-            fetchAnalysis();
-        }
-    }, [sessionId]);
+        fetchAnalysis();
+    }, [sessionId, score, isPass]);
 
-    if (error) {
-        return (
-            <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-center gap-3 text-red-700 dark:text-red-400">
-                <AlertTriangle size={20} />
-                <p>{error}</p>
-                <button
-                    onClick={() => window.location.reload()}
-                    className="ml-auto text-xs underline hover:no-underline"
-                >
-                    Retry
-                </button>
-            </div>
-        );
-    }
 
     // --- LOADING STATE (SHIMMER) ---
     if (loading) {

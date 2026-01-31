@@ -3,13 +3,13 @@ import {
   getTutorResponse,
   getInitialHint,
   getFreeChatResponse,
-  getMCQHint,
   getCodingHint,
   checkOllamaHealth,
   TutorContext,
-  TutorMessage,
-  generatePerformanceAnalysis
+  TutorMessage
 } from '../services/aiTutorService';
+import { generateMCQHint } from '../services/mcqHintService';
+import { generateSessionAnalysis, AnalysisInput } from '../services/analysisService';
 import { AuthRequest } from '../middlewares/auth';
 import logger from '../config/logger';
 import pool from '../config/database';
@@ -256,7 +256,7 @@ export const getMCQHintController = async (req: AuthRequest, res: Response): Pro
 
   try {
     const userId = req.user?.userId;
-    const { questionId, attemptCount } = req.body;
+    const { questionId, attemptCount, previousHints } = req.body;
 
     logger.info(`[MCQ Hint] Request for questionId: ${questionId}, attemptCount: ${attemptCount}`);
 
@@ -289,38 +289,32 @@ export const getMCQHintController = async (req: AuthRequest, res: Response): Pro
       question = getFirstRow(questionResult);
     } catch (dbError: any) {
       logger.error(`[MCQ Hint DB ERROR] Failed to fetch question ${cleanQuestionId}: ${dbError.message}`);
-      // Don't fail the request, just use fallback if we can't get question details
     }
 
     if (!question) {
       logger.warn(`[MCQ Hint] Question not found or DB error for ID: ${cleanQuestionId}. Returning fallback.`);
-      // Return fallback instead of 404 to keep UI smooth
-      res.json({ hint: DEFAULT_FALLBACK });
+      res.json({ hint: DEFAULT_FALLBACK, hintLevel: 'conceptual' });
       return;
     }
 
     logger.info(`[MCQ Hint] Question found: ${question.title}`);
     options = question.options ? question.options.split('|||') : [];
 
-    try {
-      const hint = await getMCQHint(
-        question.title || '',
-        question.description || '',
-        options,
-        attemptCount || 1
-      );
+    // Use new isolated MCQ hint service
+    const result = await generateMCQHint({
+      questionTitle: question.title || '',
+      questionDescription: question.description || '',
+      options,
+      attemptCount: attemptCount || 1,
+      previousHints: Array.isArray(previousHints) ? previousHints : []
+    });
 
-      logger.info(`[MCQ Hint] Hint generated successfully`);
-      res.json({ hint });
-    } catch (aiError: any) {
-      logger.error(`[MCQ Hint AI ERROR] Service failed: ${aiError.message}`);
-      res.json({ hint: DEFAULT_FALLBACK });
-    }
+    logger.info(`[MCQ Hint] Generated ${result.hintLevel} hint successfully`);
+    res.json({ hint: result.hint, hintLevel: result.hintLevel });
 
   } catch (error: any) {
     logger.error(`[MCQ Hint CRITICAL ERROR] Unexpected error: ${error.message}`, { stack: error.stack });
-    // Even in critical error, try to return a hint to the user
-    res.json({ hint: DEFAULT_FALLBACK });
+    res.json({ hint: DEFAULT_FALLBACK, hintLevel: 'conceptual' });
   }
 };
 
@@ -431,14 +425,24 @@ export const getAnalysisController = async (req: AuthRequest, res: Response): Pr
     // Calculate score
     const score = Math.round((session.correct_count / (session.total_questions || 1)) * 100);
 
-    // 3. Generate Analysis
-    const analysis = await generatePerformanceAnalysis(
-      session.session_type,
-      session.course_title,
-      session.level_title,
+    // 3. Transform data for isolated analysis service
+    const analysisInput: AnalysisInput = {
+      sessionType: session.session_type,
+      courseTitle: session.course_title,
+      levelTitle: session.level_title,
       score,
-      questions
-    );
+      totalQuestions: session.total_questions || 0,
+      correctCount: session.correct_count || 0,
+      questions: questions.map((q: any) => ({
+        title: q.title,
+        concepts: q.concepts,
+        isCorrect: Boolean(q.is_correct),
+        timeTaken: q.time_taken
+      }))
+    };
+
+    // 4. Generate Analysis using isolated service
+    const analysis = await generateSessionAnalysis(analysisInput);
 
     res.json(analysis);
 
