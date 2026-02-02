@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { ArrowLeft, Edit2, Mail, Shield, User, Lock, Moon, Sun } from 'lucide-react';
+import { ArrowLeft, Edit2, Mail, Shield, User, Lock, Moon, Sun, BookOpen, Calendar, X } from 'lucide-react';
 import Layout from '../components/Layout';
 import api from '../services/api';
 
@@ -20,6 +20,46 @@ const Profile = () => {
     const [passwordLoading, setPasswordLoading] = React.useState(false);
     const [passwordError, setPasswordError] = React.useState('');
     const [passwordSuccess, setPasswordSuccess] = React.useState('');
+
+    // Edit Profile State
+    const [isEditProfileModalOpen, setIsEditProfileModalOpen] = React.useState(false);
+    const [editProfileForm, setEditProfileForm] = React.useState({
+        name: '',
+        roll_number: '',
+        department: '',
+        year: ''
+    });
+    const [editProfileLoading, setEditProfileLoading] = React.useState(false);
+
+    const handleConvertUserToEditForm = (userData) => {
+        if (!userData) return;
+        setEditProfileForm({
+            name: userData.name || '',
+            roll_number: userData.roll_number || '',
+            department: userData.department || '',
+            year: userData.year || ''
+        });
+        setIsEditProfileModalOpen(true);
+    };
+
+    const handleProfileUpdate = async (e) => {
+        e.preventDefault();
+        try {
+            setEditProfileLoading(true);
+            const res = await api.put(`/users/${user.id}`, {
+                ...editProfileForm,
+                year: editProfileForm.year ? parseInt(editProfileForm.year) : null
+            });
+            // Reload window or fetch user again to update context
+            window.location.reload();
+        } catch (error) {
+            console.error("Failed to update profile", error);
+            alert("Failed to update profile");
+        } finally {
+            setEditProfileLoading(false);
+            setIsEditProfileModalOpen(false);
+        }
+    };
 
     const handlePasswordChange = async (e) => {
         e.preventDefault();
@@ -90,9 +130,17 @@ const Profile = () => {
                         </div>
 
                         <div className="p-6 md:p-8">
-                            <div className="flex items-center gap-3 mb-6">
-                                <User className="text-blue-500" size={20} />
-                                <h3 className="font-bold text-gray-900 dark:text-white">Account Information</h3>
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-3">
+                                    <User className="text-blue-500" size={20} />
+                                    <h3 className="font-bold text-gray-900 dark:text-white">Account Information</h3>
+                                </div>
+                                <button
+                                    onClick={() => handleConvertUserToEditForm(user)}
+                                    className="text-blue-600 dark:text-blue-400 text-sm font-medium hover:underline flex items-center gap-1"
+                                >
+                                    <Edit2 size={16} /> Edit Profile
+                                </button>
                             </div>
 
                             <div className="space-y-4">
@@ -118,131 +166,238 @@ const Profile = () => {
                                     </div>
                                 </div>
 
-                                {/* Role */}
-                                <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-slate-900/50 rounded-xl">
-                                    <div className="p-2 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-lg">
-                                        <Shield size={20} />
+                                <div className="flex-1">
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Role</p>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-gray-900 dark:text-gray-200 font-medium capitalize">{user?.role || 'Student'}</span>
+                                        <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300 text-[10px] font-bold rounded uppercase">Verified</span>
                                     </div>
-                                    <div className="flex-1">
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Role</p>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-gray-900 dark:text-gray-200 font-medium capitalize">{user?.role || 'Student'}</span>
-                                            <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300 text-[10px] font-bold rounded uppercase">Verified</span>
-                                        </div>
+                                </div>
+                            </div>
+
+                            {/* Department & Year */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-slate-900/50 rounded-xl">
+                                    <div className="p-2 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-lg">
+                                        <BookOpen size={20} />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Department</p>
+                                        <p className="text-gray-900 dark:text-gray-200 font-medium">{user?.department || 'N/A'}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-slate-900/50 rounded-xl">
+                                    <div className="p-2 bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 rounded-lg">
+                                        <Calendar size={20} />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold">Year</p>
+                                        <p className="text-gray-900 dark:text-gray-200 font-medium">{user?.year ? `${user.year} Year` : 'N/A'}</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    {/* Security Card */}
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 transition-colors duration-300">
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 bg-orange-100 dark:bg-orange-900/20 text-orange-500 dark:text-orange-400 rounded-xl">
-                                <Lock size={24} />
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-gray-900 dark:text-white text-lg">Security</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Manage your password and account security settings.</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => setIsPasswordModalOpen(true)}
-                            className="w-full md:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-sm whitespace-nowrap"
-                        >
-                            Change Password
-                        </button>
-                    </div>
-
-                    <div className="mt-8 text-center pb-8">
-                        <p className="text-x text-gray-400 dark:text-gray-600">© 2024 Practice Hub. All rights reserved.</p>
-                    </div>
-
                 </div>
+
+                {/* Security Card */}
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 transition-colors duration-300">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-orange-100 dark:bg-orange-900/20 text-orange-500 dark:text-orange-400 rounded-xl">
+                            <Lock size={24} />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-gray-900 dark:text-white text-lg">Security</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Manage your password and account security settings.</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setIsPasswordModalOpen(true)}
+                        className="w-full md:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-sm whitespace-nowrap"
+                    >
+                        Change Password
+                    </button>
+                </div>
+
+                <div className="mt-8 text-center pb-8">
+                    <p className="text-x text-gray-400 dark:text-gray-600">© 2024 Practice Hub. All rights reserved.</p>
+                </div>
+
             </div>
 
-            {/* Change Password Modal */}
-            {isPasswordModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200 border border-gray-200 dark:border-slate-700">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Change Password</h3>
-                            <button
-                                onClick={() => setIsPasswordModalOpen(false)}
-                                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                            >
-                                <Lock size={20} />
-                            </button>
-                        </div>
 
-                        {passwordSuccess ? (
-                            <div className="p-4 mb-6 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg text-center flex flex-col items-center">
-                                <div className="w-12 h-12 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center mb-2">
-                                    <Shield size={24} />
-                                </div>
-                                <p className="font-medium">{passwordSuccess}</p>
+            {/* Edit Profile Modal */}
+            {
+                isEditProfileModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200 border border-gray-200 dark:border-slate-700">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Edit Profile</h3>
+                                <button
+                                    onClick={() => setIsEditProfileModalOpen(false)}
+                                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                >
+                                    <X size={20} />
+                                </button>
                             </div>
-                        ) : (
-                            <form onSubmit={handlePasswordChange} className="space-y-4">
-                                {passwordError && (
-                                    <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm">
-                                        {passwordError}
+                            <form onSubmit={handleProfileUpdate} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-4 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 dark:text-white"
+                                        value={editProfileForm.name}
+                                        onChange={(e) => setEditProfileForm({ ...editProfileForm, name: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Roll Number</label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-4 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 dark:text-white"
+                                        value={editProfileForm.roll_number}
+                                        onChange={(e) => setEditProfileForm({ ...editProfileForm, roll_number: e.target.value })}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Department</label>
+                                        <select
+                                            className="w-full px-4 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 dark:text-white"
+                                            value={editProfileForm.department}
+                                            onChange={(e) => setEditProfileForm({ ...editProfileForm, department: e.target.value })}
+                                        >
+                                            <option value="">Select</option>
+                                            <option value="CSE">CSE</option>
+                                            <option value="ECE">ECE</option>
+                                            <option value="EEE">EEE</option>
+                                            <option value="MECH">MECH</option>
+                                            <option value="CIVIL">CIVIL</option>
+                                            <option value="IT">IT</option>
+                                            <option value="AI&DS">AI&DS</option>
+                                        </select>
                                     </div>
-                                )}
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Password</label>
-                                    <input
-                                        type="password"
-                                        required
-                                        className="w-full px-4 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white"
-                                        value={passwordForm.currentPassword}
-                                        onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                                    />
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year</label>
+                                        <select
+                                            className="w-full px-4 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 dark:text-white"
+                                            value={editProfileForm.year}
+                                            onChange={(e) => setEditProfileForm({ ...editProfileForm, year: e.target.value })}
+                                        >
+                                            <option value="">Select</option>
+                                            <option value="1">1st Year</option>
+                                            <option value="2">2nd Year</option>
+                                            <option value="3">3rd Year</option>
+                                            <option value="4">4th Year</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label>
-                                    <input
-                                        type="password"
-                                        required
-                                        className="w-full px-4 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white"
-                                        value={passwordForm.newPassword}
-                                        onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm New Password</label>
-                                    <input
-                                        type="password"
-                                        required
-                                        className="w-full px-4 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white"
-                                        value={passwordForm.confirmPassword}
-                                        onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                                    />
-                                </div>
-
                                 <div className="flex gap-3 mt-6">
                                     <button
                                         type="button"
-                                        onClick={() => setIsPasswordModalOpen(false)}
+                                        onClick={() => setIsEditProfileModalOpen(false)}
                                         className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         type="submit"
-                                        disabled={passwordLoading}
-                                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                        disabled={editProfileLoading}
+                                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                                     >
-                                        {passwordLoading ? 'Updating...' : 'Update Password'}
+                                        {editProfileLoading ? 'Saving...' : 'Save Changes'}
                                     </button>
                                 </div>
                             </form>
-                        )}
+                        </div>
                     </div>
-                </div>
-            )}
-        </Layout>
+                )
+            }
+
+            {/* Change Password Modal */}
+            {
+                isPasswordModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200 border border-gray-200 dark:border-slate-700">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Change Password</h3>
+                                <button
+                                    onClick={() => setIsPasswordModalOpen(false)}
+                                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                >
+                                    <Lock size={20} />
+                                </button>
+                            </div>
+
+                            {passwordSuccess ? (
+                                <div className="p-4 mb-6 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg text-center flex flex-col items-center">
+                                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center mb-2">
+                                        <Shield size={24} />
+                                    </div>
+                                    <p className="font-medium">{passwordSuccess}</p>
+                                </div>
+                            ) : (
+                                <form onSubmit={handlePasswordChange} className="space-y-4">
+                                    {passwordError && (
+                                        <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm">
+                                            {passwordError}
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Password</label>
+                                        <input
+                                            type="password"
+                                            required
+                                            className="w-full px-4 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white"
+                                            value={passwordForm.currentPassword}
+                                            onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Password</label>
+                                        <input
+                                            type="password"
+                                            required
+                                            className="w-full px-4 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white"
+                                            value={passwordForm.newPassword}
+                                            onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Confirm New Password</label>
+                                        <input
+                                            type="password"
+                                            required
+                                            className="w-full px-4 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white"
+                                            value={passwordForm.confirmPassword}
+                                            onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div className="flex gap-3 mt-6">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsPasswordModalOpen(false)}
+                                            className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={passwordLoading}
+                                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                        >
+                                            {passwordLoading ? 'Updating...' : 'Update Password'}
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+                        </div>
+                    </div>
+                )
+            }
+        </Layout >
     );
 };
 

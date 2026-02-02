@@ -211,8 +211,13 @@ const Progress = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-medium rounded">
-                          In Progress
+                        <span className={`px-3 py-1 text-xs font-medium rounded ${task.status === 'completed' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                            task.status === 'in_progress' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
+                              'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                          }`}>
+                          {task.status === 'completed' ? 'Completed' :
+                            task.status === 'in_progress' ? 'In Progress' :
+                              'Not Started'}
                         </span>
                         <ChevronRight className="text-gray-300 dark:text-slate-600 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors" size={20} />
                       </div>

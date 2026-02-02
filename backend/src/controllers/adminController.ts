@@ -468,3 +468,40 @@ export const getStudentResultsController = async (req: AuthRequest, res: Respons
     res.status(500).json({ error: 'Failed to fetch student results' });
   }
 };
+
+export const createAssignmentController = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { createAssignment } = await import('../services/adminService'); // Dynamic import
+  try {
+    const result = await createAssignment({
+      ...req.body,
+      admin_id: req.user?.userId
+    });
+    res.json(result);
+  } catch (error: any) {
+    logger.error('Create assignment error:', error);
+    res.status(500).json({ error: 'Failed to create assignment' });
+  }
+};
+
+export const getAssignmentDetailsController = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { getAssignmentDetails } = await import('../services/adminService');
+  try {
+    const { id } = req.params;
+    const result = await getAssignmentDetails(id);
+    res.json(result);
+  } catch (error: any) {
+    logger.error('Get assignment details error:', error);
+    res.status(500).json({ error: 'Failed to fetch assignment details' });
+  }
+};
+
+export const getAssignmentsController = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { getAssignments } = await import('../services/adminService'); // Dynamic import
+  try {
+    const assignments = await getAssignments();
+    res.json(assignments);
+  } catch (error: any) {
+    logger.error('Get assignments error:', error);
+    res.status(500).json({ error: 'Failed to fetch assignments' });
+  }
+};

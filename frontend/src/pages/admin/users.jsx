@@ -10,7 +10,7 @@ const AdminUsers = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [formData, setFormData] = useState({ name: '', email: '', role: 'student', roll_number: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', role: 'student', roll_number: '', department: '', year: '' });
 
   useEffect(() => {
     fetchUsers();
@@ -45,7 +45,7 @@ const AdminUsers = () => {
     try {
       await api.post('/admin/users', formData);
       setShowAddModal(false);
-      setFormData({ name: '', email: '', role: 'student', roll_number: '' });
+      setFormData({ name: '', email: '', role: 'student', roll_number: '', department: '', year: '' });
       fetchUsers();
       alert('User created successfully');
     } catch (error) {
@@ -60,7 +60,9 @@ const AdminUsers = () => {
       name: user.name,
       email: user.email,
       role: user.role,
-      roll_number: user.roll_number || ''
+      roll_number: user.roll_number || '',
+      department: user.department || '',
+      year: user.year || ''
     });
     setShowEditModal(true);
   };
@@ -161,6 +163,7 @@ const AdminUsers = () => {
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">User ID</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Student Name</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Dept/Year</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Level Practiced</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Date & Time</th>
                   <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Actions</th>
@@ -183,6 +186,9 @@ const AdminUsers = () => {
                         <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full capitalize ${user.role === 'admin' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400' : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'}`}>
                           {user.role}
                         </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-slate-400">
+                        {user.department ? `${user.department} - ${user.year}` : 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-slate-400">
                         {user.levels_practiced || 0} levels
@@ -261,6 +267,39 @@ const AdminUsers = () => {
                     <option value="admin">Admin</option>
                   </select>
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Department</label>
+                    <select
+                      value={formData.department}
+                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-700 text-gray-800 dark:text-white"
+                    >
+                      <option value="">Select Dept</option>
+                      <option value="CSE">CSE</option>
+                      <option value="ECE">ECE</option>
+                      <option value="EEE">EEE</option>
+                      <option value="MECH">MECH</option>
+                      <option value="CIVIL">CIVIL</option>
+                      <option value="IT">IT</option>
+                      <option value="AI&DS">AI&DS</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Year</label>
+                    <select
+                      value={formData.year}
+                      onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-700 text-gray-800 dark:text-white"
+                    >
+                      <option value="">Select Year</option>
+                      <option value="1">1st Year</option>
+                      <option value="2">2nd Year</option>
+                      <option value="3">3rd Year</option>
+                      <option value="4">4th Year</option>
+                    </select>
+                  </div>
+                </div>
                 <div className="pt-4 flex justify-end gap-3">
                   <button
                     type="button"
@@ -319,6 +358,39 @@ const AdminUsers = () => {
                     <option value="student">Student</option>
                     <option value="admin">Admin</option>
                   </select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Department</label>
+                    <select
+                      value={formData.department}
+                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-700 text-gray-800 dark:text-white"
+                    >
+                      <option value="">Select Dept</option>
+                      <option value="CSE">CSE</option>
+                      <option value="ECE">ECE</option>
+                      <option value="EEE">EEE</option>
+                      <option value="MECH">MECH</option>
+                      <option value="CIVIL">CIVIL</option>
+                      <option value="IT">IT</option>
+                      <option value="AI&DS">AI&DS</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Year</label>
+                    <select
+                      value={formData.year}
+                      onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-700 text-gray-800 dark:text-white"
+                    >
+                      <option value="">Select Year</option>
+                      <option value="1">1st Year</option>
+                      <option value="2">2nd Year</option>
+                      <option value="3">3rd Year</option>
+                      <option value="4">4th Year</option>
+                    </select>
+                  </div>
                 </div>
                 <div className="pt-4 flex justify-end gap-3">
                   <button

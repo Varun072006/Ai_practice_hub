@@ -90,7 +90,7 @@ export const login = async (credentials: LoginCredentials) => {
 
 
 export const register = async (userData: any) => {
-  const { name, email, password } = userData;
+  const { name, email, password, department, year } = userData;
 
   // Check if user exists
   const existingUser = await pool.query(
@@ -108,8 +108,8 @@ export const register = async (userData: any) => {
 
   // Insert new user
   await pool.query(
-    'INSERT INTO users (id, username, password_hash, role, name, email) VALUES (?, ?, ?, ?, ?, ?)',
-    [userId, username, hashedPassword, 'student', name, email]
+    'INSERT INTO users (id, username, password_hash, role, name, email, department, year) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [userId, username, hashedPassword, 'student', name, email, department || null, year || null]
   );
 
   // Auto-login after register

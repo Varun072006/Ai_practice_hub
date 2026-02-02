@@ -11,6 +11,8 @@ export const getAllUsers = async (searchTerm?: string) => {
       u.role,
       u.name,
       u.roll_number,
+      u.department,
+      u.year,
       u.created_at,
       COUNT(DISTINCT CASE WHEN up.status = 'completed' THEN up.level_id END) as levels_practiced,
       MAX(ps.started_at) as last_practice_date,
@@ -28,7 +30,7 @@ export const getAllUsers = async (searchTerm?: string) => {
     params.push(searchPattern, searchPattern, searchPattern);
   }
 
-  query += ' GROUP BY u.id, u.username, u.email, u.role, u.name, u.roll_number, u.created_at';
+  query += ' GROUP BY u.id, u.username, u.email, u.role, u.name, u.roll_number, u.department, u.year, u.created_at';
   query += ' ORDER BY u.created_at DESC';
 
   const result = await pool.query(query, params);
@@ -40,7 +42,7 @@ export const getAllUsers = async (searchTerm?: string) => {
   }));
 };
 
-export const createUser = async (data: { name: string; email: string; password?: string; role: string; roll_number?: string }) => {
+export const createUser = async (data: { name: string; email: string; password?: string; role: string; roll_number?: string, department?: string, year?: number }) => {
   const userId = randomUUID();
   // Simple password hashing for demo - in prod use bcrypt
   // For now we'll store it as is or handle it in auth service if reused
@@ -50,13 +52,13 @@ export const createUser = async (data: { name: string; email: string; password?:
   const hashedPassword = await hashPassword(data.password || 'password123');
 
   await pool.query(
-    'INSERT INTO users (id, name, email, password_hash, role, roll_number, username) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [userId, data.name, data.email, hashedPassword, data.role, data.roll_number || null, data.email.split('@')[0]]
+    'INSERT INTO users (id, name, email, password_hash, role, roll_number, department, year, username) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [userId, data.name, data.email, hashedPassword, data.role, data.roll_number || null, data.department || null, data.year || null, data.email.split('@')[0]]
   );
   return userId;
 };
 
-export const updateUser = async (userId: string, data: { name?: string; email?: string; roll_number?: string; role?: string }) => {
+export const updateUser = async (userId: string, data: { name?: string; email?: string; roll_number?: string; role?: string; department?: string; year?: number }) => {
   const updates: string[] = [];
   const params: any[] = [];
 
@@ -75,6 +77,14 @@ export const updateUser = async (userId: string, data: { name?: string; email?: 
   if (data.role) {
     updates.push('role = ?');
     params.push(data.role);
+  }
+  if (data.department) {
+    updates.push('department = ?');
+    params.push(data.department);
+  }
+  if (data.year) {
+    updates.push('year = ?');
+    params.push(data.year);
   }
 
   if (updates.length === 0) return;
@@ -538,5 +548,112 @@ export const getStudentResults = async (searchTerm?: string) => {
       score: Math.min(100, Math.round(score))
     };
   });
+};
+
+export const createAssignment = async (data: {
+  admin_id: string;
+  title: string;
+  course_id: string;
+  level_id: string;
+  target_type: 'all' | 'department' | 'year' | 'user';
+  target_value?: string;
+}) => {
+  const assignmentId = randomUUID();
+  const { admin_id, title, course_id, level_id, target_type, target_value } = data;
+
+  // 1. Create Assignment Record
+  await pool.query(
+    'INSERT INTO assignments (id, admin_id, title, course_id, level_id, target_type, target_value) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [assignmentId, admin_id, title, course_id, level_id, target_type, target_value || null]
+  );
+
+  // 2. Identify Target Users
+  let userQuery = 'SELECT id FROM users WHERE role = "student"';
+  const queryParams: any[] = [];
+
+  if (target_type === 'department' && target_value) {
+    userQuery += ' AND department = ?';
+    queryParams.push(target_value);
+  } else if (target_type === 'year' && target_value) {
+    userQuery += ' AND year = ?';
+    queryParams.push(target_value);
+  } else if (target_type === 'user' && target_value) {
+    userQuery += ' AND id = ?';
+    queryParams.push(target_value);
+  }
+  // 'all' already covered by base query
+
+  const usersResult = await pool.query(userQuery, queryParams);
+  const users = getRows(usersResult);
+
+  if (users.length === 0) {
+    console.warn(`[createAssignment] No users found for target: ${target_type} ${target_value}`);
+    return { assignmentId, count: 0 };
+  }
+
+  // 3. Create Student Tasks
+  // Using multi-row insert for efficiency
+  const tasksValues: any[] = [];
+  const placeholders: string[] = [];
+
+  for (const user of users) {
+    placeholders.push('(?, ?, ?)');
+    tasksValues.push(randomUUID(), user.id, assignmentId);
+  }
+
+  if (placeholders.length > 0) {
+    const taskQuery = `INSERT INTO student_tasks (id, user_id, assignment_id) VALUES ${placeholders.join(', ')}`;
+    await pool.query(taskQuery, tasksValues);
+  }
+
+  return { assignmentId, count: users.length };
+};
+
+export const getAssignments = async () => {
+  const query = `
+    SELECT 
+      a.id,
+      a.title,
+      a.course_id,
+      a.target_type,
+      a.target_value,
+      a.created_at,
+      c.title as course_title,
+      l.title as level_title,
+      l.level_number,
+      COUNT(st.id) as total_assigned,
+      COUNT(CASE WHEN st.status = 'completed' THEN 1 END) as completed_count
+    FROM assignments a
+    JOIN courses c ON a.course_id = c.id
+    JOIN levels l ON a.level_id = l.id
+    LEFT JOIN student_tasks st ON a.id = st.assignment_id
+    GROUP BY a.id, a.title, a.target_type, a.target_value, a.created_at, c.title, l.title, l.level_number
+    ORDER BY a.created_at DESC
+  `;
+
+  /* Existing getAssignments code */
+  const result = await pool.query(query);
+  return getRows(result);
+};
+
+export const getAssignmentDetails = async (assignmentId: string) => {
+  const query = `
+    SELECT 
+      st.id as task_id,
+      st.status,
+      st.completed_at,
+      u.id as user_id,
+      u.name,
+      u.email,
+      u.roll_number,
+      u.department,
+      u.year
+    FROM student_tasks st
+    JOIN users u ON st.user_id = u.id
+    WHERE st.assignment_id = ?
+    ORDER BY field(st.status, 'completed', 'in_progress', 'pending'), u.name
+  `;
+  const result = await pool.query(query, [assignmentId]);
+  return getRows(result);
 };
 

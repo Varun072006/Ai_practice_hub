@@ -8,6 +8,8 @@ export interface User {
   role: string;
   name: string | null;
   roll_number: string | null;
+  department: string | null;
+  year: number | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -17,7 +19,7 @@ export interface User {
  */
 export const getAllUsers = async (): Promise<User[]> => {
   const result = await pool.query(
-    `SELECT id, username, email, role, name, roll_number, created_at, updated_at
+    `SELECT id, username, email, role, name, roll_number, department, year, created_at, updated_at
      FROM users
      ORDER BY created_at DESC`
   );
@@ -29,7 +31,7 @@ export const getAllUsers = async (): Promise<User[]> => {
  */
 export const getUserById = async (userId: string): Promise<User> => {
   const result = await pool.query(
-    `SELECT id, username, email, role, name, roll_number, created_at, updated_at
+    `SELECT id, username, email, role, name, roll_number, department, year, created_at, updated_at
      FROM users
      WHERE id = ?`,
     [userId]
@@ -41,6 +43,25 @@ export const getUserById = async (userId: string): Promise<User> => {
   }
 
   return user;
+};
+
+/**
+ * Update user profile
+ */
+export const updateUser = async (userId: string, data: Partial<User>): Promise<User> => {
+  const { name, department, year, roll_number } = data;
+
+  await pool.query(
+    `UPDATE users 
+     SET name = COALESCE(?, name),
+         department = COALESCE(?, department),
+         year = COALESCE(?, year),
+         roll_number = COALESCE(?, roll_number)
+     WHERE id = ?`,
+    [name, department, year, roll_number, userId]
+  );
+
+  return getUserById(userId);
 };
 
 
