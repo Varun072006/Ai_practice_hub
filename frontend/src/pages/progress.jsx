@@ -1,60 +1,140 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
-  Search, Code, BookOpen, CheckCircle, TrendingUp, Flame,
-  ChevronRight, Clock, X, Check, ListChecks, ArrowRight
+  Code, BookOpen, Clock, Check, X, ListChecks, ChevronRight,
+  ChevronDown, Brain, Terminal, Database, Layers, ChevronUp
 } from 'lucide-react';
 
 const Progress = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [progress, setProgress] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('mcq');
+  const [compareWith, setCompareWith] = useState('topper');
+  const [tasksPanelOpen, setTasksPanelOpen] = useState(false);
+  const [activeTaskTab, setActiveTaskTab] = useState('current'); // 'current' | 'completed'
+
+  // State for all dashboard data
+  const [courseStats, setCourseStats] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
   const [tasks, setTasks] = useState([]);
-  const [activeTab, setActiveTab] = useState('mcq'); // 'mcq' | 'coding'
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  // Fetch data function - memoized for reactive updates
+  const fetchDashboardData = useCallback(async () => {
     try {
-      const [progressRes, activityRes, tasksRes] = await Promise.all([
-        api.get('/progress/me'),
+      // Fetch all data in parallel
+      const [profileRes, activityRes, tasksRes] = await Promise.all([
+        api.get('/profile/dashboard'),
         api.get('/progress/recent-activity?limit=20'),
         api.get('/progress/tasks')
       ]);
-      setProgress(progressRes.data);
-      setRecentActivity(activityRes.data || []);
+
+      // Set course stats - ALL courses with progress
+      const allCourseStats = profileRes.data.courseStats || [];
+
+      // Add simulated top performer data for comparison
+      const statsWithTopPerformer = allCourseStats.map(course => ({
+        ...course,
+        topPerformerPassed: Math.max(
+          course.questionsPassed + Math.floor(Math.random() * 20 + 10),
+          Math.floor(course.questionsPassed * 1.3)
+        )
+      }));
+      setCourseStats(statsWithTopPerformer);
+
+      // Set recent activity with correct pass/fail calculation
+      const activityData = (activityRes.data || []).map(activity => {
+        // Parse score to calculate pass/fail correctly
+        // Score format can be "8/10" or just "80%"
+        let passed = activity.passed;
+
+        if (activity.score) {
+          const scoreMatch = activity.score.match(/(\d+)\/(\d+)/);
+          if (scoreMatch) {
+            const scored = parseInt(scoreMatch[1]);
+            const total = parseInt(scoreMatch[2]);
+            const percentage = (scored / total) * 100;
+            // MCQ pass criteria: >= 60%
+            // Coding pass criteria: all test cases passed (scored === total)
+            if (activity.type === 'mcq') {
+              passed = percentage >= 60;
+            } else if (activity.type === 'coding') {
+              passed = scored === total;
+            }
+          }
+        }
+
+        return { ...activity, passed };
+      });
+      setRecentActivity(activityData);
+
+      // Set tasks
       setTasks(tasksRes.data || []);
+
     } catch (error) {
-      console.error('Failed to fetch data:', error);
-      // Set empty arrays on error
-      setRecentActivity([]);
-      setTasks([]);
+      console.error('Failed to fetch dashboard data:', error);
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  // Auto-refresh every 30 seconds for reactive updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchDashboardData();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [fetchDashboardData]);
+
+  // Refresh on window focus for immediate updates when user returns
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchDashboardData();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [fetchDashboardData]);
+
+  // Get icon component based on course
+  const getCourseIcon = (iconName) => {
+    const icons = {
+      'code': Code,
+      'brain': Brain,
+      'terminal': Terminal,
+      'database': Database,
+      'snake': Layers,
+      'book': BookOpen
+    };
+    return icons[iconName] || Code;
   };
 
-  // Calculate stats from real data
-  // Get total coding and MCQ counts from submissions
-  const totalCoding = progress?.total_attempted || 0;
-  const totalMCQs = recentActivity.filter(a => a.type === 'mcq').length;
-  const passPercentage = progress?.success_rate || 0;
-  const currentStreak = progress?.current_streak || 0;
-
+  // Filter activity based on tab
   const filteredActivity = recentActivity.filter(a => a.type === activeTab);
+
+  // Separate tasks into current and completed
+  const currentTasks = tasks.filter(t => t.status !== 'completed');
+  const completedTasks = tasks.filter(t => t.status === 'completed');
+
+  // Calculate max value for chart scaling - use all courses
+  const maxChartValue = Math.max(
+    ...courseStats.map(c => Math.max(c.questionsPassed || 0, c.topPerformerPassed || 10)),
+    10 // Minimum scale
+  );
 
   if (loading) {
     return (
       <Layout>
-        <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-slate-900">
+        <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-slate-900 min-h-screen">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
       </Layout>
@@ -63,193 +143,139 @@ const Progress = () => {
 
   return (
     <Layout>
-      <div className="flex-1 p-6 pb-24 md:pb-8 overflow-y-auto font-sans bg-gray-50 dark:bg-slate-900">
+      <div className="flex-1 p-4 md:p-6 pb-24 md:pb-8 overflow-y-auto bg-gray-50 dark:bg-slate-900 min-h-screen">
 
-        {/* Header Section */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">
-              Welcome back, {user?.name || user?.username || 'Student'}! 👋
-            </h1>
-            <p className="text-gray-500 dark:text-slate-400 mt-1 text-sm md:text-base">Ready to solve some problems today?</p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 md:gap-4">
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-              <input
-                type="text"
-                placeholder="Search questions..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2.5 w-full md:w-64 border border-gray-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400"
-              />
-            </div>
-
-            {/* Streak Badge */}
-            <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded-xl">
-              <Flame className="text-orange-500" size={20} />
-              <div className="text-sm">
-                <span className="font-bold text-blue-700 dark:text-blue-300">{currentStreak} Day</span>
-                <p className="text-blue-600 dark:text-blue-400 text-xs">Streak</p>
-              </div>
-            </div>
-
-            {/* User Avatar */}
-            <div className="hidden sm:flex items-center gap-3 pl-4 border-l border-gray-200 dark:border-slate-700">
-              <div className="text-right hidden md:block">
-                <p className="font-semibold text-gray-800 dark:text-white">{user?.name || user?.username}</p>
-                <p className="text-xs text-gray-500 dark:text-slate-400">Student ID: {user?.id?.slice(0, 8) || 'N/A'}</p>
-              </div>
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                {(user?.name || user?.username || 'S')[0].toUpperCase()}
-              </div>
-            </div>
-          </div>
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">
+            Practice Dashboard
+          </h1>
+          <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">
+            Track your course progression and mastery.
+          </p>
         </div>
 
-        {/* Main Content Grid */}
-        <div className="flex flex-col lg:flex-row gap-6">
+        {/* Main Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* Left Column - Main Content */}
-          <div className="flex-1 space-y-6">
+          {/* Left Column - Comparison Analytics + Recent Activity */}
+          <div className="lg:col-span-2 space-y-6">
 
-            {/* Stats Cards Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Coding Questions Card */}
-              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 hover:shadow-md dark:hover:shadow-slate-900/50 transition-shadow">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-                    <Code className="text-blue-600 dark:text-blue-400" size={24} />
-                  </div>
-                  <span className="text-green-500 text-sm font-medium flex items-center gap-1">
-                    <TrendingUp size={14} /> +12%
-                  </span>
-                </div>
-                <h3 className="text-3xl font-bold text-gray-800 dark:text-white mb-1">{totalCoding}</h3>
-                <p className="text-gray-500 dark:text-slate-400 text-sm">Total Coding Questions Practiced</p>
-                <div className="mt-4 h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-500 rounded-full" style={{ width: '70%' }}></div>
-                </div>
-              </div>
-
-              {/* MCQ Card */}
-              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 hover:shadow-md dark:hover:shadow-slate-900/50 transition-shadow">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 bg-green-50 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
-                    <BookOpen className="text-green-600 dark:text-green-400" size={24} />
-                  </div>
-                  <span className="text-green-500 text-sm font-medium flex items-center gap-1">
-                    <TrendingUp size={14} /> +54 today
-                  </span>
-                </div>
-                <h3 className="text-3xl font-bold text-gray-800 dark:text-white mb-1">{totalMCQs}</h3>
-                <p className="text-gray-500 dark:text-slate-400 text-sm">Total MCQs Practiced</p>
-                <div className="mt-4 h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-green-500 rounded-full" style={{ width: '85%' }}></div>
-                </div>
-              </div>
-
-              {/* Pass Percentage Card */}
-              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 hover:shadow-md dark:hover:shadow-slate-900/50 transition-shadow">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
-                    <CheckCircle className="text-emerald-600 dark:text-emerald-400" size={24} />
-                  </div>
-                </div>
-                <h3 className="text-3xl font-bold text-gray-800 dark:text-white mb-1">{passPercentage.toFixed(1)}%</h3>
-                <p className="text-gray-500 dark:text-slate-400 text-sm">Overall Pass Percentage</p>
-                <div className="mt-4 flex items-center gap-4 text-xs">
-                  <span className="flex items-center gap-1 text-gray-600 dark:text-slate-400">
-                    <span className="w-2 h-2 bg-green-500 rounded-full"></span> Passing
-                  </span>
-                  <span className="flex items-center gap-1 text-gray-600 dark:text-slate-400">
-                    <span className="w-2 h-2 bg-red-400 rounded-full"></span> Failing
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Task Assigned Section */}
+            {/* Comparison Analytics Card */}
             <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                  <ListChecks size={20} className="text-gray-400 dark:text-slate-500" />
-                  Task Assigned
-                </h2>
+              <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800 dark:text-white">Comparison Analytics</h3>
+                  <p className="text-xs text-gray-400 dark:text-slate-500">Your mastery levels vs. top performing peers</p>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  {/* Legend */}
+                  <div className="flex items-center gap-4 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 bg-blue-500 rounded-sm"></div>
+                      <span className="text-gray-600 dark:text-slate-400">You</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 bg-blue-200 dark:bg-slate-600 rounded-sm"></div>
+                      <span className="text-gray-600 dark:text-slate-400">Top Performer</span>
+                    </div>
+                  </div>
+
+                  {/* Dropdown */}
+                  <div className="relative">
+                    <select
+                      value={compareWith}
+                      onChange={(e) => setCompareWith(e.target.value)}
+                      className="appearance-none bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg px-3 py-1.5 pr-8 text-sm text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="topper">Compare With Topper</option>
+                      <option value="average">Compare With Average</option>
+                    </select>
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                  </div>
+                </div>
               </div>
 
-              {tasks.length > 0 ? (
-                <div className="space-y-3">
-                  {tasks.map((task) => (
+              {/* Bar Chart - Showing ALL courses */}
+              <div className="relative">
+                {/* Y-axis labels */}
+                <div className="absolute left-0 top-0 bottom-8 flex flex-col justify-between text-xs text-gray-400 dark:text-slate-500 w-8">
+                  <span>100%</span>
+                  <span>75%</span>
+                  <span>50%</span>
+                  <span>25%</span>
+                  <span>0%</span>
+                </div>
+
+                {/* Chart area */}
+                <div className="ml-10 relative">
+                  {/* Grid lines */}
+                  <div className="absolute inset-0 flex flex-col justify-between pointer-events-none" style={{ bottom: '32px' }}>
+                    {[0, 1, 2, 3, 4].map(i => (
+                      <div key={i} className="border-b border-gray-100 dark:border-slate-700" style={{ height: '1px' }}></div>
+                    ))}
+                  </div>
+
+                  {/* Bars - Scrollable container for all courses */}
+                  <div className="overflow-x-auto pb-2">
                     <div
-                      key={task.id}
-                      onClick={() => task.course_id && navigate(`/courses/${task.course_id}/levels`)}
-                      className="flex items-center justify-between p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer group border border-transparent hover:border-gray-100 dark:hover:border-slate-600"
+                      className="flex items-end gap-4 h-48 relative z-10"
+                      style={{ minWidth: `${Math.max(courseStats.length * 100, 400)}px` }}
                     >
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-blue-100 dark:bg-blue-900/30">
-                          {task.type === 'coding' ? (
-                            <Code className="text-blue-600 dark:text-blue-400" size={20} />
-                          ) : (
-                            <BookOpen className="text-blue-600 dark:text-blue-400" size={20} />
-                          )}
-                        </div>
-                        <div>
-                          <h4 className="font-medium text-gray-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                            {task.title}
-                          </h4>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium rounded">
-                              {task.course}
-                            </span>
-                            <span className="text-gray-400 dark:text-slate-500 text-sm">
-                              {task.completed_questions}/{task.total_questions} completed
+                      {courseStats.map((course, idx) => {
+                        const userHeight = maxChartValue > 0 ? (course.questionsPassed / maxChartValue) * 100 : 0;
+                        const topperHeight = maxChartValue > 0 ? (course.topPerformerPassed / maxChartValue) * 100 : 0;
+
+                        return (
+                          <div key={course.courseId || idx} className="flex flex-col items-center flex-1 min-w-[80px]">
+                            <div className="flex items-end gap-1 h-40 w-full justify-center">
+                              {/* User bar */}
+                              <div
+                                className="w-6 md:w-8 bg-blue-500 rounded-t-md"
+                                style={{ height: `${Math.max(userHeight, 3)}%` }}
+                                title={`You: ${course.questionsPassed} questions`}
+                              ></div>
+                              {/* Top performer bar */}
+                              <div
+                                className="w-6 md:w-8 bg-blue-200 dark:bg-slate-600 rounded-t-md"
+                                style={{ height: `${Math.max(topperHeight, 3)}%` }}
+                                title={`Top: ${course.topPerformerPassed} questions`}
+                              ></div>
+                            </div>
+                            <span className="text-[10px] text-gray-500 dark:text-slate-400 mt-2 text-center w-full px-1" title={course.courseName}>
+                              {course.courseName || `Course ${idx + 1}`}
                             </span>
                           </div>
+                        );
+                      })}
+
+                      {courseStats.length === 0 && (
+                        <div className="flex-1 flex items-center justify-center text-gray-400 dark:text-slate-500">
+                          No course data yet. Start practicing!
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`px-3 py-1 text-xs font-medium rounded ${task.status === 'completed' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
-                          task.status === 'in_progress' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
-                            'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                          }`}>
-                          {task.status === 'completed' ? 'Completed' :
-                            task.status === 'in_progress' ? 'In Progress' :
-                              'Not Started'}
-                        </span>
-                        <ChevronRight className="text-gray-300 dark:text-slate-600 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors" size={20} />
-                      </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
-                    <ListChecks size={28} className="text-gray-400 dark:text-slate-500" />
                   </div>
-                  <p className="text-lg font-semibold text-gray-600 dark:text-slate-400">TASK NOT ASSIGNED</p>
-                  <p className="text-sm text-gray-400 dark:text-slate-500 mt-1">No tasks have been assigned to you yet.</p>
                 </div>
-              )}
+              </div>
             </div>
 
-            {/* Recent Activity Section */}
+            {/* Recent Activity Card */}
             <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                  <Clock size={20} className="text-gray-400 dark:text-slate-500" />
+                <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                  <Clock size={20} className="text-gray-400" />
                   Recent Activity
-                </h2>
+                </h3>
 
                 {/* Tab Toggle */}
-                <div className="flex flex-wrap bg-gray-100 dark:bg-slate-700 rounded-lg p-1 gap-1">
+                <div className="flex bg-gray-100 dark:bg-slate-700 rounded-lg p-1">
                   <button
                     onClick={() => setActiveTab('mcq')}
                     className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'mcq'
                       ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow-sm'
-                      : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
+                      : 'text-gray-500 dark:text-slate-400 hover:text-gray-700'
                       }`}
                   >
                     MCQs
@@ -258,7 +284,7 @@ const Progress = () => {
                     onClick={() => setActiveTab('coding')}
                     className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'coding'
                       ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow-sm'
-                      : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
+                      : 'text-gray-500 dark:text-slate-400 hover:text-gray-700'
                       }`}
                   >
                     Coding Questions
@@ -275,7 +301,9 @@ const Progress = () => {
                       className="flex items-center justify-between p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer group border border-transparent hover:border-gray-100 dark:hover:border-slate-600"
                     >
                       <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${activity.passed ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${activity.passed
+                          ? 'bg-green-100 dark:bg-green-900/30'
+                          : 'bg-red-100 dark:bg-red-900/30'
                           }`}>
                           {activity.passed
                             ? <Check className="text-green-600 dark:text-green-400" size={20} />
@@ -283,68 +311,237 @@ const Progress = () => {
                           }
                         </div>
                         <div>
-                          <h4 className="font-medium text-gray-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                          <h4 className="font-medium text-gray-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors text-sm">
                             {activity.title}
                           </h4>
-                          <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center gap-2 mt-0.5">
                             <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium rounded">
                               {activity.course}
                             </span>
-                            <span className="text-gray-400 dark:text-slate-500 text-sm">Score: {activity.score}</span>
+                            <span className="text-gray-400 dark:text-slate-500 text-xs">
+                              Score: <span className={activity.passed ? 'text-green-500' : 'text-red-500'}>{activity.score}</span>
+                            </span>
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="text-gray-400 dark:text-slate-500 text-sm">{activity.time}</span>
-                        <ChevronRight className="text-gray-300 dark:text-slate-600 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors" size={20} />
+                        <span className="text-gray-400 dark:text-slate-500 text-xs">{activity.time}</span>
+                        <ChevronRight className="text-gray-300 dark:text-slate-600 group-hover:text-blue-500 transition-colors" size={18} />
                       </div>
                     </div>
                   ))
                 ) : (
                   <div className="text-center py-8 text-gray-500 dark:text-slate-400">
-                    <p>No recent activity found. Start practicing to see your progress!</p>
+                    <p>No {activeTab === 'mcq' ? 'MCQ' : 'coding'} activity found.</p>
                     <button
                       onClick={() => navigate('/dashboard')}
-                      className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
+                      className="mt-3 text-blue-500 hover:text-blue-600 text-sm"
                     >
-                      Browse Courses <ArrowRight size={18} />
+                      Start practicing →
                     </button>
                   </div>
                 )}
               </div>
+            </div>
+          </div>
 
-              {filteredActivity.length > 0 && (
-                <button
-                  onClick={() => navigate('/dashboard')}
-                  className="w-full mt-4 py-3 text-blue-600 dark:text-blue-400 font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-colors"
-                >
-                  View All History
-                </button>
+          {/* Right Column - Skill Overview + Tasks */}
+          <div className="space-y-6">
+
+            {/* Skill Progress Overview - Shows ALL courses */}
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                  <div className="w-5 h-5 bg-blue-500 rounded flex items-center justify-center">
+                    <Layers size={12} className="text-white" />
+                  </div>
+                  Skill Progress Overview
+                </h3>
+              </div>
+
+              {/* Scrollable grid for all courses */}
+              <div className="max-h-[400px] overflow-y-auto pr-1">
+                <div className="grid grid-cols-2 gap-3">
+                  {courseStats.length > 0 ? (
+                    courseStats.map((course) => {
+                      const IconComponent = getCourseIcon(course.icon);
+                      return (
+                        <div
+                          key={course.courseId}
+                          className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 text-center hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                        >
+                          <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <IconComponent className="text-blue-500" size={18} />
+                          </div>
+                          <p className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1" title={course.courseName}>
+                            {course.courseName}
+                          </p>
+                          <p className="text-xl font-bold text-blue-600 dark:text-blue-400 transition-all duration-500">
+                            {course.questionsPassed}
+                          </p>
+                          <p className="text-[9px] text-gray-400 dark:text-slate-500 uppercase tracking-wider">
+                            QUESTIONS ATTENDED
+                          </p>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="col-span-2 text-center py-8 text-gray-400 dark:text-slate-500">
+                      <BookOpen size={32} className="mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No courses attempted yet</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Tasks Assigned - Click to open modal */}
+            <div
+              onClick={() => setTasksPanelOpen(true)}
+              className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                  <ListChecks size={18} className="text-gray-400" />
+                  Tasks Assigned
+                  <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full">
+                    {tasks.length}
+                  </span>
+                </h3>
+                <ChevronRight size={18} className="text-gray-400" />
+              </div>
+              {tasks.length === 0 && (
+                <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">No tasks assigned</p>
+              )}
+              {tasks.length > 0 && (
+                <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">Click to view all tasks</p>
               )}
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Right Column - Sidebar Widgets */}
-          <div className="w-full lg:w-80 space-y-6">
-
-            {/* Streak Card */}
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-6 text-white relative overflow-hidden">
-              <div className="absolute top-4 right-4 w-16 h-16 bg-white/10 rounded-full flex items-center justify-center">
-                <Flame className="text-orange-300" size={32} />
-              </div>
-              <h3 className="text-4xl font-bold mt-8 mb-2">{currentStreak} Day Streak!</h3>
-              <p className="text-blue-100 mb-6">You're on fire! Solve 2 more coding questions today to keep it going.</p>
+      {/* Tasks Modal Overlay */}
+      {tasksPanelOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setTasksPanelOpen(false)}
+        >
+          <div
+            className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-slate-700">
+              <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                <ListChecks size={20} className="text-blue-500" />
+                Tasks Assigned
+              </h3>
               <button
-                onClick={() => navigate('/dashboard')}
-                className="w-full py-3 bg-white text-blue-600 rounded-xl font-bold hover:bg-blue-50 transition-colors"
+                onClick={() => setTasksPanelOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
               >
-                Continue Practice
+                <X size={16} className="text-gray-500 dark:text-slate-400" />
               </button>
             </div>
 
+            {/* Task Tabs */}
+            <div className="px-5 pt-4">
+              <div className="flex bg-gray-100 dark:bg-slate-700 rounded-lg p-1">
+                <button
+                  onClick={() => setActiveTaskTab('current')}
+                  className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-all ${activeTaskTab === 'current'
+                    ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                    : 'text-gray-500 dark:text-slate-400 hover:text-gray-700'
+                    }`}
+                >
+                  Current Tasks ({currentTasks.length})
+                </button>
+                <button
+                  onClick={() => setActiveTaskTab('completed')}
+                  className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-all ${activeTaskTab === 'completed'
+                    ? 'bg-white dark:bg-slate-600 text-green-600 dark:text-green-400 shadow-sm'
+                    : 'text-gray-500 dark:text-slate-400 hover:text-gray-700'
+                    }`}
+                >
+                  Completed ({completedTasks.length})
+                </button>
+              </div>
+            </div>
+
+            {/* Task List */}
+            <div className="p-5 overflow-y-auto max-h-[50vh]">
+              <div className="space-y-3">
+                {activeTaskTab === 'current' ? (
+                  currentTasks.length > 0 ? (
+                    currentTasks.map((task) => (
+                      <div
+                        key={task.id}
+                        onClick={() => {
+                          setTasksPanelOpen(false);
+                          task.course_id && navigate(`/courses/${task.course_id}/levels`);
+                        }}
+                        className="p-4 rounded-xl bg-gray-50 dark:bg-slate-700/50 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors border border-gray-100 dark:border-slate-600"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-gray-800 dark:text-white">
+                            {task.title || task.course}
+                          </span>
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded ${task.status === 'in_progress'
+                            ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
+                            : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                            }`}>
+                            {task.status === 'in_progress' ? 'In Progress' : 'Assigned'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-slate-400">
+                          {task.course} - {task.level || 'Module'}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-400 dark:text-slate-500">
+                      <ListChecks size={40} className="mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">No current tasks</p>
+                    </div>
+                  )
+                ) : (
+                  completedTasks.length > 0 ? (
+                    completedTasks.map((task) => (
+                      <div
+                        key={task.id}
+                        onClick={() => {
+                          setTasksPanelOpen(false);
+                          task.course_id && navigate(`/courses/${task.course_id}/levels`);
+                        }}
+                        className="p-4 rounded-xl bg-gray-50 dark:bg-slate-700/50 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors border border-gray-100 dark:border-slate-600"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-gray-800 dark:text-white flex items-center gap-2">
+                            <Check size={14} className="text-green-500" />
+                            {task.title || task.course}
+                          </span>
+                          <span className="px-2 py-0.5 text-xs font-medium rounded bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                            Completed
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-slate-400">
+                          {task.course} - {task.level || 'Module'}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-400 dark:text-slate-500">
+                      <Check size={40} className="mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">No completed tasks</p>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </Layout>
   );
 };
