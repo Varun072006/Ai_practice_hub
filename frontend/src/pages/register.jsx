@@ -47,7 +47,10 @@ const Register = () => {
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8 transition-colors duration-300">
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
-                <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
+                <div className="flex justify-center mb-4">
+                    <img src="/assets/logo.png" alt="Practice Hub" className="w-16 h-16 object-contain rounded-xl shadow-md bg-white dark:bg-slate-800 p-2" />
+                </div>
+                <h2 className="mt-2 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
                     Create your account
                 </h2>
                 <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
