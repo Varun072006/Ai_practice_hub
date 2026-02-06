@@ -250,7 +250,7 @@ export const getUserRecentActivity = async (userId: string, limit: number = 20) 
  */
 export const getUserTasks = async (userId: string) => {
   try {
-    // Get assigned tasks (pending)
+    // Get assigned tasks (pending) - use subquery for session to avoid duplicates
     const result = await pool.query(
       `SELECT 
         st.id,
@@ -261,20 +261,24 @@ export const getUserTasks = async (userId: string) => {
         l.id as level_id,
         l.title as level_title,
         l.level_number,
-        COUNT(DISTINCT q.id) as total_questions,
-        -- Check if there's an active session for this level
-        ps.id as session_id,
-        ps.status as session_status,
-        COUNT(DISTINCT CASE WHEN sq.status = 'completed' THEN sq.question_id END) as completed_questions
+        (SELECT COUNT(DISTINCT q2.id) FROM questions q2 WHERE q2.level_id = l.id) as total_questions,
+        -- Get the latest in-progress session for this task
+        (SELECT ps2.id FROM practice_sessions ps2 
+         WHERE ps2.user_id = st.user_id AND ps2.level_id = l.id AND ps2.status = 'in_progress'
+         ORDER BY ps2.started_at DESC LIMIT 1) as session_id,
+        (SELECT ps3.status FROM practice_sessions ps3 
+         WHERE ps3.user_id = st.user_id AND ps3.level_id = l.id 
+         ORDER BY ps3.started_at DESC LIMIT 1) as session_status,
+        (SELECT COUNT(DISTINCT sq2.question_id) 
+         FROM session_questions sq2 
+         JOIN practice_sessions ps4 ON sq2.session_id = ps4.id
+         WHERE ps4.user_id = st.user_id AND ps4.level_id = l.id AND sq2.status = 'completed') as completed_questions
       FROM student_tasks st
       JOIN assignments a ON st.assignment_id = a.id
       JOIN courses c ON a.course_id = c.id
       JOIN levels l ON a.level_id = l.id
-      LEFT JOIN questions q ON l.id = q.level_id
-      LEFT JOIN practice_sessions ps ON st.user_id = ps.user_id AND l.id = ps.level_id AND ps.status = 'in_progress'
-      LEFT JOIN session_questions sq ON ps.id = sq.session_id
       WHERE st.user_id = ? AND st.status = 'pending'
-      GROUP BY st.id, st.status, a.title, c.id, c.title, l.id, l.title, l.level_number, ps.id, ps.status
+      GROUP BY st.id, st.status, a.title, c.id, c.title, l.id, l.title, l.level_number
       ORDER BY st.created_at DESC`,
       [userId]
     );
@@ -291,7 +295,7 @@ export const getUserTasks = async (userId: string) => {
       level: row.level_title,
       total_questions: parseInt(row.total_questions) || 0,
       completed_questions: parseInt(row.completed_questions) || 0,
-      status: row.session_status || 'assigned', // 'assigned' or 'in_progress'
+      status: row.session_status === 'in_progress' ? 'in_progress' : 'assigned',
       started_at: row.created_at,
     }));
   } catch (error: any) {

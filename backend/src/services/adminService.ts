@@ -1,6 +1,6 @@
 import pool from '../config/database';
 import { randomUUID } from 'crypto';
-import { getRows } from '../utils/mysqlHelper';
+import { getRows } from '../utils/mysqlHelper';  
 
 export const getAllUsers = async (searchTerm?: string) => {
   let query = `
@@ -543,7 +543,7 @@ export const getStudentResults = async (searchTerm?: string) => {
       date_time: row.completed_at ? new Date(row.completed_at).toISOString() : null,
       course: row.course_title,
       level: `Level - ${row.level_number}`,
-      test_type: row.session_type === 'mcq' ? 'MCQ' : (isHtmlCss ? 'HTML/CSS' : 'Coding'),
+      test_type: row.session_type === 'mcq' ? 'MCQ' : 'Coding',
       status: status,
       score: Math.min(100, Math.round(score))
     };

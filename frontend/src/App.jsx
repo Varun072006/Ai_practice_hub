@@ -18,7 +18,7 @@ import Leaderboard from './pages/leaderboard';
 import AICoach from './pages/aiCoach';
 import LevelOverview from './pages/LevelOverview';
 import HtmlCssChallenge from './pages/HtmlCssChallenge';
-import Profile from './pages/Profile';
+import ProfileDashboard from './pages/ProfileDashboard';
 
 // Admin Pages
 import AdminOverview from './pages/admin/overview';
@@ -124,7 +124,7 @@ const AppRoutes = () => {
         path="/profile"
         element={
           <ProtectedRoute>
-            <Profile />
+            <ProfileDashboard />
           </ProtectedRoute>
         }
       />

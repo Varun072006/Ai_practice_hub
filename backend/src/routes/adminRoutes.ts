@@ -31,6 +31,7 @@ import {
   getAssignmentsController,
   getAssignmentDetailsController,
 } from '../controllers/adminController';
+import { getSessionResultsForAdminController } from '../controllers/resultController';
 import { authenticate, requireAdmin } from '../middlewares/auth';
 
 const router = Router();
@@ -52,6 +53,7 @@ router.post('/levels', createLevelController);
 router.delete('/levels/:levelId', deleteLevelController);
 router.get('/courses/with-levels', getCoursesWithLevelsController);
 router.get('/results', getStudentResultsController);
+router.get('/results/:sessionId', getSessionResultsForAdminController);  // Detailed session results for admin
 router.post('/questions/coding', createCodingQuestionController);
 router.post('/questions/mcq', createMCQQuestionController);
 router.get('/levels/:levelId/questions', getLevelQuestionsController);

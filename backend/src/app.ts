@@ -22,6 +22,7 @@ import diagnosticRoutes from './routes/diagnosticRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import intelligenceRoutes from './routes/intelligenceRoutes';
 import seedRoutes from './routes/seedRoutes';
+import profileRoutes from './routes/profileRoutes';
 
 
 dotenv.config();
@@ -96,7 +97,8 @@ app.get('/', (req, res) => {
       learningPath: '/api/learning-path',
       diagnostic: '/api/diagnostic',
       analytics: '/api/analytics',
-      intelligence: '/api/intelligence'
+      intelligence: '/api/intelligence',
+      profile: '/api/profile'
     }
   });
 });
@@ -124,6 +126,7 @@ app.use('/api/diagnostic', diagnosticRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/intelligence', intelligenceRoutes);
 app.use('/api/seed', seedRoutes);
+app.use('/api/profile', profileRoutes);
 
 
 // Error handling

@@ -4,7 +4,7 @@ import Layout from '../components/Layout';
 import HtmlCssResult from '../components/HtmlCssResult';
 import McqResult from '../components/McqResult';
 import api from '../services/api';
-import { CheckCircle, XCircle, MessageSquare, Send, X, Trophy } from 'lucide-react';
+import { CheckCircle, XCircle, MessageSquare, Send, X, Trophy, Sparkles, ChevronRight, AlertCircle, Clock, Maximize2, Copy, Info } from 'lucide-react';
 import AIAnalysisCard from '../components/AIAnalysisCard';
 import Confetti from 'react-confetti';
 
@@ -14,13 +14,15 @@ const Results = () => {
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // State for Coding Result View (Legacy/Standard)
+  // State for Coding Result View
   const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0);
+  const [selectedTestCaseIndex, setSelectedTestCaseIndex] = useState(0);
   const [activeTab, setActiveTab] = useState('user');
   const [showTutor, setShowTutor] = useState(false);
   const [tutorMessages, setTutorMessages] = useState([]);
   const [tutorInput, setTutorInput] = useState('');
   const [tutorLoading, setTutorLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     fetchResults();
@@ -140,210 +142,306 @@ const Results = () => {
 
   // 3. Default: Coding (Judge0)
   const selectedQuestion = results.questions[selectedQuestionIndex];
+  const testResults = selectedQuestion.test_results || [];
+  const passedCount = testResults.filter(tr => tr.passed).length;
+  const selectedTestCase = testResults[selectedTestCaseIndex] || null;
+  const sessionScore = Math.round((results.questions.filter(q => q.submission?.is_correct).length / results.questions.length) * 100);
+  const isPass = sessionScore >= 70;
+
+  // Helper to get error type label
+  const getErrorType = (testResult) => {
+    if (testResult.passed) return null;
+    if (testResult.error_message?.toLowerCase().includes('time')) return 'Time Limit Exceeded';
+    if (testResult.error_message?.toLowerCase().includes('memory')) return 'Memory Limit Exceeded';
+    if (testResult.error_message?.toLowerCase().includes('assertion')) return 'Assertion Error';
+    return 'Incorrect Output';
+  };
+
+  // Copy code to clipboard
+  const handleCopyCode = () => {
+    const code = activeTab === 'user'
+      ? selectedQuestion.submission?.submitted_code
+      : selectedQuestion.reference_solution;
+    if (code) {
+      navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  // Get code lines for line numbers
+  const currentCode = activeTab === 'user'
+    ? selectedQuestion.submission?.submitted_code || ''
+    : selectedQuestion.reference_solution || '';
+  const codeLines = currentCode.split('\n');
 
   return (
     <Layout>
-      <div className="flex-1 p-6 overflow-y-auto bg-gray-50 dark:bg-slate-900">
-        <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-1">Practice Session Results</h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              {results.session.course_title} - {results.session.level_title}
-            </p>
+      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-slate-900">
+        {/* Header */}
+        <div className="px-6 py-4 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <MessageSquare className="text-blue-600 dark:text-blue-400" size={20} />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Practice Session Results</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {results.session.course_title} - {results.session.level_title}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleBackToCourse}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+            >
+              ← Back to Course
+            </button>
           </div>
-          <button
-            onClick={handleBackToCourse}
-            className="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-gray-200 dark:border-slate-700 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-          >
-            Back to Course
-          </button>
         </div>
 
         {/* Assignment Completion Popup */}
         {results.session.is_assignment_completed && (
-          <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="mx-6 mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl flex items-center gap-4">
             <div className="p-3 bg-yellow-100 dark:bg-yellow-900/40 rounded-full text-yellow-600 dark:text-yellow-400">
               <Trophy size={24} />
             </div>
             <div>
               <h3 className="font-bold text-gray-900 dark:text-white text-lg">Assignment Completed!</h3>
-              <p className="text-gray-600 dark:text-gray-300">Great job! You have successfully completed the assigned task for this level.</p>
+              <p className="text-gray-600 dark:text-gray-300">Great job! You have successfully completed the assigned task.</p>
             </div>
-            <Confetti
-              width={window.innerWidth}
-              height={window.innerHeight}
-              recycle={false}
-              numberOfPieces={500}
-            />
+            <Confetti width={window.innerWidth} height={window.innerHeight} recycle={false} numberOfPieces={500} />
           </div>
         )}
 
-        <div className="mb-4 flex gap-2 flex-wrap">
-          {results.questions.map((q, index) => (
-            <button
-              key={index}
-              onClick={() => setSelectedQuestionIndex(index)}
-              className={`px-4 py-2 rounded-lg font-medium ${index === selectedQuestionIndex
-                ? 'bg-blue-600 text-white'
-                : q.submission?.is_correct
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                }`}
-            >
-              Q{index + 1}
-              {q.submission?.is_correct ? (
-                <CheckCircle className="inline ml-2" size={16} />
-              ) : (
-                <XCircle className="inline ml-2" size={16} />
-              )}
-            </button>
-          ))}
-        </div>
+        {/* Main Content - Two Column Layout */}
+        <div className="p-6 flex gap-6 flex-1 min-h-0">
+          {/* Left Column - AI Review & Test Cases */}
+          <div className="w-1/3 space-y-4">
+            {/* AI Performance Review Card */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="text-blue-500" size={20} />
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">AI Performance Review</h3>
+                    <p className="text-xs text-blue-500">Personalized Feedback</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className={`text-2xl font-bold ${isPass ? 'text-green-500' : 'text-red-500'}`}>
+                    {sessionScore}%
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">Session Score</p>
+                </div>
+              </div>
 
-        {/* Right Sidebar Content - Moved below question numbers */}
-        <div className="w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-6 mb-4">
+              {/* Areas for Improvement */}
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="text-red-500" size={16} />
+                  <span className="font-medium text-red-700 dark:text-red-400 text-sm">Areas for Improvement</span>
+                </div>
+                <ul className="text-sm text-red-600 dark:text-red-400 space-y-1 ml-6 list-disc">
+                  <li>Review conditional logic specifically for edge cases</li>
+                  <li>Practice 'while' loop exit conditions to avoid infinite loops</li>
+                  <li>Focus on variable scope within loop blocks</li>
+                </ul>
+              </div>
 
-          {/* AI Analysis Integration */}
-          <div className="mb-8">
-            <AIAnalysisCard
-              sessionId={sessionId}
-              score={Math.round((results.questions.filter(q => q.submission?.is_correct).length / results.questions.length) * 100)}
-              isPass={(results.questions.filter(q => q.submission?.is_correct).length / results.questions.length) >= 0.7}
-            />
-          </div>
-
-          <div>
-            <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4">Analysis & Help</h3>
-
-            {/* Score Summary */}
-            <div className="mb-6 p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg text-center">
-              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Session Score</div>
-              <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                {Math.round((results.questions.filter(q => q.submission?.is_correct).length / results.questions.length) * 100)}%
+              {/* Recommended Focus */}
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/10 border-l-4 border-blue-500 rounded-r-lg">
+                <div className="flex items-center gap-2 mb-1">
+                  <Info className="text-blue-500" size={16} />
+                  <span className="font-medium text-blue-700 dark:text-blue-400 text-sm">Recommended Focus</span>
+                </div>
+                <p className="text-sm text-blue-600 dark:text-blue-400">
+                  Review the tutorial on "<span className="font-semibold">Logical Operators</span>" before attempting these problems again.
+                </p>
               </div>
             </div>
 
-            {/* Question Title and Description */}
-            <div className="mb-6">
-              <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">{selectedQuestion.title}</h2>
-              <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{selectedQuestion.description}</p>
-            </div>
-          </div>
-
-          <div className="mt-8">
-            <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4">Detailed Results</h3>
-            {selectedQuestion.test_results && (
-              <div className="space-y-3 mb-6">
-                {selectedQuestion.test_results.map((testResult, index) => (
-                  <div
-                    key={index}
-                    className={`p-4 rounded-lg ${testResult.passed
-                      ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50'
-                      : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50'
+            {/* Test Cases Sidebar */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700">
+              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="text-gray-500" size={18} />
+                  <span className="font-semibold text-gray-900 dark:text-white">Test Cases</span>
+                </div>
+                <span className={`text-sm font-medium ${passedCount === testResults.length ? 'text-green-500' : 'text-red-500'}`}>
+                  {passedCount}/{testResults.length} Passed
+                </span>
+              </div>
+              <div className="divide-y divide-gray-100 dark:divide-slate-700">
+                {testResults.map((testResult, index) => (
+                  <button
+                    key={testResult.test_case_number}
+                    onClick={() => setSelectedTestCaseIndex(index)}
+                    className={`w-full flex items-center gap-3 p-4 text-left transition-colors hover:bg-gray-50 dark:hover:bg-slate-700/50 ${selectedTestCaseIndex === index ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                       }`}
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-gray-800 dark:text-gray-200">
-                        Test Case {index + 1}
-                        {testResult.is_hidden && ' (Hidden)'}
-                      </span>
-                      {testResult.passed ? (
-                        <CheckCircle className="text-green-600 dark:text-green-400" size={20} />
-                      ) : (
-                        <XCircle className="text-red-600 dark:text-red-400" size={20} />
+                    {testResult.passed ? (
+                      <CheckCircle className="text-green-500 shrink-0" size={18} />
+                    ) : (
+                      <XCircle className="text-red-500 shrink-0" size={18} />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 dark:text-white text-sm">
+                        Test Case {testResult.test_case_number}
+                        {(testResult.is_hidden === true || testResult.is_hidden === 1) && ' (Hidden)'}
+                      </p>
+                      {!testResult.passed && (
+                        <p className="text-xs text-red-500 truncate">{getErrorType(testResult)}</p>
                       )}
                     </div>
-                    <div className="text-sm space-y-1">
-                      <div>
-                        <span className="font-medium text-gray-600 dark:text-gray-400">Input:</span>
-                        <pre className="mt-1 text-gray-700 dark:text-gray-300 bg-white/50 dark:bg-black/20 p-1 rounded">{testResult.input_data}</pre>
-                      </div>
-                      <div>
-                        <span className="font-medium text-gray-600 dark:text-gray-400">Expected:</span>
-                        <pre className="mt-1 text-gray-700 dark:text-gray-300 bg-white/50 dark:bg-black/20 p-1 rounded">{testResult.expected_output}</pre>
-                      </div>
-                      {!testResult.passed && (
-                        <div>
-                          <span className="font-medium text-gray-600 dark:text-gray-400">Actual:</span>
-                          <pre className="mt-1 text-red-700 dark:text-red-400 bg-white/50 dark:bg-black/20 p-1 rounded">{testResult.actual_output}</pre>
-                        </div>
-                      )}
+                    <ChevronRight className="text-gray-400 shrink-0" size={16} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Question Details & Code */}
+          <div className="flex-1 flex flex-col space-y-4">
+            {/* Question Header */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-5">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{selectedQuestion.title}</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Test Case {selectedTestCase?.test_case_number || 1} Details
+                  </p>
+                </div>
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${selectedQuestion.submission?.is_correct
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                  }`}>
+                  <span className={`w-2 h-2 rounded-full ${selectedQuestion.submission?.is_correct ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                  {selectedQuestion.submission?.is_correct ? 'PASSED' : 'FAILED'}
+                </span>
+              </div>
+
+              {/* Test Case Details Grid */}
+              {selectedTestCase && (
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Input</label>
+                    <div className="mt-1 p-3 bg-gray-50 dark:bg-slate-900 rounded-lg font-mono text-sm text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-slate-700">
+                      {selectedTestCase.input_data || 'N/A'}
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Expected Output</label>
+                    <div className="mt-1 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg font-mono text-sm text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800/50">
+                      {selectedTestCase.expected_output || 'N/A'}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actual Output</label>
+                    <div className={`mt-1 p-3 rounded-lg font-mono text-sm border ${selectedTestCase.passed
+                      ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/50'
+                      : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800/50'
+                      }`}>
+                      {selectedTestCase.actual_output || 'N/A'}
+                    </div>
+                  </div>
+                </div>
+              )}
 
-            <button
-              onClick={() => {
-                setShowTutor(true);
-                fetchInitialHint();
-              }}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <MessageSquare size={18} />
-              Chat with Agent
-            </button>
+              {/* AI Hint */}
+              {!selectedQuestion.submission?.is_correct && selectedTestCase && !selectedTestCase.passed && (
+                <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-lg">
+                  <Info className="text-blue-500 shrink-0 mt-0.5" size={18} />
+                  <p className="text-sm text-blue-700 dark:text-blue-400">
+                    {selectedTestCase.error_message || "Check your logic and compare the expected vs actual output. Review edge cases and boundary conditions."}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Code Viewer */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col flex-1">
+              {/* Tab Bar */}
+              <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-slate-700">
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setActiveTab('user')}
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'user'
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'
+                      }`}
+                  >
+                    Your Code
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('solution')}
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'solution'
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'
+                      }`}
+                  >
+                    Correct Solution
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+                    <Maximize2 size={16} />
+                  </button>
+                  <button
+                    onClick={handleCopyCode}
+                    className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                    title="Copy code"
+                  >
+                    {copied ? <CheckCircle size={16} className="text-green-500" /> : <Copy size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Code Editor */}
+              <div className="bg-slate-900 p-4 overflow-x-auto flex-1 min-h-[300px] overflow-y-auto">
+                <table className="w-full">
+                  <tbody>
+                    {codeLines.map((line, index) => (
+                      <tr key={index}>
+                        <td className="text-slate-500 text-right pr-4 select-none font-mono text-sm w-8 align-top">
+                          {index + 1}
+                        </td>
+                        <td className="text-gray-200 font-mono text-sm whitespace-pre">
+                          {line || ' '}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Code Footer */}
+              <div className="flex items-center justify-between px-4 py-2 border-t border-slate-700 bg-slate-800/50 text-xs text-gray-500">
+                <div className="flex items-center gap-2">
+                  <Clock size={12} />
+                  <span>Submitted {selectedQuestion.submission?.submitted_at ? new Date(selectedQuestion.submission.submitted_at).toLocaleString() : 'recently'}</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span>UTF-8</span>
+                  <span className="text-red-400 uppercase">{selectedQuestion.submission?.language || 'PYTHON'} 3.10</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6 mb-4 border border-transparent dark:border-slate-700">
-          {/* Explanation Section */}
-          {selectedQuestion.explanation && (
-            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-lg">
-              <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-2">Explanation</h3>
-              <p className="text-blue-700 dark:text-blue-200">{selectedQuestion.explanation}</p>
-            </div>
-          )}
-
-          {/* Concepts Section */}
-          {selectedQuestion.concepts && (
-            <div className="mb-6">
-              <h3 className="font-semibold text-gray-800 dark:text-white mb-2">Recommended Topics</h3>
-              <div className="flex flex-wrap gap-2">
-                {(typeof selectedQuestion.concepts === 'string'
-                  ? JSON.parse(selectedQuestion.concepts)
-                  : selectedQuestion.concepts
-                ).map((concept, idx) => (
-                  <span key={idx} className="px-3 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-full text-sm">
-                    {concept}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="mb-4">
-            <div className="flex gap-2 border-b border-gray-200 dark:border-slate-700 mb-4">
-              <button
-                onClick={() => setActiveTab('user')}
-                className={`px-4 py-2 font-medium transition-colors ${activeTab === 'user'
-                  ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                  }`}
-              >
-                Your Code
-              </button>
-              <button
-                onClick={() => setActiveTab('solution')}
-                className={`px-4 py-2 font-medium transition-colors ${activeTab === 'solution'
-                  ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                  }`}
-              >
-                Correct Solution
-              </button>
-            </div>
-
-            <div className="bg-gray-50 dark:bg-slate-900 p-4 rounded-lg overflow-x-auto border border-gray-200 dark:border-slate-700">
-              <pre className="text-sm font-mono text-gray-800 dark:text-gray-300 whitespace-pre">
-                {activeTab === 'user'
-                  ? selectedQuestion.submission?.submitted_code || 'No code submitted'
-                  : selectedQuestion.reference_solution || 'No solution available'}
-              </pre>
-            </div>
-          </div>
-        </div>
+        {/* Floating Chat Button */}
+        <button
+          onClick={() => {
+            setShowTutor(true);
+            fetchInitialHint();
+          }}
+          className="fixed bottom-6 right-6 flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-full shadow-lg transition-all hover:shadow-xl"
+        >
+          <MessageSquare size={20} />
+          Chat with Tutor
+        </button>
 
         {/* AI Tutor Chat Modal */}
         {showTutor && (
@@ -394,15 +492,12 @@ const Results = () => {
               </div>
 
               <div className="p-4 border-t border-gray-200 dark:border-slate-700">
-                <form
-                  onSubmit={handleTutorSubmit}
-                  className="flex gap-2"
-                >
+                <form onSubmit={handleTutorSubmit} className="flex gap-2">
                   <input
                     type="text"
                     value={tutorInput}
                     onChange={(e) => setTutorInput(e.target.value)}
-                    placeholder="Ask a question about your code or the test results..."
+                    placeholder="Ask a question about your code..."
                     className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-900 text-gray-900 dark:text-white"
                     disabled={tutorLoading}
                   />
@@ -422,7 +517,7 @@ const Results = () => {
           </div>
         )}
       </div>
-    </Layout >
+    </Layout>
   );
 };
 

@@ -172,15 +172,15 @@ const Progress = () => {
             </div>
 
             {/* Task Assigned Section */}
-            {tasks.length > 0 && (
-              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                    <ListChecks size={20} className="text-gray-400 dark:text-slate-500" />
-                    Task Assigned
-                  </h2>
-                </div>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                  <ListChecks size={20} className="text-gray-400 dark:text-slate-500" />
+                  Task Assigned
+                </h2>
+              </div>
 
+              {tasks.length > 0 ? (
                 <div className="space-y-3">
                   {tasks.map((task) => (
                     <div
@@ -212,8 +212,8 @@ const Progress = () => {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className={`px-3 py-1 text-xs font-medium rounded ${task.status === 'completed' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
-                            task.status === 'in_progress' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
-                              'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                          task.status === 'in_progress' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
+                            'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                           }`}>
                           {task.status === 'completed' ? 'Completed' :
                             task.status === 'in_progress' ? 'In Progress' :
@@ -224,8 +224,16 @@ const Progress = () => {
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
+                    <ListChecks size={28} className="text-gray-400 dark:text-slate-500" />
+                  </div>
+                  <p className="text-lg font-semibold text-gray-600 dark:text-slate-400">TASK NOT ASSIGNED</p>
+                  <p className="text-sm text-gray-400 dark:text-slate-500 mt-1">No tasks have been assigned to you yet.</p>
+                </div>
+              )}
+            </div>
 
             {/* Recent Activity Section */}
             <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
