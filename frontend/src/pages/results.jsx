@@ -201,17 +201,32 @@ const Results = () => {
           </div>
         </div>
 
-        {/* Assignment Completion Popup */}
-        {results.session.is_assignment_completed && (
-          <div className="mx-6 mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl flex items-center gap-4">
-            <div className="p-3 bg-yellow-100 dark:bg-yellow-900/40 rounded-full text-yellow-600 dark:text-yellow-400">
-              <Trophy size={24} />
+        {/* Question Selector */}
+        {results.questions.length > 1 && (
+          <div className="mx-6 mt-4 p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl flex items-center gap-4">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Select Question:</span>
+            <div className="flex items-center gap-2">
+              {results.questions.map((question, index) => (
+                <button
+                  key={question.question_id || index}
+                  onClick={() => {
+                    setSelectedQuestionIndex(index);
+                    setSelectedTestCaseIndex(0);
+                  }}
+                  className={`w-12 h-12 rounded-lg font-bold text-lg transition-all ${selectedQuestionIndex === index
+                    ? 'bg-blue-600 text-white shadow-lg scale-105'
+                    : question.submission?.is_correct
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 border-2 border-green-300 dark:border-green-700'
+                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 border-2 border-red-300 dark:border-red-700'
+                    }`}
+                >
+                  {index + 1}
+                </button>
+              ))}
             </div>
-            <div>
-              <h3 className="font-bold text-gray-900 dark:text-white text-lg">Assignment Completed!</h3>
-              <p className="text-gray-600 dark:text-gray-300">Great job! You have successfully completed the assigned task.</p>
+            <div className="ml-4 text-sm text-gray-500 dark:text-gray-400">
+              {results.questions.filter(q => q.submission?.is_correct).length}/{results.questions.length} Passed
             </div>
-            <Confetti width={window.innerWidth} height={window.innerHeight} recycle={false} numberOfPieces={500} />
           </div>
         )}
 

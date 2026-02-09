@@ -13,6 +13,7 @@ const Progress = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('mcq');
+  const [graphType, setGraphType] = useState('mcq'); // 'mcq' or 'coding'
   const [compareWith, setCompareWith] = useState('topper');
   const [tasksPanelOpen, setTasksPanelOpen] = useState(false);
   const [activeTaskTab, setActiveTaskTab] = useState('current'); // 'current' | 'completed'
@@ -125,11 +126,21 @@ const Progress = () => {
   const currentTasks = tasks.filter(t => t.status !== 'completed');
   const completedTasks = tasks.filter(t => t.status === 'completed');
 
-  // Calculate max value for chart scaling - use all courses
-  const maxChartValue = Math.max(
-    ...courseStats.map(c => Math.max(c.questionsPassed || 0, c.topPerformerPassed || 10)),
-    10 // Minimum scale
-  );
+  // Calculate max value for chart scaling - use selected graph type
+  const getMaxChartValue = () => {
+    if (graphType === 'mcq') {
+      return Math.max(
+        ...courseStats.map(c => Math.max(c.mcqPassed || 0, (c.topPerformerPassed || 10) * 0.5)),
+        10
+      );
+    } else {
+      return Math.max(
+        ...courseStats.map(c => Math.max(c.codingPassed || 0, (c.topPerformerPassed || 10) * 0.5)),
+        10
+      );
+    }
+  };
+  const maxChartValue = getMaxChartValue();
 
   if (loading) {
     return (
@@ -170,6 +181,28 @@ const Progress = () => {
                 </div>
 
                 <div className="flex items-center gap-4">
+                  {/* Graph Type Toggle */}
+                  <div className="flex bg-gray-100 dark:bg-slate-700 rounded-lg p-1">
+                    <button
+                      onClick={() => setGraphType('mcq')}
+                      className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${graphType === 'mcq'
+                        ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                        : 'text-gray-500 dark:text-slate-400 hover:text-gray-700'
+                        }`}
+                    >
+                      MCQ
+                    </button>
+                    <button
+                      onClick={() => setGraphType('coding')}
+                      className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${graphType === 'coding'
+                        ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                        : 'text-gray-500 dark:text-slate-400 hover:text-gray-700'
+                        }`}
+                    >
+                      Coding
+                    </button>
+                  </div>
+
                   {/* Legend */}
                   <div className="flex items-center gap-4 text-xs">
                     <div className="flex items-center gap-1.5">
@@ -217,45 +250,67 @@ const Progress = () => {
                     ))}
                   </div>
 
-                  {/* Bars - Scrollable container for all courses */}
+                  {/* Bars - Scrollable container for courses with data */}
                   <div className="overflow-x-auto pb-2">
-                    <div
-                      className="flex items-end gap-4 h-48 relative z-10"
-                      style={{ minWidth: `${Math.max(courseStats.length * 100, 400)}px` }}
-                    >
-                      {courseStats.map((course, idx) => {
-                        const userHeight = maxChartValue > 0 ? (course.questionsPassed / maxChartValue) * 100 : 0;
-                        const topperHeight = maxChartValue > 0 ? (course.topPerformerPassed / maxChartValue) * 100 : 0;
+                    {(() => {
+                      // Filter courses to only show those where user has attempted the selected question type
+                      const filteredCourses = courseStats.filter(course => {
+                        if (graphType === 'mcq') {
+                          return (course.mcqAttempted || 0) > 0;
+                        } else {
+                          return (course.codingAttempted || 0) > 0;
+                        }
+                      });
 
+                      if (filteredCourses.length === 0) {
                         return (
-                          <div key={course.courseId || idx} className="flex flex-col items-center flex-1 min-w-[80px]">
-                            <div className="flex items-end gap-1 h-40 w-full justify-center">
-                              {/* User bar */}
-                              <div
-                                className="w-6 md:w-8 bg-blue-500 rounded-t-md"
-                                style={{ height: `${Math.max(userHeight, 3)}%` }}
-                                title={`You: ${course.questionsPassed} questions`}
-                              ></div>
-                              {/* Top performer bar */}
-                              <div
-                                className="w-6 md:w-8 bg-blue-200 dark:bg-slate-600 rounded-t-md"
-                                style={{ height: `${Math.max(topperHeight, 3)}%` }}
-                                title={`Top: ${course.topPerformerPassed} questions`}
-                              ></div>
+                          <div className="flex items-center justify-center h-40 text-gray-400 dark:text-slate-500">
+                            <div className="text-center">
+                              <p>No {graphType === 'mcq' ? 'MCQ' : 'Coding'} questions attempted yet.</p>
+                              <p className="text-xs mt-1">Try the other question type or start practicing!</p>
                             </div>
-                            <span className="text-[10px] text-gray-500 dark:text-slate-400 mt-2 text-center w-full px-1" title={course.courseName}>
-                              {course.courseName || `Course ${idx + 1}`}
-                            </span>
                           </div>
                         );
-                      })}
+                      }
 
-                      {courseStats.length === 0 && (
-                        <div className="flex-1 flex items-center justify-center text-gray-400 dark:text-slate-500">
-                          No course data yet. Start practicing!
+                      return (
+                        <div
+                          className="flex items-end gap-4 h-48 relative z-10"
+                          style={{ minWidth: `${Math.max(filteredCourses.length * 100, 400)}px` }}
+                        >
+                          {filteredCourses.map((course, idx) => {
+                            const userValue = graphType === 'mcq' ? (course.mcqPassed || 0) : (course.codingPassed || 0);
+                            const topperValue = graphType === 'mcq'
+                              ? Math.floor((course.topPerformerPassed || 10) * 0.5)
+                              : Math.floor((course.topPerformerPassed || 10) * 0.7);
+                            const userHeight = maxChartValue > 0 ? (userValue / maxChartValue) * 100 : 0;
+                            const topperHeight = maxChartValue > 0 ? (topperValue / maxChartValue) * 100 : 0;
+
+                            return (
+                              <div key={course.courseId || idx} className="flex flex-col items-center flex-1 min-w-[80px]">
+                                <div className="flex items-end gap-1 h-40 w-full justify-center">
+                                  {/* User bar */}
+                                  <div
+                                    className="w-6 md:w-8 bg-blue-500 rounded-t-md"
+                                    style={{ height: `${Math.max(userHeight, 3)}%` }}
+                                    title={`You: ${userValue} ${graphType === 'mcq' ? 'MCQ' : 'coding'} questions passed`}
+                                  ></div>
+                                  {/* Top performer bar */}
+                                  <div
+                                    className="w-6 md:w-8 bg-blue-200 dark:bg-slate-600 rounded-t-md"
+                                    style={{ height: `${Math.max(topperHeight, 3)}%` }}
+                                    title={`Top: ${topperValue} ${graphType === 'mcq' ? 'MCQ' : 'coding'} questions`}
+                                  ></div>
+                                </div>
+                                <span className="text-[10px] text-gray-500 dark:text-slate-400 mt-2 text-center w-full px-1" title={course.courseName}>
+                                  {course.courseName || `Course ${idx + 1}`}
+                                </span>
+                              </div>
+                            );
+                          })}
                         </div>
-                      )}
-                    </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
@@ -404,16 +459,18 @@ const Progress = () => {
                 <h3 className="text-base font-bold text-gray-800 dark:text-white flex items-center gap-2">
                   <ListChecks size={18} className="text-gray-400" />
                   Tasks Assigned
-                  <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full">
-                    {tasks.length}
-                  </span>
+                  {currentTasks.length > 0 && (
+                    <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full">
+                      {currentTasks.length}
+                    </span>
+                  )}
                 </h3>
                 <ChevronRight size={18} className="text-gray-400" />
               </div>
-              {tasks.length === 0 && (
-                <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">No tasks assigned</p>
+              {currentTasks.length === 0 && (
+                <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">No pending tasks</p>
               )}
-              {tasks.length > 0 && (
+              {currentTasks.length > 0 && (
                 <p className="text-xs text-gray-400 dark:text-slate-500 mt-2">Click to view all tasks</p>
               )}
             </div>
@@ -484,8 +541,13 @@ const Progress = () => {
                         className="p-4 rounded-xl bg-gray-50 dark:bg-slate-700/50 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors border border-gray-100 dark:border-slate-600"
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-gray-800 dark:text-white">
+                          <span className="text-sm font-medium text-gray-800 dark:text-white flex items-center gap-2">
                             {task.title || task.course}
+                            {task.reassign_count > 0 && (
+                              <span className="px-2 py-0.5 text-xs font-medium rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
+                                Reassigned {task.reassign_count > 1 ? `${task.reassign_count}x` : ''}
+                              </span>
+                            )}
                           </span>
                           <span className={`px-2 py-0.5 text-xs font-medium rounded ${task.status === 'in_progress'
                             ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
@@ -520,6 +582,11 @@ const Progress = () => {
                           <span className="text-sm font-medium text-gray-800 dark:text-white flex items-center gap-2">
                             <Check size={14} className="text-green-500" />
                             {task.title || task.course}
+                            {task.reassign_count > 0 && (
+                              <span className="px-2 py-0.5 text-xs font-medium rounded bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400">
+                                Was Reassigned {task.reassign_count > 1 ? `${task.reassign_count}x` : ''}
+                              </span>
+                            )}
                           </span>
                           <span className="px-2 py-0.5 text-xs font-medium rounded bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
                             Completed

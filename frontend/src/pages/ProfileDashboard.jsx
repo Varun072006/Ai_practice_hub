@@ -182,6 +182,144 @@ const ProfileDashboard = () => {
                         )}
                     </div>
 
+                    {/* MCQ Questions Breakdown */}
+                    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 mt-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                                <Brain className="text-green-500" size={20} />
+                                MCQ Questions Breakdown
+                            </h3>
+                            <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs font-medium rounded-full">
+                                Multiple Choice
+                            </span>
+                        </div>
+
+                        {courseStats.some(c => (c.mcqAttempted || 0) > 0) ? (
+                            <div className="space-y-4">
+                                {courseStats.filter(c => (c.mcqAttempted || 0) > 0).map((course) => {
+                                    const IconComponent = getCourseIcon(course.icon);
+                                    const mcqPassed = course.mcqPassed || 0;
+                                    const mcqAttempted = course.mcqAttempted || 0;
+                                    const accuracy = mcqAttempted > 0 ? Math.round((mcqPassed / mcqAttempted) * 100) : 0;
+                                    return (
+                                        <div
+                                            key={`mcq-${course.courseId}`}
+                                            className="flex items-center gap-4 p-4 bg-green-50 dark:bg-slate-700/50 rounded-xl"
+                                        >
+                                            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center shrink-0">
+                                                <IconComponent className="text-green-500" size={20} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="text-sm font-semibold text-gray-800 dark:text-white truncate">
+                                                    {course.courseName}
+                                                </h4>
+                                                <p className="text-xs text-gray-500 dark:text-slate-400">
+                                                    {mcqPassed} correct of {mcqAttempted} attempted
+                                                </p>
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                                <p className="text-xl font-bold text-green-600 dark:text-green-400">{mcqPassed}</p>
+                                                <p className="text-[10px] text-gray-500 dark:text-slate-400">{accuracy}% accuracy</p>
+                                            </div>
+                                            <div className="w-24 h-2 bg-gray-200 dark:bg-slate-600 rounded-full overflow-hidden shrink-0">
+                                                <div
+                                                    className="h-full bg-green-500 rounded-full transition-all duration-500"
+                                                    style={{ width: `${accuracy}%` }}
+                                                ></div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {/* MCQ Total Summary */}
+                                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-600">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium text-gray-600 dark:text-slate-300">Total MCQ Questions</span>
+                                        <div className="text-right">
+                                            <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                                                {courseStats.reduce((acc, c) => acc + (c.mcqPassed || 0), 0)}
+                                            </span>
+                                            <span className="text-sm text-gray-500 dark:text-slate-400"> / {courseStats.reduce((acc, c) => acc + (c.mcqAttempted || 0), 0)} attempted</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center py-6 text-gray-500 dark:text-slate-400">
+                                <Brain size={36} className="mx-auto mb-2 opacity-30" />
+                                <p className="text-sm">No MCQ questions attempted yet</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Coding Questions Breakdown */}
+                    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 mt-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                                <Terminal className="text-purple-500" size={20} />
+                                Coding Questions Breakdown
+                            </h3>
+                            <span className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-xs font-medium rounded-full">
+                                Programming
+                            </span>
+                        </div>
+
+                        {courseStats.some(c => (c.codingAttempted || 0) > 0) ? (
+                            <div className="space-y-4">
+                                {courseStats.filter(c => (c.codingAttempted || 0) > 0).map((course) => {
+                                    const IconComponent = getCourseIcon(course.icon);
+                                    const codingPassed = course.codingPassed || 0;
+                                    const codingAttempted = course.codingAttempted || 0;
+                                    const accuracy = codingAttempted > 0 ? Math.round((codingPassed / codingAttempted) * 100) : 0;
+                                    return (
+                                        <div
+                                            key={`coding-${course.courseId}`}
+                                            className="flex items-center gap-4 p-4 bg-purple-50 dark:bg-slate-700/50 rounded-xl"
+                                        >
+                                            <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/50 rounded-full flex items-center justify-center shrink-0">
+                                                <IconComponent className="text-purple-500" size={20} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="text-sm font-semibold text-gray-800 dark:text-white truncate">
+                                                    {course.courseName}
+                                                </h4>
+                                                <p className="text-xs text-gray-500 dark:text-slate-400">
+                                                    {codingPassed} passed of {codingAttempted} attempted
+                                                </p>
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                                <p className="text-xl font-bold text-purple-600 dark:text-purple-400">{codingPassed}</p>
+                                                <p className="text-[10px] text-gray-500 dark:text-slate-400">{accuracy}% success</p>
+                                            </div>
+                                            <div className="w-24 h-2 bg-gray-200 dark:bg-slate-600 rounded-full overflow-hidden shrink-0">
+                                                <div
+                                                    className="h-full bg-purple-500 rounded-full transition-all duration-500"
+                                                    style={{ width: `${accuracy}%` }}
+                                                ></div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {/* Coding Total Summary */}
+                                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-600">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium text-gray-600 dark:text-slate-300">Total Coding Questions</span>
+                                        <div className="text-right">
+                                            <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                                                {courseStats.reduce((acc, c) => acc + (c.codingPassed || 0), 0)}
+                                            </span>
+                                            <span className="text-sm text-gray-500 dark:text-slate-400"> / {courseStats.reduce((acc, c) => acc + (c.codingAttempted || 0), 0)} attempted</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center py-6 text-gray-500 dark:text-slate-400">
+                                <Terminal size={36} className="mx-auto mb-2 opacity-30" />
+                                <p className="text-sm">No coding questions attempted yet</p>
+                            </div>
+                        )}
+                    </div>
+
                     {/* Footer */}
                     <div className="text-center mt-8 text-gray-400 dark:text-slate-500 text-sm">
                         © 2024 Practice Hub. Information Display Only.

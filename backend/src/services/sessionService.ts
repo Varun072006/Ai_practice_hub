@@ -580,53 +580,90 @@ export const completeSession = async (sessionId: string, userId: string) => {
     [sessionId, userId]
   );
 
-  // Check if all questions are completed (for coding sessions)
+  // Get session details with questions completed
   const sessionResult = await pool.query(
-    `SELECT s.level_id, s.course_id, COUNT(*) as total, SUM(CASE WHEN sq.status = 'completed' THEN 1 ELSE 0 END) as completed
+    `SELECT s.level_id, s.course_id, s.session_type,
+            COUNT(*) as total, 
+            SUM(CASE WHEN sq.status = 'completed' THEN 1 ELSE 0 END) as completed
      FROM practice_sessions s
      JOIN session_questions sq ON s.id = sq.session_id
      WHERE s.id = ?
-     GROUP BY s.level_id, s.course_id`,
+     GROUP BY s.level_id, s.course_id, s.session_type`,
     [sessionId]
   );
 
   const sessionRows = getRows(sessionResult);
-  if (sessionRows.length > 0) {
-    const { level_id, course_id, total, completed } = sessionRows[0];
+  if (sessionRows.length === 0) return;
 
-    // If all questions completed, mark level as completed
-    if (parseInt(completed) === parseInt(total)) {
-      const completedProgressId = randomUUID();
+  const { level_id, course_id, session_type, total, completed } = sessionRows[0];
+  const totalInt = parseInt(total);
+  const completedInt = parseInt(completed);
+
+  // Calculate pass rate
+  const passRate = totalInt > 0 ? (completedInt / totalInt) * 100 : 0;
+
+  // Define pass thresholds based on session type
+  // Coding: 100% (all test cases must pass)
+  // MCQ: 60% (at least 60% correct)
+  // HTML/CSS: 80% (at least 80% correct)
+  let passThreshold = 100; // Default for coding
+  if (session_type === 'mcq') {
+    passThreshold = 60;
+  } else if (session_type === 'html-css-challenge') {
+    passThreshold = 80;
+  }
+
+  console.log(`[completeSession] Session ${sessionId}, Type: ${session_type}, Pass Rate: ${passRate.toFixed(1)}%, Threshold: ${passThreshold}%`);
+
+  // Check if user meets the pass threshold
+  const passedThreshold = passRate >= passThreshold;
+
+  if (passedThreshold) {
+    // User passed! Mark level progress as completed
+    const completedProgressId = randomUUID();
+    await pool.query(
+      `INSERT INTO user_progress (id, user_id, course_id, level_id, status, completed_at)
+       VALUES (?, ?, ?, ?, 'completed', CURRENT_TIMESTAMP)
+       ON DUPLICATE KEY UPDATE status = 'completed', completed_at = CURRENT_TIMESTAMP`,
+      [completedProgressId, userId, course_id, level_id]
+    );
+
+    // Check if Coding/HTML-CSS session is completed for this level
+    // Mark assignment as completed when coding is done
+    const typesResult = await pool.query(
+      `SELECT DISTINCT session_type FROM practice_sessions 
+       WHERE user_id = ? AND level_id = ? AND status = 'completed'`,
+      [userId, level_id]
+    );
+    const completedTypes = getRows(typesResult).map((r: any) => r.session_type);
+
+    const hasCoding = completedTypes.includes('coding') || completedTypes.includes('html-css-challenge');
+
+    if (hasCoding) {
+      // Mark assignment/task as completed
       await pool.query(
-        `INSERT INTO user_progress (id, user_id, course_id, level_id, status, completed_at)
-         VALUES (?, ?, ?, ?, 'completed', CURRENT_TIMESTAMP)
-         ON DUPLICATE KEY UPDATE status = 'completed', completed_at = CURRENT_TIMESTAMP`,
-        [completedProgressId, userId, course_id, level_id]
-      );
-
-      // Check if BOTH MCQ and Coding/HTML-CSS are completed for this level
-      // This is required to mark the *Assignment* as completed
-      const typesResult = await pool.query(
-        `SELECT DISTINCT session_type FROM practice_sessions 
-         WHERE user_id = ? AND level_id = ? AND status = 'completed'`,
+        `UPDATE student_tasks st
+           JOIN assignments a ON st.assignment_id = a.id
+           SET st.status = 'completed', st.completed_at = CURRENT_TIMESTAMP
+           WHERE st.user_id = ? AND a.level_id = ? AND st.status = 'pending'`,
         [userId, level_id]
       );
-      const completedTypes = getRows(typesResult).map((r: any) => r.session_type);
-
-      const hasMcq = completedTypes.includes('mcq');
-      const hasCoding = completedTypes.includes('coding') || completedTypes.includes('html-css-challenge');
-
-      if (hasMcq && hasCoding) {
-        // Both parts done, mark assignment as completed
-        await pool.query(
-          `UPDATE student_tasks st
-             JOIN assignments a ON st.assignment_id = a.id
-             SET st.status = 'completed', st.completed_at = CURRENT_TIMESTAMP
-             WHERE st.user_id = ? AND a.level_id = ? AND st.status = 'pending'`,
-          [userId, level_id]
-        );
-      }
+      console.log(`[completeSession] Task marked as COMPLETED for user ${userId}, level ${level_id}`);
     }
+  } else {
+    // User did NOT pass! Auto-reassign the task
+    console.log(`[completeSession] User ${userId} did NOT meet threshold (${passRate.toFixed(1)}% < ${passThreshold}%). Reassigning task...`);
+
+    // Increment reassign_count and keep status as pending
+    await pool.query(
+      `UPDATE student_tasks st
+         JOIN assignments a ON st.assignment_id = a.id
+         SET st.reassign_count = COALESCE(st.reassign_count, 0) + 1,
+             st.status = 'pending'
+         WHERE st.user_id = ? AND a.level_id = ?`,
+      [userId, level_id]
+    );
+    console.log(`[completeSession] Task REASSIGNED for user ${userId}, level ${level_id}`);
   }
 };
 export const runCode = async (

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
-import { Search, Download, X, CheckCircle, XCircle, ChevronRight, Copy, Clock } from 'lucide-react';
+import { Search, Download, X, CheckCircle, XCircle, ChevronRight, Copy, Clock, Edit } from 'lucide-react';
 
 const StudentResults = () => {
     const [results, setResults] = useState([]);
@@ -10,7 +10,6 @@ const StudentResults = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filter, setFilter] = useState('all'); // all, pass, fail
 
-    // Modal state
     const [selectedSession, setSelectedSession] = useState(null);
     const [sessionDetails, setSessionDetails] = useState(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
@@ -18,6 +17,12 @@ const StudentResults = () => {
     const [selectedTestCaseIndex, setSelectedTestCaseIndex] = useState(0);
     const [activeTab, setActiveTab] = useState('user');
     const [copied, setCopied] = useState(false);
+
+    // Edit user modal state
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editingUser, setEditingUser] = useState(null);
+    const [editName, setEditName] = useState('');
+    const [savingEdit, setSavingEdit] = useState(false);
 
     useEffect(() => {
         fetchResults();
@@ -36,6 +41,38 @@ const StudentResults = () => {
 
     const handleSearch = (e) => {
         setSearchTerm(e.target.value);
+    };
+
+    // Handle opening edit modal
+    const handleEditClick = (result, e) => {
+        e.stopPropagation(); // Prevent row click
+        setEditingUser(result);
+        setEditName(result.student_name);
+        setShowEditModal(true);
+    };
+
+    // Handle saving user name
+    const handleSaveEdit = async () => {
+        if (!editingUser || !editName.trim()) return;
+
+        setSavingEdit(true);
+        try {
+            await api.put(`/admin/users/${editingUser.user_id}`, { name: editName.trim() });
+            // Update local state
+            setResults(results.map(r =>
+                r.user_id === editingUser.user_id
+                    ? { ...r, student_name: editName.trim() }
+                    : r
+            ));
+            setShowEditModal(false);
+            setEditingUser(null);
+            alert('User name updated successfully!');
+        } catch (error) {
+            console.error('Failed to update user:', error);
+            alert('Failed to update user name');
+        } finally {
+            setSavingEdit(false);
+        }
     };
 
     const filteredResults = results.filter(result => {
@@ -701,6 +738,13 @@ const StudentResults = () => {
                                                         {result.student_name.substring(0, 2)}
                                                     </div>
                                                     <span className="font-medium text-gray-800 dark:text-white">{result.student_name}</span>
+                                                    <button
+                                                        onClick={(e) => handleEditClick(result, e)}
+                                                        className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                                                        title="Edit student name"
+                                                    >
+                                                        <Edit size={14} />
+                                                    </button>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-400">
@@ -753,6 +797,55 @@ const StudentResults = () => {
 
             {/* Render Modal */}
             {renderDetailModal()}
+
+            {/* Edit User Modal */}
+            {showEditModal && editingUser && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl dark:shadow-slate-900/50 w-full max-w-md overflow-hidden border dark:border-slate-700">
+                        <div className="p-6 border-b border-gray-100 dark:border-slate-700">
+                            <h3 className="text-lg font-bold text-gray-800 dark:text-white">Edit Student Name</h3>
+                            <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
+                                Update the name for {editingUser.student_name}
+                            </p>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                                    Student Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={editName}
+                                    onChange={(e) => setEditName(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-slate-700 text-gray-800 dark:text-white"
+                                    placeholder="Enter student name"
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="pt-4 flex justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowEditModal(false);
+                                        setEditingUser(null);
+                                    }}
+                                    className="px-4 py-2 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg font-medium transition-colors"
+                                    disabled={savingEdit}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSaveEdit}
+                                    disabled={savingEdit || !editName.trim()}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {savingEdit ? 'Saving...' : 'Save Changes'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </Layout>
     );
 };

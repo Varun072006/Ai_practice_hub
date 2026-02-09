@@ -174,10 +174,7 @@ const MCQPractice = () => {
         {/* Sidebar - Question Navigator */}
         <div className="hidden lg:flex flex-col w-80 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 shadow-sm z-10">
           <div className="p-6 border-b border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-800/50">
-            <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-slate-400 mb-1">
-              <LayoutGrid size={16} /> Question Navigator
-            </h3>
-            <p className="text-xs text-gray-400 dark:text-slate-500">
+            <p className="text-sm text-gray-500 dark:text-slate-400">
               Question {currentQuestionIndex + 1} of {session.questions.length}
             </p>
           </div>
