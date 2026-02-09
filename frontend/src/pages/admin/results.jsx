@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
 import api from '../../services/api';
-import { Search, Download, X, CheckCircle, XCircle, ChevronRight, Copy, Clock, Edit } from 'lucide-react';
+import { Search, Download, X, CheckCircle, XCircle, ChevronRight, Copy, Clock, ExternalLink } from 'lucide-react';
 
 const StudentResults = () => {
     const [results, setResults] = useState([]);
@@ -738,13 +738,6 @@ const StudentResults = () => {
                                                         {result.student_name.substring(0, 2)}
                                                     </div>
                                                     <span className="font-medium text-gray-800 dark:text-white">{result.student_name}</span>
-                                                    <button
-                                                        onClick={(e) => handleEditClick(result, e)}
-                                                        className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
-                                                        title="Edit student name"
-                                                    >
-                                                        <Edit size={14} />
-                                                    </button>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-400">
@@ -772,9 +765,11 @@ const StudentResults = () => {
                                             <td className="px-6 py-4">
                                                 <button
                                                     onClick={() => handleStatusClick(result)}
-                                                    className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border shadow-sm cursor-pointer hover:opacity-80 transition-opacity ${getStatusColor(result.status)}`}
+                                                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-sm cursor-pointer hover:opacity-80 transition-opacity ${getStatusColor(result.status)}`}
+                                                    title="Click to view detailed results"
                                                 >
                                                     {result.status.toUpperCase()}
+                                                    <ExternalLink size={12} />
                                                 </button>
                                             </td>
                                         </tr>

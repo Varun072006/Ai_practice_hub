@@ -16,6 +16,9 @@ const CreateQuestion = () => {
 
   const isEditMode = !!questionId;
   const [questionType, setQuestionType] = useState(questionTypeParam || 'coding');
+  // Track if type has been selected (for two-step creation flow)
+  // If there's a type in URL params (from clicking MCQ/Coding count in levels page), skip selection
+  const [typeSelected, setTypeSelected] = useState(isEditMode || !!questionTypeParam);
   const [course, setCourse] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [formData, setFormData] = useState({
@@ -46,6 +49,12 @@ const CreateQuestion = () => {
 
   // Image assets for HTML/CSS questions
   const [assets, setAssets] = useState([]);
+
+  // Handler to select question type (first step of creation flow)
+  const handleSelectQuestionType = (type) => {
+    setQuestionType(type);
+    setTypeSelected(true);
+  };
 
   // Check if this is an HTML/CSS course
   const isHtmlCssCourse = course?.title?.toLowerCase().includes('html') || course?.title?.toLowerCase().includes('css');
@@ -417,409 +426,416 @@ const CreateQuestion = () => {
           </div>
         )}
 
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 mb-6 border border-transparent dark:border-slate-700">
-          <h2 className="text-lg font-bold text-gray-800 dark:text-white mb-4">Question Type</h2>
-          <div className="flex gap-4">
-            {/* For HTML/CSS course: show HTML/CSS instead of Coding, but keep MCQ */}
-            {isHtmlCssCourse ? (
-              <>
-                <button
-                  onClick={() => setQuestionType('coding')}
-                  className={`px-6 py-3 rounded-lg font-medium ${questionType === 'coding'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
-                    }`}
-                >
-                  HTML/CSS Challenge
-                </button>
-                <button
-                  onClick={() => setQuestionType('mcq')}
-                  className={`px-6 py-3 rounded-lg font-medium ${questionType === 'mcq'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
-                    }`}
-                >
-                  MCQ Question
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => setQuestionType('coding')}
-                  className={`px-6 py-3 rounded-lg font-medium ${questionType === 'coding'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
-                    }`}
-                >
-                  Coding Question
-                </button>
-                <button
-                  onClick={() => setQuestionType('mcq')}
-                  className={`px-6 py-3 rounded-lg font-medium ${questionType === 'mcq'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
-                    }`}
-                >
-                  MCQ Question
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
-              Problem Title *
-            </label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="e.g., Binary Search Implementation"
-              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
-              required
-            />
-          </div>
-
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
-              Question Description *
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Enter the problem description, constraints, and examples..."
-              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
-              rows={6}
-              required
-            />
-          </div>
-
-          {questionType === 'coding' && (
-            <>
+        {/* Question Type Selection Screen - Only show when creating and type not yet selected */}
+        {!isEditMode && !typeSelected && (
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg dark:shadow-slate-900/50 p-8 border border-gray-200 dark:border-slate-700">
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2 text-center">Select Question Type</h2>
+            <p className="text-gray-500 dark:text-slate-400 text-center mb-8">Choose the type of question you want to create</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
               {isHtmlCssCourse ? (
-                /* HTML/CSS Course - Show HTML, CSS, JS editors */
                 <>
-                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">
-                        Expected HTML Code *
-                      </label>
-                    </div>
-                    <Editor
-                      height="300px"
-                      language="html"
-                      value={htmlCssCode.html}
-                      onChange={(value) => setHtmlCssCode({ ...htmlCssCode, html: value || '' })}
-                      theme="vs-dark"
-                      options={{
-                        minimap: { enabled: false },
-                        fontSize: 14,
-                        wordWrap: 'on',
-                      }}
-                    />
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectQuestionType('coding')}
+                    className="p-8 rounded-xl border-2 border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40 hover:border-purple-400 dark:hover:border-purple-600 transition-all group"
+                  >
+                    <div className="text-5xl mb-4">🎨</div>
+                    <h3 className="text-xl font-bold text-purple-700 dark:text-purple-400 mb-2">HTML/CSS Challenge</h3>
+                    <p className="text-sm text-purple-600 dark:text-purple-500">Create a web development challenge with HTML, CSS, and JavaScript</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectQuestionType('mcq')}
+                    className="p-8 rounded-xl border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:border-blue-400 dark:hover:border-blue-600 transition-all group"
+                  >
+                    <div className="text-5xl mb-4">📝</div>
+                    <h3 className="text-xl font-bold text-blue-700 dark:text-blue-400 mb-2">MCQ Question</h3>
+                    <p className="text-sm text-blue-600 dark:text-blue-500">Create a multiple choice question with 4 options</p>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectQuestionType('coding')}
+                    className="p-8 rounded-xl border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:border-blue-400 dark:hover:border-blue-600 transition-all group"
+                  >
+                    <div className="text-5xl mb-4">💻</div>
+                    <h3 className="text-xl font-bold text-blue-700 dark:text-blue-400 mb-2">Coding Question</h3>
+                    <p className="text-sm text-blue-600 dark:text-blue-500">Create a programming challenge with test cases</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectQuestionType('mcq')}
+                    className="p-8 rounded-xl border-2 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/40 hover:border-green-400 dark:hover:border-green-600 transition-all group"
+                  >
+                    <div className="text-5xl mb-4">📝</div>
+                    <h3 className="text-xl font-bold text-green-700 dark:text-green-400 mb-2">MCQ Question</h3>
+                    <p className="text-sm text-green-600 dark:text-green-500">Create a multiple choice question with 4 options</p>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
-                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">
-                        Expected CSS Code
-                      </label>
-                    </div>
-                    <Editor
-                      height="250px"
-                      language="css"
-                      value={htmlCssCode.css}
-                      onChange={(value) => setHtmlCssCode({ ...htmlCssCode, css: value || '' })}
-                      theme="vs-dark"
-                      options={{
-                        minimap: { enabled: false },
-                        fontSize: 14,
-                        wordWrap: 'on',
-                      }}
-                    />
-                  </div>
+        {/* Question Form - Only show after type is selected or in edit mode */}
+        {(isEditMode || typeSelected) && (
 
-                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">
-                        Expected JavaScript Code
-                      </label>
-                    </div>
-                    <Editor
-                      height="200px"
-                      language="javascript"
-                      value={htmlCssCode.js}
-                      onChange={(value) => setHtmlCssCode({ ...htmlCssCode, js: value || '' })}
-                      theme="vs-dark"
-                      options={{
-                        minimap: { enabled: false },
-                        fontSize: 14,
-                        wordWrap: 'on',
-                      }}
-                    />
-                  </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                Problem Title *
+              </label>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="e.g., Binary Search Implementation"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
+                required
+              />
+            </div>
 
-                  {/* Image Assets Section */}
-                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                Question Description *
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Enter the problem description, constraints, and examples..."
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
+                rows={6}
+                required
+              />
+            </div>
+
+            {questionType === 'coding' && (
+              <>
+                {isHtmlCssCourse ? (
+                  /* HTML/CSS Course - Show HTML, CSS, JS editors */
+                  <>
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">
-                          Image Assets
+                          Expected HTML Code *
                         </label>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setAssets([...assets, { name: '', path: '' }])}
-                        className="flex items-center gap-2 px-3 py-1 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700"
-                      >
-                        <Plus size={16} />
-                        Add Asset
-                      </button>
+                      <Editor
+                        height="300px"
+                        language="html"
+                        value={htmlCssCode.html}
+                        onChange={(value) => setHtmlCssCode({ ...htmlCssCode, html: value || '' })}
+                        theme="vs-dark"
+                        options={{
+                          minimap: { enabled: false },
+                          fontSize: 14,
+                          wordWrap: 'on',
+                        }}
+                      />
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-slate-500 mb-4">
-                      Define image assets that students can use in their HTML code (e.g., dog1.jpg → /assets/images/dog1.jpg)
-                    </p>
-                    {assets.length === 0 ? (
-                      <div className="text-center py-4 text-gray-400 dark:text-slate-500 text-sm border-2 border-dashed border-gray-200 dark:border-slate-600 rounded-lg">
-                        No assets defined. Click "Add Asset" to add image references.
+
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">
+                          Expected CSS Code
+                        </label>
                       </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {assets.map((asset, index) => (
-                          <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
-                            <input
-                              type="text"
-                              value={asset.name}
-                              onChange={(e) => {
-                                const newAssets = [...assets];
-                                newAssets[index].name = e.target.value;
-                                setAssets(newAssets);
-                              }}
-                              placeholder="Asset name (e.g., dog1.jpg)"
-                              className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
-                            />
-                            <span className="text-gray-400 dark:text-slate-500">→</span>
-                            <input
-                              type="text"
-                              value={asset.path}
-                              onChange={(e) => {
-                                const newAssets = [...assets];
-                                newAssets[index].path = e.target.value;
-                                setAssets(newAssets);
-                              }}
-                              placeholder="Path (e.g., /assets/images/dog1.jpg)"
-                              className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newAssets = assets.filter((_, i) => i !== index);
-                                setAssets(newAssets);
-                              }}
-                              className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-1"
-                            >
-                              <Trash2 size={18} />
-                            </button>
+                      <Editor
+                        height="250px"
+                        language="css"
+                        value={htmlCssCode.css}
+                        onChange={(value) => setHtmlCssCode({ ...htmlCssCode, css: value || '' })}
+                        theme="vs-dark"
+                        options={{
+                          minimap: { enabled: false },
+                          fontSize: 14,
+                          wordWrap: 'on',
+                        }}
+                      />
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">
+                          Expected JavaScript Code
+                        </label>
+                      </div>
+                      <Editor
+                        height="200px"
+                        language="javascript"
+                        value={htmlCssCode.js}
+                        onChange={(value) => setHtmlCssCode({ ...htmlCssCode, js: value || '' })}
+                        theme="vs-dark"
+                        options={{
+                          minimap: { enabled: false },
+                          fontSize: 14,
+                          wordWrap: 'on',
+                        }}
+                      />
+                    </div>
+
+                    {/* Image Assets Section */}
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">
+                            Image Assets
+                          </label>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAssets([...assets, { name: '', path: '' }])}
+                          className="flex items-center gap-2 px-3 py-1 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700"
+                        >
+                          <Plus size={16} />
+                          Add Asset
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-slate-500 mb-4">
+                        Define image assets that students can use in their HTML code (e.g., dog1.jpg → /assets/images/dog1.jpg)
+                      </p>
+                      {assets.length === 0 ? (
+                        <div className="text-center py-4 text-gray-400 dark:text-slate-500 text-sm border-2 border-dashed border-gray-200 dark:border-slate-600 rounded-lg">
+                          No assets defined. Click "Add Asset" to add image references.
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {assets.map((asset, index) => (
+                            <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
+                              <input
+                                type="text"
+                                value={asset.name}
+                                onChange={(e) => {
+                                  const newAssets = [...assets];
+                                  newAssets[index].name = e.target.value;
+                                  setAssets(newAssets);
+                                }}
+                                placeholder="Asset name (e.g., dog1.jpg)"
+                                className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
+                              />
+                              <span className="text-gray-400 dark:text-slate-500">→</span>
+                              <input
+                                type="text"
+                                value={asset.path}
+                                onChange={(e) => {
+                                  const newAssets = [...assets];
+                                  newAssets[index].path = e.target.value;
+                                  setAssets(newAssets);
+                                }}
+                                placeholder="Path (e.g., /assets/images/dog1.jpg)"
+                                className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newAssets = assets.filter((_, i) => i !== index);
+                                  setAssets(newAssets);
+                                }}
+                                className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-1"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+                      <p className="text-sm text-purple-700 dark:text-purple-400">
+                        <strong>HTML/CSS Challenge Mode:</strong> Students will write HTML, CSS, and JS code to match the expected output. The expected code above serves as the reference solution.
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  /* Regular Coding Course */
+                  <>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                          Input Format
+                        </label>
+                        <textarea
+                          value={formData.input_format}
+                          onChange={(e) => setFormData({ ...formData, input_format: e.target.value })}
+                          placeholder="Describe the expected input structure..."
+                          className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
+                          rows={4}
+                        />
+                      </div>
+                      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                          Output Format
+                        </label>
+                        <textarea
+                          value={formData.output_format}
+                          onChange={(e) => setFormData({ ...formData, output_format: e.target.value })}
+                          placeholder="Describe the expected output structure..."
+                          className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
+                          rows={4}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                        Correct Solution ({getLanguageLabel()})
+                      </label>
+                      <Editor
+                        height="300px"
+                        language={getEditorLanguage()}
+                        value={formData.reference_solution}
+                        onChange={(value) => setFormData({ ...formData, reference_solution: value || '' })}
+                        theme="vs-dark"
+                      />
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold text-gray-800 dark:text-white">Test Cases</h3>
+                        <button
+                          type="button"
+                          onClick={addTestCase}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        >
+                          <Plus size={18} />
+                          Add Test Case
+                        </button>
+                      </div>
+                      <div className="space-y-4">
+                        {formData.test_cases.map((testCase, index) => (
+                          <div key={index} className="border border-gray-200 dark:border-slate-600 rounded-lg p-4 bg-gray-50 dark:bg-slate-700/50">
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="font-medium text-gray-800 dark:text-white">Test Case {index + 1}</span>
+                              <div className="flex items-center gap-4">
+                                <label className="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={testCase.is_hidden}
+                                    onChange={(e) =>
+                                      updateTestCase(index, 'is_hidden', e.target.checked)
+                                    }
+                                    className="mr-2"
+                                  />
+                                  <span className="text-sm text-gray-600 dark:text-slate-400">Hidden</span>
+                                </label>
+                                {formData.test_cases.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeTestCase(index)}
+                                    className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                                  >
+                                    <Trash2 size={18} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                                  Input
+                                </label>
+                                <textarea
+                                  value={testCase.input_data}
+                                  onChange={(e) =>
+                                    updateTestCase(index, 'input_data', e.target.value)
+                                  }
+                                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
+                                  rows={3}
+                                  required
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                                  Expected Output
+                                </label>
+                                <textarea
+                                  value={testCase.expected_output}
+                                  onChange={(e) =>
+                                    updateTestCase(index, 'expected_output', e.target.value)
+                                  }
+                                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
+                                  rows={3}
+                                  required
+                                />
+                              </div>
+                            </div>
                           </div>
                         ))}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
 
-                  <div className="bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
-                    <p className="text-sm text-purple-700 dark:text-purple-400">
-                      <strong>HTML/CSS Challenge Mode:</strong> Students will write HTML, CSS, and JS code to match the expected output. The expected code above serves as the reference solution.
-                    </p>
-                  </div>
-                </>
-              ) : (
-                /* Regular Coding Course */
-                <>
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
-                        Input Format
-                      </label>
-                      <textarea
-                        value={formData.input_format}
-                        onChange={(e) => setFormData({ ...formData, input_format: e.target.value })}
-                        placeholder="Describe the expected input structure..."
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
-                        rows={4}
+            {questionType === 'mcq' && (
+              <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
+                <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4">Answer Options</h3>
+                <div className="space-y-3 mb-6">
+                  {formData.options.map((option, index) => (
+                    <div key={index} className="flex items-center gap-3 p-3 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700/50">
+                      <span className="font-medium text-gray-800 dark:text-white">{String.fromCharCode(65 + index)}.</span>
+                      <input
+                        type="text"
+                        value={option.option_text}
+                        onChange={(e) => {
+                          const newOptions = [...formData.options];
+                          newOptions[index].option_text = e.target.value;
+                          setFormData({ ...formData, options: newOptions });
+                        }}
+                        placeholder="Enter option text..."
+                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
+                        required
                       />
                     </div>
-                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
-                        Output Format
-                      </label>
-                      <textarea
-                        value={formData.output_format}
-                        onChange={(e) => setFormData({ ...formData, output_format: e.target.value })}
-                        placeholder="Describe the expected output structure..."
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
-                        rows={4}
-                      />
-                    </div>
-                  </div>
+                  ))}
+                </div>
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-600">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                    Correct Answer (Text) *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.correct_answer}
+                    onChange={(e) => {
+                      setFormData({ ...formData, correct_answer: e.target.value });
+                    }}
+                    placeholder="Enter the correct answer text (must match one of the options)"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 dark:text-slate-500 mt-2">
+                    This should exactly match the text of the correct option (for example: "
+                    <span className="italic">0</span>" or "
+                    <span className="italic">Depends on language</span>").
+                  </p>
+                </div>
+              </div>
+            )}
 
-                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
-                      Correct Solution ({getLanguageLabel()})
-                    </label>
-                    <Editor
-                      height="300px"
-                      language={getEditorLanguage()}
-                      value={formData.reference_solution}
-                      onChange={(value) => setFormData({ ...formData, reference_solution: value || '' })}
-                      theme="vs-dark"
-                    />
-                  </div>
-
-                  <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-bold text-gray-800 dark:text-white">Test Cases</h3>
-                      <button
-                        type="button"
-                        onClick={addTestCase}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                      >
-                        <Plus size={18} />
-                        Add Test Case
-                      </button>
-                    </div>
-                    <div className="space-y-4">
-                      {formData.test_cases.map((testCase, index) => (
-                        <div key={index} className="border border-gray-200 dark:border-slate-600 rounded-lg p-4 bg-gray-50 dark:bg-slate-700/50">
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="font-medium text-gray-800 dark:text-white">Test Case {index + 1}</span>
-                            <div className="flex items-center gap-4">
-                              <label className="flex items-center">
-                                <input
-                                  type="checkbox"
-                                  checked={testCase.is_hidden}
-                                  onChange={(e) =>
-                                    updateTestCase(index, 'is_hidden', e.target.checked)
-                                  }
-                                  className="mr-2"
-                                />
-                                <span className="text-sm text-gray-600 dark:text-slate-400">Hidden</span>
-                              </label>
-                              {formData.test_cases.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => removeTestCase(index)}
-                                  className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
-                                >
-                                  <Trash2 size={18} />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
-                                Input
-                              </label>
-                              <textarea
-                                value={testCase.input_data}
-                                onChange={(e) =>
-                                  updateTestCase(index, 'input_data', e.target.value)
-                                }
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
-                                rows={3}
-                                required
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
-                                Expected Output
-                              </label>
-                              <textarea
-                                value={testCase.expected_output}
-                                onChange={(e) =>
-                                  updateTestCase(index, 'expected_output', e.target.value)
-                                }
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
-                                rows={3}
-                                required
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-            </>
-          )}
-
-          {questionType === 'mcq' && (
             <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
-              <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4">Answer Options</h3>
-              <div className="space-y-3 mb-6">
-                {formData.options.map((option, index) => (
-                  <div key={index} className="flex items-center gap-3 p-3 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700/50">
-                    <span className="font-medium text-gray-800 dark:text-white">{String.fromCharCode(65 + index)}.</span>
-                    <input
-                      type="text"
-                      value={option.option_text}
-                      onChange={(e) => {
-                        const newOptions = [...formData.options];
-                        newOptions[index].option_text = e.target.value;
-                        setFormData({ ...formData, options: newOptions });
-                      }}
-                      placeholder="Enter option text..."
-                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-600 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
-                      required
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-600">
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
-                  Correct Answer (Text) *
-                </label>
-                <input
-                  type="text"
-                  value={formData.correct_answer}
-                  onChange={(e) => {
-                    setFormData({ ...formData, correct_answer: e.target.value });
-                  }}
-                  placeholder="Enter the correct answer text (must match one of the options)"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white placeholder-gray-400 dark:placeholder-slate-500"
-                  required
-                />
-                <p className="text-xs text-gray-500 dark:text-slate-500 mt-2">
-                  This should exactly match the text of the correct option (for example: "
-                  <span className="italic">0</span>" or "
-                  <span className="italic">Depends on language</span>").
-                </p>
-              </div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                Difficulty
+              </label>
+              <select
+                value={formData.difficulty}
+                onChange={(e) => setFormData({ ...formData, difficulty: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white"
+              >
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+              </select>
             </div>
-          )}
-
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
-              Difficulty
-            </label>
-            <select
-              value={formData.difficulty}
-              onChange={(e) => setFormData({ ...formData, difficulty: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white"
-            >
-              <option value="easy">Easy</option>
-              <option value="medium">Medium</option>
-              <option value="hard">Hard</option>
-            </select>
-          </div>
-        </form>
+          </form>
+        )}
       </div>
     </Layout>
   );
