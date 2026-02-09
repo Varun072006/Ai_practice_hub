@@ -179,6 +179,14 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/admin/courses/:courseId/levels/:levelId/preview"
+        element={
+          <ProtectedRoute requireAdmin>
+            <LevelOverview />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/admin/results"
         element={
           <ProtectedRoute requireAdmin>

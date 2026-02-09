@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
+import AdminBreadcrumb from '../../components/AdminBreadcrumb';
 import api from '../../services/api';
 import { BookOpen, Calendar, Check, Search, Users, Plus, RefreshCw, Trash2, Award, X } from 'lucide-react';
 
@@ -102,6 +103,9 @@ const AdminAssignments = () => {
     return (
         <Layout>
             <div className="min-h-screen bg-gray-50 dark:bg-slate-900 p-8 transition-colors duration-300">
+                {/* Breadcrumb */}
+                <AdminBreadcrumb items={[{ label: 'Assignments', path: null }]} />
+
                 <div className="mb-8">
                     <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Task Assignments</h1>
                     <p className="text-gray-600 dark:text-slate-400">Assign specific tasks to students based on department, year, or individually.</p>

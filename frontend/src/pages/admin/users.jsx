@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Layout from '../../components/Layout';
+import AdminBreadcrumb from '../../components/AdminBreadcrumb';
 import api from '../../services/api';
 import { Search, Plus, Edit, Trash2, Users, RefreshCw } from 'lucide-react';
 
@@ -106,6 +107,9 @@ const AdminUsers = () => {
   return (
     <Layout>
       <div className="flex-1 p-8 bg-gray-50 dark:bg-slate-900 min-h-screen">
+        {/* Breadcrumb */}
+        <AdminBreadcrumb items={[{ label: 'User Management', path: null }]} />
+
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">User Management</h1>
           <p className="text-gray-600 dark:text-slate-400">Manage and monitor student activities</p>

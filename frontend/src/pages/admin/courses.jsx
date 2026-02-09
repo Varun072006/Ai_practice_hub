@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/Layout';
+import AdminBreadcrumb from '../../components/AdminBreadcrumb';
 import api from '../../services/api';
 import { Plus, Edit, Upload, Trash2 } from 'lucide-react';
 
@@ -88,6 +89,9 @@ const AdminCourses = () => {
   return (
     <Layout>
       <div className="flex-1 p-8 bg-gray-50 dark:bg-slate-900 min-h-screen">
+        {/* Breadcrumb */}
+        <AdminBreadcrumb items={[{ label: 'Courses & Questions', path: null }]} />
+
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Course Management</h1>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Layout from '../../components/Layout';
+import AdminBreadcrumb from '../../components/AdminBreadcrumb';
 import api from '../../services/api';
 import { Search, Edit, Trash2, Trophy, RefreshCw } from 'lucide-react';
 
@@ -61,6 +62,9 @@ const AdminLeaderboard = () => {
     return (
         <Layout>
             <div className="p-8 bg-gray-50 dark:bg-slate-900 min-h-screen">
+                {/* Breadcrumb */}
+                <AdminBreadcrumb items={[{ label: 'Leaderboard', path: null }]} />
+
                 <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">

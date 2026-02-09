@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
+import AdminBreadcrumb from '../../components/AdminBreadcrumb';
 import api from '../../services/api';
-import { Plus, Edit, Trash2, Clock, Upload, ArrowLeft, Loader, Sparkles, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Clock, Upload, Loader, Sparkles, X } from 'lucide-react';
 
 const AdminCourseLevels = () => {
   const { courseId } = useParams();
@@ -199,12 +200,15 @@ const AdminCourseLevels = () => {
       <Sidebar />
       <div className="flex-1 p-8 overflow-y-auto">
 
+        {/* Breadcrumb Navigation */}
+        <AdminBreadcrumb items={[
+          { label: 'Courses', path: '/admin/courses' },
+          { label: course?.title || 'Course', path: null }
+        ]} />
+
         {/* Header Section */}
         <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <button onClick={() => navigate('/admin/courses')} className="flex items-center text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mb-2">
-              <ArrowLeft size={18} className="mr-1" /> Back
-            </button>
             <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">{course?.title}</h1>
             <p className="text-gray-500 dark:text-slate-400 mt-1">{course?.levels?.length || 0} Levels • Last updated {new Date().toLocaleDateString()}</p>
           </div>
@@ -363,7 +367,7 @@ const AdminCourseLevels = () => {
                 </div>
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => navigate(`/courses/${courseId}/level/${level.id}/learn`)}
+                    onClick={() => navigate(`/admin/courses/${courseId}/levels/${level.id}/preview`)}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors border border-blue-100 dark:border-blue-800 font-medium text-sm"
                   >
                     <Edit size={16} /> View Overview

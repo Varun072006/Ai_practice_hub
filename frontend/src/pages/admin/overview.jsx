@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Layout from '../../components/Layout';
+import AdminBreadcrumb from '../../components/AdminBreadcrumb';
 import api from '../../services/api';
 import { Users, TrendingUp, FileText, CheckCircle2, ChevronLeft, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -45,6 +46,9 @@ const AdminOverview = () => {
   return (
     <Layout>
       <div className="p-8 bg-gray-50 dark:bg-slate-900 min-h-screen">
+        {/* Breadcrumb */}
+        <AdminBreadcrumb items={[{ label: 'Overview', path: null }]} />
+
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Dashboard Overview</h1>

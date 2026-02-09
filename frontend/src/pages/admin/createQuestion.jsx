@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
+import AdminBreadcrumb from '../../components/AdminBreadcrumb';
 import Editor from '@monaco-editor/react';
 import api from '../../services/api';
 import { Plus, Trash2, Save, CheckCircle } from 'lucide-react';
@@ -326,7 +327,14 @@ const CreateQuestion = () => {
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
-        navigate(`/admin/courses/${courseId}/levels`);
+        // Navigate back to level questions if we have courseId and levelId, otherwise to courses list
+        if (courseId && levelId) {
+          navigate(`/admin/courses/${courseId}/levels/${levelId}/questions?type=${questionType}`);
+        } else if (courseId) {
+          navigate(`/admin/courses/${courseId}/levels`);
+        } else {
+          navigate('/admin/courses');
+        }
       }, 2000);
     } catch (error) {
       console.error('Failed to save question:', error);
@@ -359,17 +367,29 @@ const CreateQuestion = () => {
   return (
     <Layout>
       <div className="flex-1 p-4 md:p-8 pb-20 md:pb-8 bg-gray-50 dark:bg-slate-900 min-h-screen">
+        {/* Breadcrumb Navigation */}
+        <AdminBreadcrumb items={[
+          { label: 'Courses', path: '/admin/courses' },
+          { label: course?.title || 'Course', path: `/admin/courses/${courseId}/levels` },
+          { label: isEditMode ? 'Edit Question' : 'Create Question', path: null }
+        ]} />
+
         <div className="mb-6">
-          <nav className="text-sm text-gray-600 dark:text-slate-400 mb-4">
-            Home / Questions / {isEditMode ? 'Edit' : 'Create New'}
-          </nav>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">
               {isEditMode ? 'Edit Question' : 'Create New Question'}
             </h1>
             <div className="flex gap-3">
               <button
-                onClick={() => navigate(`/admin/courses/${courseId}/levels`)}
+                onClick={() => {
+                  if (courseId && levelId) {
+                    navigate(`/admin/courses/${courseId}/levels/${levelId}/questions?type=${questionType}`);
+                  } else if (courseId) {
+                    navigate(`/admin/courses/${courseId}/levels`);
+                  } else {
+                    navigate('/admin/courses');
+                  }
+                }}
                 className="flex-1 md:flex-none px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700"
               >
                 Cancel

@@ -1,6 +1,6 @@
 import pool from '../config/database';
 import { randomUUID } from 'crypto';
-import { getRows } from '../utils/mysqlHelper';  
+import { getRows } from '../utils/mysqlHelper';
 
 export const getAllUsers = async (searchTerm?: string) => {
   let query = `

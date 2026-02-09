@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
+import AdminBreadcrumb from '../../components/AdminBreadcrumb';
 import api from '../../services/api';
-import { ArrowLeft, Edit, Trash2, Plus } from 'lucide-react';
+import { Edit, Trash2, Plus } from 'lucide-react';
 
 const LevelQuestions = () => {
   const { courseId, levelId } = useParams();
@@ -115,14 +116,15 @@ const LevelQuestions = () => {
     <div className="flex min-h-screen bg-gray-50 dark:bg-slate-900 font-sans">
       <Sidebar />
       <div className="flex-1 p-8 overflow-y-auto">
+        {/* Breadcrumb Navigation */}
+        <AdminBreadcrumb items={[
+          { label: 'Courses', path: '/admin/courses' },
+          { label: level?.course_title || 'Course', path: `/admin/courses/${courseId}/levels` },
+          { label: level?.title || `Level ${level?.level_number}`, path: null }
+        ]} />
+
         {/* Header Section */}
         <div className="mb-8">
-          <button
-            onClick={() => navigate(`/admin/courses/${courseId}/levels`)}
-            className="flex items-center text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mb-4"
-          >
-            <ArrowLeft size={18} className="mr-1" /> Back
-          </button>
 
           <div className="flex items-center justify-between">
             <div>
@@ -244,7 +246,7 @@ const LevelQuestions = () => {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate(`/admin/questions/edit/${q.id}?type=${q.question_type}`);
+                      navigate(`/admin/questions/edit/${q.id}?type=${q.question_type}&courseId=${courseId}&levelId=${levelId}`);
                     }}
                     className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-slate-600"
                     title="Edit Question"
