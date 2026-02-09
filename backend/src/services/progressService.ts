@@ -97,22 +97,23 @@ export const getLeaderboard = async (limit: number = 10) => {
     console.log(`[getLeaderboard] Fetching leaderboard with limit: ${limit}`);
 
     // First, try to get real data
+    // Count levels from completed coding/html-css sessions directly for more accurate tracking
     const result = await pool.query(
       `SELECT 
         u.id,
         u.name,
         u.roll_number,
         COUNT(DISTINCT CASE WHEN us.is_correct = true THEN us.question_id END) as problems_solved,
-        COUNT(DISTINCT CASE WHEN up.status = 'completed' THEN up.level_id END) as levels_cleared,
+        COUNT(DISTINCT CASE WHEN ps.status = 'completed' AND ps.session_type IN ('coding', 'html-css-challenge') THEN ps.level_id END) as levels_cleared,
         AVG(CASE WHEN us.total_test_cases > 0 THEN CAST(us.test_cases_passed AS FLOAT) / us.total_test_cases ELSE 0 END) * 100 as efficiency
        FROM users u
        LEFT JOIN user_submissions us ON u.id = us.user_id
-       LEFT JOIN user_progress up ON u.id = up.user_id
+       LEFT JOIN practice_sessions ps ON u.id = ps.user_id
        WHERE u.role = 'student'
        GROUP BY u.id, u.name, u.roll_number
        HAVING COUNT(DISTINCT CASE WHEN us.is_correct = true THEN us.question_id END) > 0
-          OR COUNT(DISTINCT CASE WHEN up.status = 'completed' THEN up.level_id END) > 0
-       ORDER BY problems_solved DESC, levels_cleared DESC, efficiency DESC
+          OR COUNT(DISTINCT CASE WHEN ps.status = 'completed' AND ps.session_type IN ('coding', 'html-css-challenge') THEN ps.level_id END) > 0
+       ORDER BY levels_cleared DESC, problems_solved DESC, efficiency DESC
        LIMIT ?`,
       [limit]
     );
@@ -250,7 +251,7 @@ export const getUserRecentActivity = async (userId: string, limit: number = 20) 
  */
 export const getUserTasks = async (userId: string) => {
   try {
-    // Get assigned tasks (pending) - use subquery for session to avoid duplicates
+    // Get ALL assigned tasks (both pending and completed)
     const result = await pool.query(
       `SELECT 
         st.id,
@@ -277,7 +278,7 @@ export const getUserTasks = async (userId: string) => {
       JOIN assignments a ON st.assignment_id = a.id
       JOIN courses c ON a.course_id = c.id
       JOIN levels l ON a.level_id = l.id
-      WHERE st.user_id = ? AND st.status = 'pending'
+      WHERE st.user_id = ?
       GROUP BY st.id, st.status, a.title, c.id, c.title, l.id, l.title, l.level_number
       ORDER BY st.created_at DESC`,
       [userId]
@@ -285,19 +286,30 @@ export const getUserTasks = async (userId: string) => {
 
     const rows = getRows(result);
 
-    return rows.map((row: any) => ({
-      id: row.id,
-      course_id: row.course_id,
-      level_id: row.level_id,
-      type: 'coding', // Default or fetch from level/questions
-      title: row.assignment_title, // Use assignment title
-      course: row.course_title,
-      level: row.level_title,
-      total_questions: parseInt(row.total_questions) || 0,
-      completed_questions: parseInt(row.completed_questions) || 0,
-      status: row.session_status === 'in_progress' ? 'in_progress' : 'assigned',
-      started_at: row.created_at,
-    }));
+    return rows.map((row: any) => {
+      // Determine status based on task_status and session_status
+      let status = 'assigned';
+      if (row.task_status === 'completed') {
+        status = 'completed';
+      } else if (row.session_status === 'in_progress') {
+        status = 'in_progress';
+      }
+
+      return {
+        id: row.id,
+        course_id: row.course_id,
+        level_id: row.level_id,
+        type: 'coding', // Default or fetch from level/questions
+        title: row.assignment_title, // Use assignment title
+        course: row.course_title,
+        level: row.level_title,
+        total_questions: parseInt(row.total_questions) || 0,
+        completed_questions: parseInt(row.completed_questions) || 0,
+        status: status,
+        started_at: row.created_at,
+        reassign_count: parseInt(row.reassign_count) || 0,
+      };
+    });
   } catch (error: any) {
     console.error('[getUserTasks] Error:', error);
     return [];

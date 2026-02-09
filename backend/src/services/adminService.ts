@@ -1,6 +1,6 @@
 import pool from '../config/database';
 import { randomUUID } from 'crypto';
-import { getRows } from '../utils/mysqlHelper';  
+import { getRows } from '../utils/mysqlHelper';
 
 export const getAllUsers = async (searchTerm?: string) => {
   let query = `
@@ -14,11 +14,10 @@ export const getAllUsers = async (searchTerm?: string) => {
       u.department,
       u.year,
       u.created_at,
-      COUNT(DISTINCT CASE WHEN up.status = 'completed' THEN up.level_id END) as levels_practiced,
+      COUNT(DISTINCT CASE WHEN ps.status = 'completed' AND ps.session_type IN ('coding', 'html-css-challenge') THEN ps.level_id END) as levels_practiced,
       MAX(ps.started_at) as last_practice_date,
       MAX(ps.status) as last_status
     FROM users u
-    LEFT JOIN user_progress up ON u.id = up.user_id
     LEFT JOIN practice_sessions ps ON u.id = ps.user_id
     WHERE u.role = 'student'
   `;
@@ -458,6 +457,7 @@ export const getStudentResults = async (searchTerm?: string) => {
   let query = `
     SELECT 
       ps.id as session_id,
+      u.id as user_id,
       u.roll_number as student_id,
       u.name as student_name,
       ps.completed_at,
@@ -469,11 +469,11 @@ export const getStudentResults = async (searchTerm?: string) => {
       -- Calculate scores
       COUNT(DISTINCT q.id) as total_questions,
       
-      -- MCQ Score Calculation
-      SUM(CASE WHEN us.submission_type = 'mcq' AND us.is_correct = 1 THEN 1 ELSE 0 END) as mcq_correct,
+      -- MCQ Score Calculation (count distinct correct questions)
+      COUNT(DISTINCT CASE WHEN us.submission_type = 'mcq' AND us.is_correct = 1 THEN us.question_id END) as mcq_correct,
       
-      -- Coding Score Calculation (for non-HTML/CSS)
-      SUM(CASE WHEN us.submission_type = 'coding' AND us.is_correct = 1 THEN 1 ELSE 0 END) as coding_correct,
+      -- Coding Score Calculation (count distinct correct questions)
+      COUNT(DISTINCT CASE WHEN us.submission_type = 'coding' AND us.is_correct = 1 THEN us.question_id END) as coding_correct,
       
       -- HTML/CSS Score 
       MAX(us.language) as language
@@ -497,7 +497,7 @@ export const getStudentResults = async (searchTerm?: string) => {
     params.push(searchPattern, searchPattern, searchPattern);
   }
 
-  query += ' GROUP BY ps.id, u.roll_number, u.name, ps.completed_at, c.title, l.title, l.level_number, ps.session_type';
+  query += ' GROUP BY ps.id, u.id, u.roll_number, u.name, ps.completed_at, c.title, l.title, l.level_number, ps.session_type';
   query += ' ORDER BY ps.completed_at DESC';
 
   const result = await pool.query(query, params);
@@ -532,12 +532,13 @@ export const getStudentResults = async (searchTerm?: string) => {
       const codingCorrect = parseInt(row.coding_correct) || 0;
       const percentage = totalQuestions > 0 ? (codingCorrect / totalQuestions) * 100 : 0;
       score = percentage;
-      // Must have 100% correct to pass
-      if (percentage === 100 && totalQuestions > 0) status = 'Pass';
+      // Must have all questions correct to pass (avoid floating-point comparison issues)
+      if (codingCorrect === totalQuestions && totalQuestions > 0) status = 'Pass';
     }
 
     return {
       session_id: row.session_id,
+      user_id: row.user_id,
       student_id: row.student_id || 'N/A',
       student_name: row.student_name,
       date_time: row.completed_at ? new Date(row.completed_at).toISOString() : null,

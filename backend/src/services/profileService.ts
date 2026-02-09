@@ -23,6 +23,10 @@ export interface CourseStats {
     courseName: string;
     questionsPassed: number;
     questionsAttempted: number;
+    mcqPassed: number;
+    mcqAttempted: number;
+    codingPassed: number;
+    codingAttempted: number;
     icon: string;
 }
 
@@ -157,23 +161,14 @@ export const getCourseWiseStats = async (userId: string): Promise<CourseStats[]>
 
         const rows = getRows(result);
 
-        // For MCQ, we need to check session-level pass rate
+        // For MCQ, count only the correctly answered questions (is_correct = 1)
         const mcqPassedResult = await pool.query(`
       SELECT 
         ps.course_id,
-        SUM(CASE WHEN session_pass_rate >= 60 THEN question_count ELSE 0 END) as mcq_passed
-      FROM (
-        SELECT 
-          ps.id as session_id,
-          ps.course_id,
-          COUNT(DISTINCT us.question_id) as question_count,
-          (SUM(CASE WHEN us.is_correct = 1 THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0)) as session_pass_rate
-        FROM practice_sessions ps
-        LEFT JOIN user_submissions us ON ps.id = us.session_id
-        WHERE ps.user_id = ? AND ps.session_type = 'mcq' AND ps.status = 'completed'
-        GROUP BY ps.id, ps.course_id
-      ) as session_data
-      JOIN practice_sessions ps ON session_data.session_id = ps.id
+        COUNT(DISTINCT CASE WHEN us.is_correct = 1 THEN us.question_id END) as mcq_passed
+      FROM practice_sessions ps
+      LEFT JOIN user_submissions us ON ps.id = us.session_id
+      WHERE ps.user_id = ? AND ps.session_type = 'mcq'
       GROUP BY ps.course_id
     `, [userId]);
 
@@ -194,6 +189,10 @@ export const getCourseWiseStats = async (userId: string): Promise<CourseStats[]>
                 courseName: row.course_name,
                 questionsPassed: codingPassed + mcqPassed,
                 questionsAttempted: codingAttempted + mcqAttempted,
+                mcqPassed: mcqPassed,
+                mcqAttempted: mcqAttempted,
+                codingPassed: codingPassed,
+                codingAttempted: codingAttempted,
                 icon: getCourseIcon(row.course_name)
             };
         }).filter((course: CourseStats) => course.questionsAttempted > 0 || course.questionsPassed > 0);
@@ -309,14 +308,20 @@ const calculateStreak = async (userId: string): Promise<{ currentStreak: number;
 
 export const getLeaderboardRank = async (userId: string): Promise<{ rank: number; totalUsers: number }> => {
     try {
-        // Calculate rank based on questions solved correctly
+        // Calculate rank based on levels cleared from completed practice sessions (matching leaderboard page logic)
         const rankResult = await pool.query(`
       SELECT 
-        user_id,
-        SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) as score
-      FROM user_submissions
-      GROUP BY user_id
-      ORDER BY score DESC
+        u.id as user_id,
+        COUNT(DISTINCT CASE WHEN ps.status = 'completed' AND ps.session_type IN ('coding', 'html-css-challenge') THEN ps.level_id END) as levels_cleared,
+        COUNT(DISTINCT CASE WHEN us.is_correct = 1 THEN us.question_id END) as problems_solved
+      FROM users u
+      LEFT JOIN practice_sessions ps ON u.id = ps.user_id
+      LEFT JOIN user_submissions us ON u.id = us.user_id
+      WHERE u.role = 'student'
+      GROUP BY u.id
+      HAVING COUNT(DISTINCT CASE WHEN ps.status = 'completed' AND ps.session_type IN ('coding', 'html-css-challenge') THEN ps.level_id END) > 0 
+         OR COUNT(DISTINCT CASE WHEN us.is_correct = 1 THEN us.question_id END) > 0
+      ORDER BY levels_cleared DESC, problems_solved DESC
     `);
 
         const rankings = getRows(rankResult);
