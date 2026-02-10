@@ -167,6 +167,118 @@ export const getLeaderboard = async (limit: number = 10) => {
 };
 
 /**
+ * Get paginated leaderboard for all users
+ */
+export const getLeaderboardPaginated = async (page: number = 1, limit: number = 20, search: string = '') => {
+  try {
+    const offset = (page - 1) * limit;
+
+    // Base query for leaderboard data
+    const baseQuery = `
+      SELECT 
+        u.id,
+        u.name,
+        u.roll_number,
+        u.department,
+        COUNT(DISTINCT CASE WHEN us.is_correct = true THEN us.question_id END) as problems_solved,
+        COUNT(DISTINCT CASE WHEN ps.status = 'completed' AND ps.session_type IN ('coding', 'html-css-challenge') THEN ps.level_id END) as levels_cleared,
+        AVG(CASE WHEN us.total_test_cases > 0 THEN CAST(us.test_cases_passed AS FLOAT) / us.total_test_cases ELSE 0 END) * 100 as efficiency
+      FROM users u
+      LEFT JOIN user_submissions us ON u.id = us.user_id
+      LEFT JOIN practice_sessions ps ON u.id = ps.user_id
+      WHERE u.role = 'student'
+      ${search ? `AND (u.name LIKE ? OR u.roll_number LIKE ?)` : ''}
+      GROUP BY u.id, u.name, u.roll_number, u.department
+      ORDER BY levels_cleared DESC, problems_solved DESC, efficiency DESC`;
+
+    const searchParam = `%${search}%`;
+    const queryParams: any[] = search ? [searchParam, searchParam] : [];
+
+    // Get total count
+    const countResult = await pool.query(
+      `SELECT COUNT(*) as total FROM (${baseQuery}) as ranked`,
+      queryParams
+    );
+    const countRows = getRows(countResult);
+    const total = parseInt(countRows[0]?.total) || 0;
+
+    // Get paginated data
+    const dataResult = await pool.query(
+      `${baseQuery} LIMIT ? OFFSET ?`,
+      [...queryParams, limit, offset]
+    );
+    const rows = getRows(dataResult);
+
+    const data = rows.map((row: any, index: number) => ({
+      rank: offset + index + 1,
+      ...row,
+      levels_cleared: parseInt(row.levels_cleared) || 0,
+      problems_solved: parseInt(row.problems_solved) || 0,
+      efficiency: Math.round((parseFloat(row.efficiency) || 0) * 10) / 10,
+    }));
+
+    return {
+      data,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit) || 1,
+    };
+  } catch (error: any) {
+    console.error('[getLeaderboardPaginated] Error:', error);
+    return { data: [], total: 0, page: 1, totalPages: 1 };
+  }
+};
+
+/**
+ * Get a specific user's rank on the leaderboard
+ */
+export const getUserRank = async (userId: string) => {
+  try {
+    // Get all users ranked
+    const result = await pool.query(
+      `SELECT 
+        u.id,
+        u.name,
+        u.roll_number,
+        COUNT(DISTINCT CASE WHEN us.is_correct = true THEN us.question_id END) as problems_solved,
+        COUNT(DISTINCT CASE WHEN ps.status = 'completed' AND ps.session_type IN ('coding', 'html-css-challenge') THEN ps.level_id END) as levels_cleared,
+        AVG(CASE WHEN us.total_test_cases > 0 THEN CAST(us.test_cases_passed AS FLOAT) / us.total_test_cases ELSE 0 END) * 100 as efficiency
+      FROM users u
+      LEFT JOIN user_submissions us ON u.id = us.user_id
+      LEFT JOIN practice_sessions ps ON u.id = ps.user_id
+      WHERE u.role = 'student'
+      GROUP BY u.id, u.name, u.roll_number
+      ORDER BY levels_cleared DESC, problems_solved DESC, efficiency DESC`
+    );
+
+    const rows = getRows(result);
+    const userIndex = rows.findIndex((r: any) => r.id === userId);
+
+    if (userIndex === -1) {
+      return {
+        rank: 0,
+        total_users: rows.length,
+        problems_solved: 0,
+        levels_cleared: 0,
+        efficiency: 0,
+      };
+    }
+
+    const userRow = rows[userIndex];
+    return {
+      rank: userIndex + 1,
+      total_users: rows.length,
+      problems_solved: parseInt(userRow.problems_solved) || 0,
+      levels_cleared: parseInt(userRow.levels_cleared) || 0,
+      efficiency: Math.round((parseFloat(userRow.efficiency) || 0) * 10) / 10,
+    };
+  } catch (error: any) {
+    console.error('[getUserRank] Error:', error);
+    return { rank: 0, total_users: 0, problems_solved: 0, levels_cleared: 0, efficiency: 0 };
+  }
+};
+
+/**
  * Get user's recent activity (completed sessions)
  */
 export const getUserRecentActivity = async (userId: string, limit: number = 20) => {

@@ -4,7 +4,7 @@ import Layout from '../../components/Layout';
 import AdminBreadcrumb from '../../components/AdminBreadcrumb';
 import Editor from '@monaco-editor/react';
 import api from '../../services/api';
-import { Plus, Trash2, Save, CheckCircle } from 'lucide-react';
+import { Plus, Trash2, Save, CheckCircle, Code, ListChecks, Palette } from 'lucide-react';
 
 const CreateQuestion = () => {
   const [searchParams] = useSearchParams();
@@ -428,29 +428,37 @@ const CreateQuestion = () => {
 
         {/* Question Type Selection Screen - Only show when creating and type not yet selected */}
         {!isEditMode && !typeSelected && (
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg dark:shadow-slate-900/50 p-8 border border-gray-200 dark:border-slate-700">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2 text-center">Select Question Type</h2>
-            <p className="text-gray-500 dark:text-slate-400 text-center mb-8">Choose the type of question you want to create</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm dark:shadow-slate-900/50 p-8 border border-gray-200 dark:border-slate-700 max-w-xl mx-auto mt-8">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-1 text-center">Select Question Type</h2>
+            <p className="text-sm text-gray-500 dark:text-slate-400 text-center mb-6">Choose the type of question you want to create</p>
+            <div className="flex flex-col gap-3">
               {isHtmlCssCourse ? (
                 <>
                   <button
                     type="button"
                     onClick={() => handleSelectQuestionType('coding')}
-                    className="p-8 rounded-xl border-2 border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40 hover:border-purple-400 dark:hover:border-purple-600 transition-all group"
+                    className="flex items-center gap-4 w-full px-5 py-4 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/50 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-left group"
                   >
-                    <div className="text-5xl mb-4">🎨</div>
-                    <h3 className="text-xl font-bold text-purple-700 dark:text-purple-400 mb-2">HTML/CSS Challenge</h3>
-                    <p className="text-sm text-purple-600 dark:text-purple-500">Create a web development challenge with HTML, CSS, and JavaScript</p>
+                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 group-hover:bg-purple-200 dark:group-hover:bg-purple-900/60 transition-colors">
+                      <Palette size={20} />
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-800 dark:text-white text-sm">HTML / CSS Challenge</div>
+                      <div className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Web development challenge with HTML, CSS & JS</div>
+                    </div>
                   </button>
                   <button
                     type="button"
                     onClick={() => handleSelectQuestionType('mcq')}
-                    className="p-8 rounded-xl border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:border-blue-400 dark:hover:border-blue-600 transition-all group"
+                    className="flex items-center gap-4 w-full px-5 py-4 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/50 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-left group"
                   >
-                    <div className="text-5xl mb-4">📝</div>
-                    <h3 className="text-xl font-bold text-blue-700 dark:text-blue-400 mb-2">MCQ Question</h3>
-                    <p className="text-sm text-blue-600 dark:text-blue-500">Create a multiple choice question with 4 options</p>
+                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 group-hover:bg-blue-200 dark:group-hover:bg-blue-900/60 transition-colors">
+                      <ListChecks size={20} />
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-800 dark:text-white text-sm">MCQ Question</div>
+                      <div className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Multiple choice question with 4 options</div>
+                    </div>
                   </button>
                 </>
               ) : (
@@ -458,26 +466,35 @@ const CreateQuestion = () => {
                   <button
                     type="button"
                     onClick={() => handleSelectQuestionType('coding')}
-                    className="p-8 rounded-xl border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:border-blue-400 dark:hover:border-blue-600 transition-all group"
+                    className="flex items-center gap-4 w-full px-5 py-4 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/50 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-left group"
                   >
-                    <div className="text-5xl mb-4">💻</div>
-                    <h3 className="text-xl font-bold text-blue-700 dark:text-blue-400 mb-2">Coding Question</h3>
-                    <p className="text-sm text-blue-600 dark:text-blue-500">Create a programming challenge with test cases</p>
+                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-200 dark:group-hover:bg-indigo-900/60 transition-colors">
+                      <Code size={20} />
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-800 dark:text-white text-sm">Coding Question</div>
+                      <div className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Programming challenge with test cases</div>
+                    </div>
                   </button>
                   <button
                     type="button"
                     onClick={() => handleSelectQuestionType('mcq')}
-                    className="p-8 rounded-xl border-2 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/40 hover:border-green-400 dark:hover:border-green-600 transition-all group"
+                    className="flex items-center gap-4 w-full px-5 py-4 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/50 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-left group"
                   >
-                    <div className="text-5xl mb-4">📝</div>
-                    <h3 className="text-xl font-bold text-green-700 dark:text-green-400 mb-2">MCQ Question</h3>
-                    <p className="text-sm text-green-600 dark:text-green-500">Create a multiple choice question with 4 options</p>
+                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900/60 transition-colors">
+                      <ListChecks size={20} />
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-800 dark:text-white text-sm">MCQ Question</div>
+                      <div className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Multiple choice question with 4 options</div>
+                    </div>
                   </button>
                 </>
               )}
             </div>
           </div>
         )}
+
 
         {/* Question Form - Only show after type is selected or in edit mode */}
         {(isEditMode || typeSelected) && (

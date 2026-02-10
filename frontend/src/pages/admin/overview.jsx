@@ -2,22 +2,17 @@ import { useEffect, useState } from 'react';
 import Layout from '../../components/Layout';
 import AdminBreadcrumb from '../../components/AdminBreadcrumb';
 import api from '../../services/api';
-import { Users, TrendingUp, FileText, CheckCircle2, ChevronLeft, Search } from 'lucide-react';
+import { Users, TrendingUp, FileText, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, AreaChart, Area, CartesianGrid } from 'recharts';
 
 const AdminOverview = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Use real data from stats
-  const popularCourses = stats?.popular_courses || [];
-  const avgSuccessRate = stats?.average_success_rate ? `${stats.average_success_rate}%` : '0%';
 
   const fetchData = async () => {
     try {
-      // Keep existing stats fetch, we'll map fields as needed.
       const statsResponse = await api.get('/admin/dashboard/stats');
       setStats(statsResponse.data);
     } catch (error) {
@@ -35,144 +30,225 @@ const AdminOverview = () => {
     return (
       <Layout>
         <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-slate-900">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
         </div>
       </Layout>
     );
   }
 
+  // Prepare data for charts with default fallbacks
+  const questionAttemptsData = stats?.weekly_attempts?.map(d => ({ name: d.name, attempts: d.attempts })) || [];
+  const successRateData = stats?.success_trend?.length > 0 ? stats.success_trend.map(d => ({ week: d.week, rate: d.rate })) : [{ week: 'Week 1', rate: 0 }];
 
 
   return (
     <Layout>
-      <div className="p-8 bg-gray-50 dark:bg-slate-900 min-h-screen">
-        {/* Breadcrumb */}
+      <div className="p-4 md:p-8 bg-gray-50 dark:bg-slate-900 min-h-screen">
         <AdminBreadcrumb items={[{ label: 'Overview', path: null }]} />
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Dashboard Overview</h1>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Dashboard Overview</h1>
+          <p className="text-slate-500 dark:text-slate-400">Track practice portal metrics and performance.</p>
         </div>
 
-        {/* Summary Cards */}
+        {/* Top Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-
-          {/* Card 1: Total Users */}
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm dark:shadow-slate-900/50 border border-gray-100 dark:border-slate-700 flex flex-col justify-between h-40">
-            <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mb-4">
-              <Users className="text-blue-600 dark:text-blue-400" size={20} />
+          {/* Total Users */}
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-between h-40 relative overflow-hidden group hover:shadow-sm transition-shadow">
+            <div className="flex justify-between items-start">
+              <div className="w-10 h-10 bg-slate-50 dark:bg-slate-900/50 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-400">
+                <Users size={20} />
+              </div>
+              <span className={`text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1 ${(stats?.user_growth || 0) >= 0
+                  ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20'
+                  : 'text-red-600 bg-red-50 dark:bg-red-900/20'
+                }`}>
+                <TrendingUp size={12} />
+                {(stats?.user_growth || 0) > 0 ? '+' : ''}{stats?.user_growth || 0}%
+              </span>
             </div>
             <div>
-              <h3 className="text-3xl font-bold text-gray-800 dark:text-white mb-1">{stats?.total_users?.toLocaleString() || '2,840'}</h3>
-              <p className="text-gray-500 dark:text-slate-400 text-sm font-medium">Total Users</p>
-              <p className="text-green-600 dark:text-green-400 text-xs font-semibold mt-1">+12% vs last month</p>
+              <h3 className="text-3xl font-bold text-slate-800 dark:text-white mb-1">
+                {stats?.total_users?.toLocaleString() || 0}
+              </h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Total Users</p>
             </div>
           </div>
 
-          {/* Card 2: Active Learners */}
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm dark:shadow-slate-900/50 border border-gray-100 dark:border-slate-700 flex flex-col justify-between h-40">
-            <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mb-4">
-              <TrendingUp className="text-blue-600 dark:text-blue-400" size={20} />
-            </div>
-            <div>
-              <h3 className="text-3xl font-bold text-gray-800 dark:text-white mb-1">{stats?.active_learners?.toLocaleString() || '1,152'}</h3>
-              <p className="text-gray-500 dark:text-slate-400 text-sm font-medium">Active Learners</p>
-              <p className="text-gray-400 dark:text-slate-500 text-xs mt-1">Currently online</p>
-            </div>
-          </div>
-
-          {/* Card 3: Questions Attempted */}
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm dark:shadow-slate-900/50 border border-gray-100 dark:border-slate-700 flex flex-col justify-between h-40">
-            <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mb-4">
-              <FileText className="text-blue-600 dark:text-blue-400" size={20} />
-            </div>
-            <div>
-              <h3 className="text-3xl font-bold text-gray-800 dark:text-white mb-1">{stats?.questions_attempted?.toLocaleString() || '15,420'}</h3>
-              <p className="text-gray-500 dark:text-slate-400 text-sm font-medium">Questions Attempted</p>
-              <p className="text-green-600 dark:text-green-400 text-xs font-semibold mt-1">+540 today</p>
-            </div>
-          </div>
-
-          {/* Card 4: Avg. Success Rate */}
-          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm dark:shadow-slate-900/50 border border-gray-100 dark:border-slate-700 flex flex-col justify-between h-40">
-            <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mb-4">
-              <CheckCircle2 className="text-blue-600 dark:text-blue-400" size={20} />
-            </div>
-            <div>
-              <h3 className="text-3xl font-bold text-gray-800 dark:text-white mb-1">{avgSuccessRate}</h3>
-              <p className="text-gray-500 dark:text-slate-400 text-sm font-medium">Avg. Success Rate</p>
-
-              {/* Simple progress bar mock */}
-              <div className="w-full bg-blue-50 dark:bg-blue-900/30 rounded-full h-1.5 mt-3">
-                <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${parseFloat(avgSuccessRate) || 0}%` }}></div>
+          {/* Active Learners */}
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-between h-40 hover:shadow-sm transition-shadow">
+            <div className="flex justify-between items-start">
+              <div className="w-10 h-10 bg-slate-50 dark:bg-slate-900/50 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-400">
+                <span className="text-lg font-bold">⚡</span>
               </div>
             </div>
+            <div>
+              <h3 className="text-3xl font-bold text-slate-800 dark:text-white mb-1">
+                {stats?.active_learners?.toLocaleString() || 0}
+              </h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Active Learners</p>
+            </div>
           </div>
 
+          {/* Total Attempts */}
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-between h-40 hover:shadow-sm transition-shadow">
+            <div className="flex justify-between items-start">
+              <div className="w-10 h-10 bg-slate-50 dark:bg-slate-900/50 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-400">
+                <FileText size={20} />
+              </div>
+              <span className="text-emerald-600 text-xs font-semibold px-2 py-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-full">
+                +{stats?.attempts_today || 0} today
+              </span>
+            </div>
+            <div>
+              <h3 className="text-3xl font-bold text-slate-800 dark:text-white mb-1">
+                {stats?.questions_attempted?.toLocaleString() || 0}
+              </h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Total Attempts</p>
+            </div>
+          </div>
+
+          {/* Avg Success Rate */}
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-between h-40 hover:shadow-sm transition-shadow">
+            <div className="flex justify-between items-start">
+              <div className="w-10 h-10 bg-slate-50 dark:bg-slate-900/50 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-400">
+                <CheckCircle2 size={20} />
+              </div>
+            </div>
+            <div>
+              <h3 className="text-3xl font-bold text-slate-800 dark:text-white mb-1">
+                {stats?.average_success_rate || 0}%
+              </h3>
+              <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 mt-2">
+                <div
+                  className="bg-slate-600 dark:bg-slate-400 h-1.5 rounded-full transition-all duration-1000"
+                  style={{ width: `${Math.min(stats?.average_success_rate || 0, 100)}%` }}
+                ></div>
+              </div>
+              <p className="text-slate-500 dark:text-slate-400 text-xs font-medium mt-1">Avg. Success Rate</p>
+            </div>
+          </div>
         </div>
 
-        {/* Popular Courses Section */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm dark:shadow-slate-900/50 border border-gray-100 dark:border-slate-700 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <div className="text-orange-400">★</div>
-              <h2 className="text-lg font-bold text-gray-800 dark:text-white">Popular Courses</h2>
+        {/* Main Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Question Attempts Bar Chart */}
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-base font-semibold text-slate-800 dark:text-white">Question Attempts</h3>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-slate-500" size={16} />
-                <input
-                  type="text"
-                  placeholder="Search courses..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-4 py-2 bg-gray-50 dark:bg-slate-700 border-none dark:border-slate-600 rounded-lg text-sm focus:ring-0 w-64 text-gray-600 dark:text-slate-300 placeholder-gray-400 dark:placeholder-slate-500"
-                />
-              </div>
-              <button
-                onClick={() => navigate('/admin/courses')}
-                className="text-blue-600 dark:text-blue-400 text-sm font-semibold hover:underline"
-              >
-                View All
-              </button>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={questionAttemptsData} barSize={32}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#94A3B8', fontSize: 12 }}
+                    dy={10}
+                  />
+                  <Tooltip
+                    cursor={{ fill: '#F1F5F9' }}
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Bar dataKey="attempts" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
+          {/* Success Rate Line/Area Chart */}
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-base font-semibold text-slate-800 dark:text-white">Success Rate Over Time</h3>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="flex items-center gap-1 text-blue-600 font-medium">● Current</span>
+                <span className="flex items-center gap-1 text-slate-400">● Previous</span>
+              </div>
+            </div>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={successRateData}>
+                  <defs>
+                    <linearGradient id="colorRate" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                  <XAxis
+                    dataKey="week"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#94A3B8', fontSize: 12 }}
+                    dy={10}
+                  />
+                  <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                  <Area
+                    type="monotone"
+                    dataKey="rate"
+                    stroke="#3B82F6"
+                    strokeWidth={3}
+                    fillOpacity={1}
+                    fill="url(#colorRate)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* Course Performance Insights Table */}
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+          <div className="p-6 border-b border-slate-100 dark:border-slate-700 mb-2">
+            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Course Performance Insights</h3>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-100 dark:border-slate-700">
-                  <th className="text-left text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider py-4 px-2">Course Name</th>
-                  <th className="text-left text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider py-4 px-2">Subject</th>
-                  <th className="text-left text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider py-4 px-2">Student Count</th>
-                  <th className="text-right text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider py-4 px-2">Actions</th>
+                <tr className="bg-slate-50 dark:bg-slate-800/50">
+                  <th className="text-left py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Course Name</th>
+                  <th className="text-left py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Subject</th>
+                  <th className="text-left py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Attempts</th>
+                  <th className="text-left py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Avg. Accuracy</th>
+                  <th className="text-left py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50 dark:divide-slate-700">
-                {popularCourses
-                  .filter(course => course.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                  .map((course) => (
-                    <tr key={course.id} className="group hover:bg-blue-50/30 dark:hover:bg-slate-700/50 transition-colors">
-                      <td className="py-4 px-2">
-                        <span className="text-sm font-bold text-gray-800 dark:text-white">{course.name}</span>
-                      </td>
-                      <td className="py-4 px-2">
-                        <span className="text-sm text-gray-500 dark:text-slate-400">{course.subject}</span>
-                      </td>
-                      <td className="py-4 px-2">
-                        <span className="text-sm text-gray-800 dark:text-slate-300 font-medium">{course.count}</span>
-                      </td>
-                      <td className="py-4 px-2 text-right">
-                        <a href="/admin/courses" className="text-blue-600 dark:text-blue-400 text-sm font-medium hover:text-blue-700 dark:hover:text-blue-300">Manage</a>
-                      </td>
-                    </tr>
-                  ))}
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                {stats?.course_insights?.map((course, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                    <td className="py-4 px-6 text-sm font-semibold text-slate-800 dark:text-white">{course.name}</td>
+                    <td className="py-4 px-6 text-sm text-slate-500 dark:text-slate-400">{course.subject}</td>
+                    <td className="py-4 px-6 text-sm text-slate-800 dark:text-slate-300 font-medium">{course.attempts.toLocaleString()}</td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{course.accuracy}%</span>
+                        <div className="w-16 bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
+                          <div
+                            className="h-1.5 rounded-full bg-slate-600 dark:bg-slate-400"
+                            style={{ width: `${course.accuracy}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${course.status === 'Healthy' ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' :
+                        course.status === 'Review' ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' :
+                          'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+                        }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${course.status === 'Healthy' ? 'bg-slate-500' :
+                          course.status === 'Review' ? 'bg-amber-500' : 'bg-red-500'
+                          }`}></span>
+                        {course.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-
         </div>
-
       </div>
     </Layout>
   );

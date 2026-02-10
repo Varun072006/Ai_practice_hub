@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import AdminBreadcrumb from '../../components/AdminBreadcrumb';
 import api from '../../services/api';
-import { Plus, Edit, Trash2, Upload, Loader, X, Search, Eye, Code, FileQuestion, ExternalLink } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, Loader, X, Search, Eye, Code, FileQuestion, ExternalLink, ArrowLeft } from 'lucide-react';
 
 const AdminCourseLevels = () => {
   const { courseId } = useParams();
@@ -195,11 +195,21 @@ const AdminCourseLevels = () => {
     <div className="flex min-h-screen bg-gray-50 dark:bg-slate-900 font-sans">
       <Sidebar />
       <div className="flex-1 p-8 overflow-y-auto">
-        {/* Breadcrumb */}
-        <AdminBreadcrumb items={[
-          { label: 'Courses', path: '/admin/courses' },
-          { label: course?.title || 'Course', path: null }
-        ]} />
+        {/* Breadcrumb + Back Button */}
+        <div className="flex items-center justify-between">
+          <AdminBreadcrumb items={[
+            { label: 'Courses', path: '/admin/courses' },
+            { label: course?.title || 'Course', path: null }
+          ]} />
+          <button
+            onClick={() => navigate('/admin/courses')}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors text-sm"
+            title="Back to Courses"
+          >
+            <ArrowLeft size={16} />
+            Back
+          </button>
+        </div>
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">

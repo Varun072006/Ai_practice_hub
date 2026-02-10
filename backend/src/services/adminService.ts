@@ -136,68 +136,46 @@ export const getDashboardStats = async () => {
   try {
     console.log('[getDashboardStats] Fetching dashboard stats');
 
-    // Get total users (with error handling)
-    let totalUsers = 0;
-    try {
-      const totalUsersResult = await pool.query('SELECT COUNT(*) as count FROM users WHERE role = ?', ['student']);
-      const totalUsersRows = getRows(totalUsersResult);
-      totalUsers = parseInt(totalUsersRows[0]?.count || '0');
-    } catch (error: any) {
-      console.warn('[getDashboardStats] Error fetching total users:', error.message);
-    }
+    // Parallelize queries for efficiency
+    const [
+      totalUsersResult,
+      activeUsersResult,
+      questionsAttemptedResult,
+      pendingApprovalsResult,
+      avgSuccessRateResult,
+      popularCoursesResult,
+      weeklyAttemptsResult,
+      successRateTrendResult,
+      courseInsightsResult,
+      submissionStatsResult,
+      usersPrevResult,
+      attemptsTodayResult
+    ] = await Promise.all([
+      // 1. Total Users
+      pool.query('SELECT COUNT(*) as count FROM users WHERE role = ?', ['student']),
 
-    // Get active users (with error handling)
-    let activeUsers = 0;
-    try {
-      const activeUsersResult = await pool.query(
+      // 2. Active Learners (last 24h)
+      pool.query(
         "SELECT COUNT(DISTINCT user_id) as count FROM practice_sessions WHERE started_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)"
-      );
-      const activeUsersRows = getRows(activeUsersResult);
-      activeUsers = parseInt(activeUsersRows[0]?.count || '0');
-    } catch (error: any) {
-      console.warn('[getDashboardStats] Error fetching active users:', error.message);
-    }
+      ),
 
-    // Get questions attempted (with error handling)
-    let questionsAttempted = 0;
-    try {
-      const questionsAttemptedResult = await pool.query('SELECT COUNT(*) as count FROM user_submissions');
-      const questionsAttemptedRows = getRows(questionsAttemptedResult);
-      questionsAttempted = parseInt(questionsAttemptedRows[0]?.count || '0');
-    } catch (error: any) {
-      console.warn('[getDashboardStats] Error fetching questions attempted:', error.message);
-    }
+      // 3. Questions Attempted (Total)
+      pool.query('SELECT COUNT(*) as count FROM user_submissions'),
 
-    // Get pending approvals (with error handling)
-    let pendingApprovals = 0;
-    try {
-      const pendingApprovalsResult = await pool.query(
+      // 4. Pending Approvals (Active sessions > 2h old)
+      pool.query(
         "SELECT COUNT(*) as count FROM practice_sessions WHERE status = 'in_progress' AND started_at < DATE_SUB(NOW(), INTERVAL 2 HOUR)"
-      );
-      const pendingApprovalsRows = getRows(pendingApprovalsResult);
-      pendingApprovals = parseInt(pendingApprovalsRows[0]?.count || '0');
-    } catch (error: any) {
-      console.warn('[getDashboardStats] Error fetching pending approvals:', error.message);
-    }
+      ),
 
-    // Get average success rate
-    let avgSuccessRate = 0;
-    try {
-      const successRateResult = await pool.query(`
+      // 5. Avg Success Rate
+      pool.query(`
         SELECT 
           COUNT(CASE WHEN is_correct = 1 THEN 1 END) * 100.0 / COUNT(*) as rate 
         FROM user_submissions
-      `);
-      const successRateRows = getRows(successRateResult);
-      avgSuccessRate = parseFloat(successRateRows[0]?.rate || '0');
-    } catch (error: any) {
-      console.warn('[getDashboardStats] Error fetching success rate:', error.message);
-    }
+      `),
 
-    // Get popular courses
-    let popularCourses: any[] = [];
-    try {
-      const popularCoursesResult = await pool.query(`
+      // 6. Popular Courses (All)
+      pool.query(`
         SELECT 
           c.id,
           c.title as name, 
@@ -207,39 +185,164 @@ export const getDashboardStats = async () => {
         LEFT JOIN practice_sessions ps ON c.id = ps.course_id
         GROUP BY c.id, c.title
         ORDER BY student_count DESC
-        LIMIT 6
-      `);
-      popularCourses = getRows(popularCoursesResult).map((course: any) => ({
-        id: course.id,
-        name: course.name,
-        subject: course.subject || 'Development', // Fallback subject
-        count: `${course.student_count} students`
-      }));
-    } catch (error: any) {
-      console.warn('[getDashboardStats] Error fetching popular courses:', error.message);
+      `),
+
+      // 7. Weekly Attempts (Last 7 Days)
+      pool.query(`
+        SELECT 
+          DATE(submitted_at) as date,
+          COUNT(*) as count
+        FROM user_submissions
+        WHERE submitted_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+        GROUP BY DATE(submitted_at)
+        ORDER BY date ASC
+      `),
+
+      // 8. Success Rate Trend (Last 4 Weeks)
+      pool.query(`
+             SELECT 
+                WEEK(submitted_at) as week,
+                COUNT(CASE WHEN is_correct = 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0) as rate
+             FROM user_submissions
+             WHERE submitted_at >= DATE_SUB(NOW(), INTERVAL 4 WEEK)
+             GROUP BY WEEK(submitted_at)
+             ORDER BY week ASC
+            `),
+
+      // 9. Course Insights (Detailed - All Courses)
+      pool.query(`
+                SELECT 
+                    c.title as name,
+                    'Computer Science' as subject,
+                    COUNT(ps.id) as attempts,
+                    COALESCE(AVG(case when us.is_correct = 1 then 100 else 0 end), 0) as accuracy,
+                    'Healthy' as status
+                FROM courses c
+                LEFT JOIN practice_sessions ps ON c.id = ps.course_id
+                LEFT JOIN user_submissions us ON ps.id = us.session_id
+                GROUP BY c.id, c.title
+                ORDER BY attempts DESC
+            `),
+
+      // 10. Submission Stats (Total, Pass Rate, Error Rate)
+      pool.query(`
+                SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) as passed,
+                    SUM(CASE WHEN is_correct = 0 THEN 1 ELSE 0 END) as failed,
+                     COALESCE(AVG(test_cases_passed * 100.0 / NULLIF(total_test_cases, 0)), 0) as test_case_rate
+                FROM user_submissions
+            `),
+
+      // 11. Users Prev Month (for growth)
+      pool.query("SELECT COUNT(*) as count FROM users WHERE role = 'student' AND created_at < DATE_SUB(NOW(), INTERVAL 30 DAY)"),
+
+      // 12. Attempts Today
+      pool.query("SELECT COUNT(*) as count FROM user_submissions WHERE DATE(submitted_at) = CURDATE()")
+    ]);
+
+    // Process Results
+    const totalUsers = parseInt(getRows(totalUsersResult)[0]?.count || '0');
+    const activeUsers = parseInt(getRows(activeUsersResult)[0]?.count || '0');
+    const questionsAttempted = parseInt(getRows(questionsAttemptedResult)[0]?.count || '0');
+    const pendingApprovals = parseInt(getRows(pendingApprovalsResult)[0]?.count || '0');
+    const avgSuccessRate = parseFloat(getRows(avgSuccessRateResult)[0]?.rate || '0');
+
+    // Calculate Growth
+    const prevUsers = parseInt(getRows(usersPrevResult)[0]?.count || '0');
+    const userGrowth = prevUsers > 0 ? Math.round(((totalUsers - prevUsers) / prevUsers) * 100) : 0;
+    const attemptsToday = parseInt(getRows(attemptsTodayResult)[0]?.count || '0');
+
+    const popularCourses = getRows(popularCoursesResult).map((course: any) => ({
+      id: course.id,
+      name: course.name,
+      subject: course.subject || 'Development',
+      count: `${course.student_count} students`
+    }));
+
+    // Format Weekly Attempts for Recharts
+    const rawWeeklyAttempts = getRows(weeklyAttemptsResult);
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    // Fill in missing days
+    const last7Days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const dayName = days[d.getDay()];
+      const found = rawWeeklyAttempts.find((r: any) => {
+        // Handle different date formats returned by driver
+        const rDate = r.date instanceof Date ? r.date.toISOString().split('T')[0] : r.date;
+        return rDate === dateStr;
+      });
+      last7Days.push({
+        name: dayName,
+        attempts: found ? parseInt(found.count) : 0
+      });
     }
 
-    console.log(`[getDashboardStats] Stats: users=${totalUsers}, active=${activeUsers}, questions=${questionsAttempted}, pending=${pendingApprovals}, success=${avgSuccessRate}`);
+    // Format Success Rate Trend
+    const rawSuccessTrend = getRows(successRateTrendResult);
+    const successTrend = rawSuccessTrend.map((r: any, i: number) => ({
+      week: `Week ${i + 1}`,
+      rate: Math.round(parseFloat(r.rate) || 0)
+    }));
+    // Ensure at least some data if empty
+    if (successTrend.length === 0) {
+      successTrend.push({ week: 'Week 1', rate: 0 });
+    }
 
-    return {
+
+    const courseInsights = getRows(courseInsightsResult).map((c: any) => ({
+      name: c.name,
+      subject: c.subject,
+      attempts: c.attempts,
+      accuracy: Math.round(parseFloat(c.accuracy)),
+      status: parseFloat(c.accuracy) > 70 ? 'Healthy' : (parseFloat(c.accuracy) > 40 ? 'Review' : 'Critical')
+    }));
+
+    const subStats = getRows(submissionStatsResult)[0];
+    const submissionStats = {
+      total: subStats?.total || 0,
+      test_case_rate: Math.round(parseFloat(subStats?.test_case_rate || '0')),
+      error_rate: subStats?.total > 0 ? Math.round((parseInt(subStats.failed) / parseInt(subStats.total)) * 100) : 0
+    };
+
+
+    const stats = {
       total_users: totalUsers,
       active_learners: activeUsers,
       questions_attempted: questionsAttempted,
       pending_approvals: pendingApprovals,
       average_success_rate: Math.round(avgSuccessRate * 10) / 10,
-      popular_courses: popularCourses
+      popular_courses: popularCourses,
+      weekly_attempts: last7Days,
+      success_trend: successTrend,
+      course_insights: courseInsights,
+      submission_stats: submissionStats,
+      user_growth: userGrowth,
+      attempts_today: attemptsToday
     };
+
+
+    console.log(`[getDashboardStats] Stats compiled successfully`);
+    return stats;
+
   } catch (error: any) {
     console.error('[getDashboardStats] Error:', error);
     console.error('[getDashboardStats] Error stack:', error.stack);
-    // Return default stats on error
+    // Return default stats on error to prevent unnecessary crashes
     return {
       total_users: 0,
       active_learners: 0,
       questions_attempted: 0,
       pending_approvals: 0,
       average_success_rate: 0,
-      popular_courses: []
+      popular_courses: [],
+      weekly_attempts: [],
+      success_trend: [],
+      course_insights: [],
+      submission_stats: { total: 0, test_case_rate: 0, error_rate: 0 }
     };
   }
 };

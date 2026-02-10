@@ -9,6 +9,8 @@ const StudentResults = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filter, setFilter] = useState('all'); // all, pass, fail
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 100;
 
     const [selectedSession, setSelectedSession] = useState(null);
     const [sessionDetails, setSessionDetails] = useState(null);
@@ -41,6 +43,7 @@ const StudentResults = () => {
 
     const handleSearch = (e) => {
         setSearchTerm(e.target.value);
+        setCurrentPage(1);
     };
 
     // Handle opening edit modal
@@ -79,6 +82,17 @@ const StudentResults = () => {
         if (filter === 'all') return true;
         return result.status.toLowerCase() === filter;
     });
+
+    // Pagination Logic
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentResults = filteredResults.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(filteredResults.length / itemsPerPage);
+
+    const handlePageChange = (pageNumber) => {
+        setCurrentPage(pageNumber);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
     const getStatusColor = (status) => {
         return status === 'Pass'
@@ -681,7 +695,10 @@ const StudentResults = () => {
                         <div className="flex gap-3 w-full md:w-auto">
                             <select
                                 value={filter}
-                                onChange={(e) => setFilter(e.target.value)}
+                                onChange={(e) => {
+                                    setFilter(e.target.value);
+                                    setCurrentPage(1);
+                                }}
                                 className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700"
                             >
                                 <option value="all">All Status</option>
@@ -727,7 +744,7 @@ const StudentResults = () => {
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredResults.map((result, index) => (
+                                    currentResults.map((result, index) => (
                                         <tr key={index} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
                                             <td className="px-6 py-4 font-mono text-sm text-gray-600 dark:text-slate-400">
                                                 {result.student_id}
@@ -780,13 +797,57 @@ const StudentResults = () => {
                     </div>
 
                     {/* Pagination */}
-                    <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-700 flex items-center justify-between text-sm text-gray-500 dark:text-slate-400">
-                        <span>Showing {filteredResults.length} results</span>
-                        <div className="flex gap-2">
-                            <button className="px-3 py-1 border border-gray-300 dark:border-slate-600 rounded hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 text-gray-700 dark:text-slate-300" disabled>Previous</button>
-                            <button className="px-3 py-1 border border-gray-300 dark:border-slate-600 rounded hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 text-gray-700 dark:text-slate-300" disabled>Next</button>
+                    {filteredResults.length > 0 && (
+                        <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-700 flex items-center justify-between text-sm text-gray-500 dark:text-slate-400">
+                            <span>
+                                Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredResults.length)} of {filteredResults.length} results
+                            </span>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className="px-3 py-1 border border-gray-300 dark:border-slate-600 rounded hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 dark:text-slate-300 transition-colors"
+                                >
+                                    Previous
+                                </button>
+                                <div className="hidden sm:flex items-center gap-1">
+                                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                        // Simple pagination logic to show around current page
+                                        let pageNum;
+                                        if (totalPages <= 5) {
+                                            pageNum = i + 1;
+                                        } else if (currentPage <= 3) {
+                                            pageNum = i + 1;
+                                        } else if (currentPage >= totalPages - 2) {
+                                            pageNum = totalPages - 4 + i;
+                                        } else {
+                                            pageNum = currentPage - 2 + i;
+                                        }
+
+                                        return (
+                                            <button
+                                                key={pageNum}
+                                                onClick={() => handlePageChange(pageNum)}
+                                                className={`w-8 h-8 flex items-center justify-center rounded border ${currentPage === pageNum
+                                                        ? 'bg-blue-600 text-white border-blue-600'
+                                                        : 'border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300'
+                                                    }`}
+                                            >
+                                                {pageNum}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                    className="px-3 py-1 border border-gray-300 dark:border-slate-600 rounded hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 dark:text-slate-300 transition-colors"
+                                >
+                                    Next
+                                </button>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
 

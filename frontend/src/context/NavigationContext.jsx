@@ -36,9 +36,9 @@ export const NavigationProvider = ({ children }) => {
 
       // Only add to stack if it's a new page (not going back)
       // We'll handle back navigation separately
-      if (currentPath !== '/login' && 
-          currentPath !== '/register' && 
-          currentPath !== '/forgot-password') {
+      if (currentPath !== '/login' &&
+        currentPath !== '/register' &&
+        currentPath !== '/forgot-password') {
         setHistoryStack(prev => {
           const lastPath = prev[prev.length - 1];
           // Avoid duplicates if same page is visited consecutively
@@ -73,22 +73,19 @@ export const NavigationProvider = ({ children }) => {
     setIsNavigatingBack(true);
     setHistoryStack(prev => {
       if (prev.length <= 1) {
-        // If stack is empty or only has current page, go to dashboard
-        const defaultPath = '/dashboard';
-        navigate(defaultPath, { replace: true });
-        return [defaultPath];
+        return ['/dashboard'];
       }
-      
-      // Remove current page from stack
-      const newStack = prev.slice(0, -1);
-      const previousPath = newStack[newStack.length - 1] || '/dashboard';
-      
-      // Navigate to previous page
-      navigate(previousPath, { replace: false });
-      
-      return newStack;
+      return prev.slice(0, -1);
     });
-  }, [navigate]);
+  }, []);
+
+  // Perform the actual navigation after the stack state has updated
+  useEffect(() => {
+    if (isNavigatingBack) {
+      const targetPath = historyStack[historyStack.length - 1] || '/dashboard';
+      navigate(targetPath, { replace: historyStack.length <= 1 });
+    }
+  }, [isNavigatingBack, historyStack, navigate]);
 
   // Replace current page in stack (for redirects)
   const replaceCurrent = useCallback((path) => {

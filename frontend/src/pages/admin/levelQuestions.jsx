@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import AdminBreadcrumb from '../../components/AdminBreadcrumb';
 import api from '../../services/api';
-import { Edit, Trash2, Plus, Search } from 'lucide-react';
+import { Edit, Trash2, Plus, Search, ArrowLeft } from 'lucide-react';
 
 const LevelQuestions = () => {
   const { courseId, levelId } = useParams();
@@ -131,13 +131,22 @@ const LevelQuestions = () => {
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
-              {level?.title ? `Level ${level?.level_number}: ${level?.title}` : 'Level Questions'}
-            </h1>
-            <p className="text-gray-600 dark:text-slate-400">
-              {level?.description ? `${level.description} • ` : ''}{questions.length} {questionType === 'coding' ? 'Coding' : 'MCQ'} Questions
-            </p>
+          <div className="flex items-start gap-3">
+            <button
+              onClick={() => navigate(`/admin/courses/${courseId}/levels`)}
+              className="mt-1 p-2 text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              title="Back to Levels"
+            >
+              <ArrowLeft size={22} />
+            </button>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
+                {level?.title ? `Level ${level?.level_number}: ${level?.title}` : 'Level Questions'}
+              </h1>
+              <p className="text-gray-600 dark:text-slate-400">
+                {level?.description ? `${level.description} • ` : ''}{questions.length} {questionType === 'coding' ? 'Coding' : 'MCQ'} Questions
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             {selectedIds.size > 0 && (
@@ -183,8 +192,8 @@ const LevelQuestions = () => {
                   navigate(`/admin/courses/${courseId}/levels/${levelId}/questions?type=coding`, { replace: true });
                 }}
                 className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${questionType === 'coding'
-                    ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow-sm'
-                    : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
+                  ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
                   }`}
               >
                 Coding ({allQuestions.filter(q => q.question_type === 'coding').length})
@@ -196,8 +205,8 @@ const LevelQuestions = () => {
                   navigate(`/admin/courses/${courseId}/levels/${levelId}/questions?type=mcq`, { replace: true });
                 }}
                 className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${questionType === 'mcq'
-                    ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow-sm'
-                    : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
+                  ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300'
                   }`}
               >
                 MCQ ({allQuestions.filter(q => q.question_type === 'mcq').length})
