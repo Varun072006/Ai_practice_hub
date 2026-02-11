@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { FileSearch, UserCog, FileCode2, MonitorPlay, ClipboardList, BarChart3, GraduationCap, TrendingUp, Bot, CircleUser, LogOut, Sun, Moon } from 'lucide-react';
+import { LogOut, Sun, Moon, Image as ImageIcon } from 'lucide-react';
 
 const Sidebar = () => {
   const { user, logout } = useAuth();
@@ -17,12 +17,13 @@ const Sidebar = () => {
   ];
 
   const adminMenuItems = [
-    { path: '/admin/overview', label: 'Overview', image: '/assets/admin-icons/overview.png' },
+    { path: '/admin/dashboard', label: 'Overview', image: '/assets/admin-icons/overview.png' },
     { path: '/admin/users', label: 'User Management', image: '/assets/admin-icons/users.png' },
     { path: '/admin/assignments', label: 'Assignments', image: '/assets/admin-icons/assignments.png' },
     { path: '/admin/courses', label: 'Courses & Questions', image: '/assets/admin-icons/courses.png' },
     { path: '/admin/results', label: 'Student Results', image: '/assets/admin-icons/results.png' },
     { path: '/admin/leaderboard', label: 'Leaderboard', image: '/assets/admin-icons/leaderboard.png' },
+    { path: '/admin/assets', label: 'Assets', icon: ImageIcon },
   ];
 
   const menuItems = user?.role === 'admin' ? adminMenuItems : studentMenuItems;

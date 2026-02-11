@@ -29,7 +29,9 @@ import AdminAssignments from './pages/admin/assignments';
 import CreateQuestion from './pages/admin/createQuestion';
 import LevelQuestions from './pages/admin/levelQuestions';
 import AdminLeaderboard from './pages/admin/leaderboard';
+
 import StudentResults from './pages/admin/results';
+import AdminAssets from './pages/admin/Assets';
 
 const AppRoutes = () => {
   const { user, loading } = useAuth();
@@ -199,6 +201,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute requireAdmin>
             <AdminLeaderboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/assets"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminAssets />
           </ProtectedRoute>
         }
       />

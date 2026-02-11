@@ -1,4 +1,5 @@
 import express, { Application } from 'express';
+import path from 'path';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { errorHandler } from './middlewares/errorHandler';
@@ -23,6 +24,7 @@ import analyticsRoutes from './routes/analyticsRoutes';
 import intelligenceRoutes from './routes/intelligenceRoutes';
 import seedRoutes from './routes/seedRoutes';
 import profileRoutes from './routes/profileRoutes';
+import assetRoutes from './routes/assetsRoutes';
 
 
 dotenv.config();
@@ -127,6 +129,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/intelligence', intelligenceRoutes);
 app.use('/api/seed', seedRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/assets', assetRoutes);
 
 
 // Error handling

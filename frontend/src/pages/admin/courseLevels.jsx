@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import AdminBreadcrumb from '../../components/AdminBreadcrumb';
 import api from '../../services/api';
-import { Plus, Edit, Trash2, Upload, Loader, X, Search, Eye, Code, FileQuestion, ExternalLink, ArrowLeft } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, Loader, X, Search, Eye, Code, FileQuestion, ExternalLink, ArrowLeft, Image as ImageIcon, AlertTriangle, Check } from 'lucide-react';
 
 const AdminCourseLevels = () => {
   const { courseId } = useParams();
@@ -26,6 +26,9 @@ const AdminCourseLevels = () => {
   const [csvUploadModal, setCsvUploadModal] = useState({ show: false, levelId: null, uploading: false, questionType: null });
   const [showCourseEditModal, setShowCourseEditModal] = useState(false);
   const [courseFormData, setCourseFormData] = useState({ title: '', description: '', total_levels: 1 });
+
+  // Fix Assets Modal State
+  const [fixAssetsModal, setFixAssetsModal] = useState({ show: false, loading: false, issues: [], fixedCount: 0 });
 
   useEffect(() => {
     fetchData();
@@ -191,6 +194,240 @@ const AdminCourseLevels = () => {
     );
   }
 
+  // Fix Assets Logic moved to top
+
+
+  const isJsCourse = course?.title?.toLowerCase().includes('javascript') || course?.title?.toLowerCase().includes('js');
+  const showFixAssets = isHtmlCssCourse || isJsCourse;
+
+  const handleScanAssets = async () => {
+    setFixAssetsModal({ show: true, loading: true, issues: [], fixedCount: 0 });
+    try {
+      // 1. Fetch available assets
+      const assetsRes = await api.get('/assets');
+      const availableAssets = assetsRes.data.map(a => a.name);
+
+      // 2. Fetch all questions for this course
+      const allQuestions = Object.values(questions).flat();
+      const foundIssues = [];
+
+      allQuestions.forEach(q => {
+        // Only check HTML/CSS or Coding questions
+        if (q.question_type !== 'htmlcss' && q.question_type !== 'coding' && q.question_type !== 'web') return;
+
+        // Helper regex generator for an asset
+        // Matches asset name NOT preceded by /assets/ or assets/
+        // We use a simplified check: if we find the filename, check provided context
+
+        let needsFix = false;
+        let details = [];
+
+        const checkText = (text, fieldName) => {
+          if (!text) return null;
+          let newText = text;
+          let changed = false;
+
+          availableAssets.forEach(assetName => {
+            // Regex to find filename.ext NOT preceded by /assets/ or assets/
+            // Negative lookbehind is supported in modern JS (V8/Chrome/Node)
+            // Match: (not /assets/)(not assets/) assetName
+            // We'll use a safer approach for broader compatibility if needed, but modern browsers support lookbehind.
+            // Let's use a capture group approach or simple lookbehind if we target modern env.
+            // Given this is a specific user env, likely modern.
+
+            if (newText.includes(assetName)) {
+              // Check if it is poorly linked
+              // We want to replace "foo.png" with "/assets/foo.png"
+              // But ignore "/assets/foo.png" or "assets/foo.png"
+
+              // Regex: Match assetName that is NOT preceded by /?assets/
+              // We also want to avoid http://.../foo.png
+
+              // Simple scan: split by assetName? No, use Regex.
+              const regex = new RegExp(`(?<!\\/?assets\\/)(?<!http:\\/\\/)(?<!https:\\/\\/)\\b${assetName.replace('.', '\\.')}\\b`, 'g');
+
+              if (regex.test(newText)) {
+                changed = true;
+                details.push(`Found unlinked '${assetName}' in ${fieldName}`);
+              }
+            }
+          });
+          return changed;
+        };
+
+        // 1. Check Description
+        if (checkText(q.description, 'Description')) {
+          needsFix = true;
+        }
+
+        // 2. Check Reference Solution (Code)
+        if (q.reference_solution) {
+          let isJson = false;
+          try {
+            const parsed = JSON.parse(q.reference_solution);
+            // If it's an object with html/css/js, check each
+            if (parsed && typeof parsed === 'object') {
+              isJson = true;
+              if (checkText(parsed.html, 'Solution HTML')) needsFix = true;
+              if (checkText(parsed.css, 'Solution CSS')) needsFix = true;
+              if (checkText(parsed.js, 'Solution JS')) needsFix = true;
+            }
+          } catch (e) {
+            // Not JSON, treat as raw string
+          }
+
+          if (!isJson) {
+            if (checkText(q.reference_solution, 'Reference Solution')) needsFix = true;
+          }
+        }
+
+        // 3. Check HTML/CSS output format assets config (legacy check)
+        if (q.output_format) {
+          try {
+            const config = typeof q.output_format === 'string' ? JSON.parse(q.output_format) : q.output_format;
+            if (Array.isArray(config)) {
+              config.forEach(a => {
+                if (availableAssets.includes(a.name) && a.path !== `/assets/${a.name}` && a.path !== `assets/${a.name}`) {
+                  needsFix = true;
+                  details.push(`Fix asset config for '${a.name}'`);
+                }
+              });
+            }
+          } catch (e) { }
+        }
+
+
+        if (needsFix) {
+          foundIssues.push({
+            questionId: q.id,
+            title: q.title,
+            type: 'Asset Link',
+            detail: [...new Set(details)].join(', '),
+            fixAction: 'auto_link'
+          });
+        }
+      });
+
+      setFixAssetsModal({ show: true, loading: false, issues: foundIssues, fixedCount: 0 });
+
+    } catch (err) {
+      console.error("Failed to scan assets:", err);
+      alert("Failed to scan assets");
+      setFixAssetsModal({ show: false, loading: false, issues: [], fixedCount: 0 });
+    }
+  };
+
+  const handleFixAssets = async () => {
+    setFixAssetsModal(prev => ({ ...prev, loading: true }));
+    let fixed = 0;
+
+    const assetsRes = await api.get('/assets');
+    const availableAssets = assetsRes.data.map(a => a.name);
+
+    // Group issues by question (though our scan already produced one issue object per question, 
+    // but defensive coding if we change scan logic later)
+    const issuesToFix = fixAssetsModal.issues;
+
+    for (const issue of issuesToFix) {
+      // Find latest question data
+      const q = Object.values(questions).flat().find(quest => quest.id === issue.questionId);
+      if (!q) continue;
+
+      let updatedFields = {};
+      let modified = false;
+
+      // Helper to replace text
+      const applyReplacement = (text) => {
+        if (!text) return text;
+        let newText = text;
+        availableAssets.forEach(asset => {
+          // Replace standalone filename with /assets/filename
+          // Regex: Lookbehind to ensure not already assets/
+          const regex = new RegExp(`(?<!\\/?assets\\/)(?<!http:\\/\\/)(?<!https:\\/\\/)\\b${asset.replace('.', '\\.')}\\b`, 'g');
+          newText = newText.replace(regex, `/assets/${asset}`);
+        });
+        return newText;
+      };
+
+      // 1. Fix Description
+      if (q.description) {
+        const newDesc = applyReplacement(q.description);
+        if (newDesc !== q.description) {
+          updatedFields.description = newDesc;
+          modified = true;
+        }
+      }
+
+      // 2. Fix Reference Solution
+      if (q.reference_solution) {
+        try {
+          const parsed = JSON.parse(q.reference_solution);
+          if (parsed && typeof parsed === 'object' && (parsed.html || parsed.css || parsed.js)) {
+            // It is our Web Question JSON format
+            const newHtml = applyReplacement(parsed.html);
+            const newCss = applyReplacement(parsed.css);
+            const newJs = applyReplacement(parsed.js);
+
+            if (newHtml !== parsed.html || newCss !== parsed.css || newJs !== parsed.js) {
+              updatedFields.reference_solution = JSON.stringify({
+                ...parsed,
+                html: newHtml,
+                css: newCss,
+                js: newJs
+              });
+              modified = true;
+            }
+          } else {
+            throw new Error("Not Web JSON");
+          }
+        } catch (e) {
+          // Treat as raw string
+          const newSol = applyReplacement(q.reference_solution);
+          if (newSol !== q.reference_solution) {
+            updatedFields.reference_solution = newSol;
+            modified = true;
+          }
+        }
+      }
+
+      // 3. Fix Output Format (Assets Config)
+      if (q.output_format) {
+        try {
+          let config = typeof q.output_format === 'string' ? JSON.parse(q.output_format) : q.output_format;
+          if (Array.isArray(config)) {
+            let configChanged = false;
+            const newConfig = config.map(a => {
+              if (availableAssets.includes(a.name) && a.path !== `/assets/${a.name}`) {
+                configChanged = true;
+                return { ...a, path: `/assets/${a.name}` };
+              }
+              return a;
+            });
+            if (configChanged) {
+              updatedFields.output_format = JSON.stringify(newConfig);
+              modified = true;
+            }
+          }
+        } catch (e) { }
+      }
+
+      if (modified) {
+        try {
+          // Determine endpoint based on type
+          const type = q.question_type === 'mcq' ? 'mcq' : 'coding';
+          await api.put(`/admin/questions/${type}/${q.id}`, updatedFields);
+          fixed++;
+        } catch (e) {
+          console.error(`Failed to update question ${q.id}`, e);
+        }
+      }
+    }
+
+    setFixAssetsModal(prev => ({ ...prev, loading: false, fixedCount: fixed, issues: [] }));
+    fetchData(); // Refresh
+  };
+
+
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-slate-900 font-sans">
       <Sidebar />
@@ -218,6 +455,15 @@ const AdminCourseLevels = () => {
             <p className="text-gray-600 dark:text-slate-400">{levels.length} Levels • Manage course structure and questions</p>
           </div>
           <div className="flex items-center gap-3">
+            {showFixAssets && (
+              <button
+                onClick={handleScanAssets}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium shadow-md hover:shadow-lg"
+              >
+                <ImageIcon size={18} />
+                Fix Assets
+              </button>
+            )}
             <button
               onClick={openCourseEditModal}
               className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
@@ -235,9 +481,92 @@ const AdminCourseLevels = () => {
           </div>
         </div>
 
+        {/* ... (Rest of UI) ... */}
+
+        {/* Fix Assets Modal */}
+        {fixAssetsModal.show && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl dark:shadow-slate-900/50 w-full max-w-2xl overflow-hidden border dark:border-slate-700 flex flex-col max-h-[80vh]">
+              <div className="p-6 border-b border-gray-100 dark:border-slate-700">
+                <h3 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                  <ImageIcon className="text-purple-600 dark:text-purple-400" /> Asset Health Check
+                </h3>
+              </div>
+              <div className="p-6 overflow-y-auto flex-1">
+                {fixAssetsModal.loading ? (
+                  <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                    <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+                    <p className="text-gray-500 dark:text-slate-400">Scanning content...</p>
+                  </div>
+                ) : fixAssetsModal.issues.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 p-4 rounded-xl flex items-center gap-3 text-orange-800 dark:text-orange-200">
+                      <div className="p-2 bg-orange-100 dark:bg-orange-900/50 rounded-lg">
+                        <AlertTriangle size={20} />
+                      </div>
+                      <div>
+                        <p className="font-bold">Found {fixAssetsModal.issues.length} potential issues</p>
+                        <p className="text-xs opacity-80">Assets referenced in descriptions or config that don't match standard paths.</p>
+                      </div>
+                    </div>
+
+                    <div className="divide-y divide-gray-100 dark:divide-slate-700 border border-gray-100 dark:border-slate-700 rounded-xl overflow-hidden">
+                      {fixAssetsModal.issues.map((issue, idx) => (
+                        <div key={idx} className="p-4 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+                          <div className="flex justify-between items-start mb-1">
+                            <span className="text-xs font-bold uppercase tracking-wider text-gray-500">{issue.type} issue</span>
+                            <span className="text-xs bg-gray-100 dark:bg-slate-700 px-2 py-0.5 rounded text-gray-600 dark:text-slate-300">QID: {issue.questionId}</span>
+                          </div>
+                          <h4 className="font-medium text-gray-900 dark:text-white mb-1">{issue.title}</h4>
+                          <p className="text-sm text-gray-600 dark:text-slate-400 font-mono bg-gray-50 dark:bg-slate-900/50 p-2 rounded border border-gray-100 dark:border-slate-700">
+                            {issue.detail}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : fixAssetsModal.fixedCount > 0 ? (
+                  <div className="text-center py-10">
+                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Check size={32} />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">All Fixed!</h3>
+                    <p className="text-gray-500 dark:text-slate-400">Successfully updated {fixAssetsModal.fixedCount} questions.</p>
+                  </div>
+                ) : (
+                  <div className="text-center py-10">
+                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Check size={32} />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">All Good!</h3>
+                    <p className="text-gray-500 dark:text-slate-400">No element path issues found in scanned questions.</p>
+                  </div>
+                )}
+              </div>
+              <div className="p-6 border-t border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-800/50 flex justify-end gap-3">
+                <button
+                  onClick={() => setFixAssetsModal({ ...fixAssetsModal, show: false })}
+                  className="px-5 py-2.5 text-gray-600 dark:text-slate-300 font-medium hover:bg-white dark:hover:bg-slate-700 border border-transparent hover:border-gray-200 dark:hover:border-slate-600 rounded-xl transition-all"
+                >
+                  Close
+                </button>
+                {fixAssetsModal.issues.length > 0 && (
+                  <button
+                    onClick={handleFixAssets}
+                    disabled={fixAssetsModal.loading}
+                    className="px-6 py-2.5 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 shadow-lg shadow-purple-200 dark:shadow-none hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:translate-y-0"
+                  >
+                    {fixAssetsModal.loading ? 'Fixing...' : `Fix ${fixAssetsModal.issues.length} Issues`}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Main Card Container */}
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm dark:shadow-slate-900/50 border border-gray-200 dark:border-slate-700 overflow-hidden">
-          {/* Toolbar */}
+          {/* ... */}          {/* Toolbar */}
           <div className="p-4 border-b border-gray-200 dark:border-slate-700 flex flex-col md:flex-row gap-4 justify-between items-center bg-gray-50/50 dark:bg-slate-800/50">
             <div className="relative flex-1 w-full md:max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" size={20} />

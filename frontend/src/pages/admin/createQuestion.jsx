@@ -47,7 +47,7 @@ const CreateQuestion = () => {
     js: ''
   });
 
-  // Image assets for HTML/CSS questions
+  // Image assets for HTML/CSS questions (output_format)
   const [assets, setAssets] = useState([]);
 
   // Handler to select question type (first step of creation flow)
@@ -56,8 +56,11 @@ const CreateQuestion = () => {
     setTypeSelected(true);
   };
 
-  // Check if this is an HTML/CSS course
-  const isHtmlCssCourse = course?.title?.toLowerCase().includes('html') || course?.title?.toLowerCase().includes('css');
+  // Check if this is a Web Development course (HTML/CSS or JavaScript)
+  const isWebCourse = course?.title?.toLowerCase().includes('html') ||
+    course?.title?.toLowerCase().includes('css') ||
+    course?.title?.toLowerCase().includes('javascript') ||
+    course?.title?.toLowerCase().includes('js');
 
   useEffect(() => {
     // Get course info to determine language
@@ -275,10 +278,12 @@ const CreateQuestion = () => {
         }
       } else {
         // Coding question handling - different validation for HTML/CSS vs regular coding
-        if (isHtmlCssCourse) {
-          // HTML/CSS question - validate that at least HTML is provided
-          if (!htmlCssCode.html || !htmlCssCode.html.trim()) {
-            alert('Please enter expected HTML code');
+        if (isWebCourse) {
+          // Web Development question (HTML/CSS/JS) - validate that at least HTML OR JS is provided
+          // For JS course, HTML might be minimal/optional if it's pure logic, but usually we want some output.
+          // Let's relax validation to require EITHER html OR js.
+          if ((!htmlCssCode.html || !htmlCssCode.html.trim()) && (!htmlCssCode.js || !htmlCssCode.js.trim())) {
+            alert('Please enter expected HTML or JavaScript code');
             return;
           }
 
@@ -432,7 +437,7 @@ const CreateQuestion = () => {
             <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-1 text-center">Select Question Type</h2>
             <p className="text-sm text-gray-500 dark:text-slate-400 text-center mb-6">Choose the type of question you want to create</p>
             <div className="flex flex-col gap-3">
-              {isHtmlCssCourse ? (
+              {isWebCourse ? (
                 <>
                   <button
                     type="button"
@@ -443,8 +448,8 @@ const CreateQuestion = () => {
                       <Palette size={20} />
                     </div>
                     <div>
-                      <div className="font-medium text-gray-800 dark:text-white text-sm">HTML / CSS Challenge</div>
-                      <div className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Web development challenge with HTML, CSS & JS</div>
+                      <div className="font-medium text-gray-800 dark:text-white text-sm">Web Development Challenge</div>
+                      <div className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Interactive challenge with HTML, CSS & JS</div>
                     </div>
                   </button>
                   <button
@@ -530,7 +535,7 @@ const CreateQuestion = () => {
 
             {questionType === 'coding' && (
               <>
-                {isHtmlCssCourse ? (
+                {isWebCourse ? (
                   /* HTML/CSS Course - Show HTML, CSS, JS editors */
                   <>
                     <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
@@ -666,7 +671,7 @@ const CreateQuestion = () => {
 
                     <div className="bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
                       <p className="text-sm text-purple-700 dark:text-purple-400">
-                        <strong>HTML/CSS Challenge Mode:</strong> Students will write HTML, CSS, and JS code to match the expected output. The expected code above serves as the reference solution.
+                        <strong>Web Development Challenge Mode:</strong> Students will write HTML, CSS, and JS code to match the expected output. The expected code above serves as the reference solution.
                       </p>
                     </div>
                   </>

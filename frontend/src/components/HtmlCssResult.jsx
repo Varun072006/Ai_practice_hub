@@ -299,7 +299,7 @@ const HtmlCssResult = ({ results, onBack }) => {
                             </div>
                             <div>
                                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Result Overview</h1>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">HTML & CSS Challenge</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{results.session.course_title || 'Web Development Challenge'}</p>
                             </div>
                         </div>
 

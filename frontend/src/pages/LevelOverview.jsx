@@ -193,6 +193,52 @@ const LevelOverview = () => {
         setEditData({ ...editData, key_terms: newTerms });
     };
 
+    const handleStartPractice = async (type) => {
+        try {
+            // We need to know the course title to determine if it's a "Web" course
+            // lessonPlan might not have it, so let's fetch course details if not available
+            let cTitle = (lessonPlan?.course_title || '').toLowerCase();
+
+            if (!cTitle && courseId) {
+                const courseRes = await api.get(`/courses`);
+                const course = courseRes.data.find(c => c.id === courseId);
+                if (course) {
+                    cTitle = (course.title || '').toLowerCase();
+                }
+            }
+
+            const isWebCourse = cTitle.includes('html') ||
+                cTitle.includes('css') ||
+                cTitle.includes('javascript') ||
+                cTitle.includes('js');
+
+            if (isWebCourse) {
+                navigate(`/html-css-practice/${courseId}/${levelId}`, {
+                    state: { sessionType: 'html-css-challenge' }
+                });
+                return;
+            }
+
+            // For Machine Learning course, specific level check (legacy logic)
+            // If cTitle is available check it, else default to old check
+            if (cTitle.includes('machine learning') && levelId.includes('660e8400')) {
+                navigate(`/mcq-practice/${courseId}/${levelId}`, { state: { sessionType: 'mcq' } });
+                return;
+            }
+
+            // Default routing for other cases
+            if (type === 'mcq') {
+                navigate(`/mcq-practice/${courseId}/${levelId}`, { state: { sessionType: 'mcq' } });
+            } else {
+                navigate(`/practice/${courseId}/${levelId}`, { state: { sessionType: 'coding' } });
+            }
+        } catch (e) {
+            console.error("Error starting practice:", e);
+            // Fallback to coding
+            navigate(`/practice/${courseId}/${levelId}`, { state: { sessionType: 'coding' } });
+        }
+    };
+
 
     if (loading) {
         return (
@@ -590,21 +636,7 @@ const LevelOverview = () => {
                                 </button>
 
                                 <button
-                                    onClick={() => {
-                                        const courseTitle = (lessonPlan?.course_title || '').toLowerCase();
-                                        const isHtmlCssCourse = courseTitle.includes('html') || courseTitle.includes('css');
-
-                                        if (isHtmlCssCourse) {
-                                            navigate(`/html-css-practice/${courseId}/${levelId}`, {
-                                                state: { sessionType: 'coding' },
-                                            });
-                                        } else {
-                                            navigate(`/practice/${courseId}/${levelId}`, {
-                                                state: { sessionType: 'coding' },
-                                            });
-                                        }
-                                        setModeSelection({ open: false });
-                                    }}
+                                    onClick={() => handleStartPractice('coding')}
                                     className="w-full py-4 rounded-xl bg-[#2563EB] text-white font-bold hover:bg-blue-700 transition-all shadow-md active:scale-[0.98]"
                                 >
                                     Coding Test
