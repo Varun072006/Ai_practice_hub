@@ -203,228 +203,46 @@ const AdminCourseLevels = () => {
   const handleScanAssets = async () => {
     setFixAssetsModal({ show: true, loading: true, issues: [], fixedCount: 0 });
     try {
-      // 1. Fetch available assets
-      const assetsRes = await api.get('/assets');
-      const availableAssets = assetsRes.data.map(a => a.name);
+      const res = await api.post(`/admin/courses/${courseId}/fix-assets`, { dryRun: true });
 
-      // 2. Fetch all questions for this course
-      const allQuestions = Object.values(questions).flat();
-      const foundIssues = [];
+      // Map backend issues to frontend display format
+      const formattedIssues = res.data.issues.map(issue => ({
+        questionId: issue.questionId,
+        title: issue.title || `QID: ${issue.questionId}`, // Use title from backend
+        type: issue.type,
+        detail: issue.exists
+          ? `Current: "${issue.currentValue}" → New: "${issue.suggestedValue}" (Fix Available)`
+          : `MISSING ASSET: "${issue.assetName || issue.currentValue}" (File not found in assets)`,
+        fixAction: 'auto_link'
+      }));
 
-      allQuestions.forEach(q => {
-        // Only check HTML/CSS or Coding questions
-        if (q.question_type !== 'htmlcss' && q.question_type !== 'coding' && q.question_type !== 'web') return;
-
-        // Helper regex generator for an asset
-        // Matches asset name NOT preceded by /assets/ or assets/
-        // We use a simplified check: if we find the filename, check provided context
-
-        let needsFix = false;
-        let details = [];
-
-        const checkText = (text, fieldName) => {
-          if (!text) return null;
-          let newText = text;
-          let changed = false;
-
-          availableAssets.forEach(assetName => {
-            // Regex to find filename.ext NOT preceded by /assets/ or assets/
-            // Negative lookbehind is supported in modern JS (V8/Chrome/Node)
-            // Match: (not /assets/)(not assets/) assetName
-            // We'll use a safer approach for broader compatibility if needed, but modern browsers support lookbehind.
-            // Let's use a capture group approach or simple lookbehind if we target modern env.
-            // Given this is a specific user env, likely modern.
-
-            if (newText.includes(assetName)) {
-              // Check if it is poorly linked
-              // We want to replace "foo.png" with "/assets/foo.png"
-              // But ignore "/assets/foo.png" or "assets/foo.png"
-
-              // Regex: Match assetName that is NOT preceded by /?assets/
-              // We also want to avoid http://.../foo.png
-
-              // Simple scan: split by assetName? No, use Regex.
-              const regex = new RegExp(`(?<!\\/?assets\\/)(?<!http:\\/\\/)(?<!https:\\/\\/)\\b${assetName.replace('.', '\\.')}\\b`, 'g');
-
-              if (regex.test(newText)) {
-                changed = true;
-                details.push(`Found unlinked '${assetName}' in ${fieldName}`);
-              }
-            }
-          });
-          return changed;
-        };
-
-        // 1. Check Description
-        if (checkText(q.description, 'Description')) {
-          needsFix = true;
-        }
-
-        // 2. Check Reference Solution (Code)
-        if (q.reference_solution) {
-          let isJson = false;
-          try {
-            const parsed = JSON.parse(q.reference_solution);
-            // If it's an object with html/css/js, check each
-            if (parsed && typeof parsed === 'object') {
-              isJson = true;
-              if (checkText(parsed.html, 'Solution HTML')) needsFix = true;
-              if (checkText(parsed.css, 'Solution CSS')) needsFix = true;
-              if (checkText(parsed.js, 'Solution JS')) needsFix = true;
-            }
-          } catch (e) {
-            // Not JSON, treat as raw string
-          }
-
-          if (!isJson) {
-            if (checkText(q.reference_solution, 'Reference Solution')) needsFix = true;
-          }
-        }
-
-        // 3. Check HTML/CSS output format assets config (legacy check)
-        if (q.output_format) {
-          try {
-            const config = typeof q.output_format === 'string' ? JSON.parse(q.output_format) : q.output_format;
-            if (Array.isArray(config)) {
-              config.forEach(a => {
-                if (availableAssets.includes(a.name) && a.path !== `/assets/${a.name}` && a.path !== `assets/${a.name}`) {
-                  needsFix = true;
-                  details.push(`Fix asset config for '${a.name}'`);
-                }
-              });
-            }
-          } catch (e) { }
-        }
-
-
-        if (needsFix) {
-          foundIssues.push({
-            questionId: q.id,
-            title: q.title,
-            type: 'Asset Link',
-            detail: [...new Set(details)].join(', '),
-            fixAction: 'auto_link'
-          });
-        }
-      });
-
-      setFixAssetsModal({ show: true, loading: false, issues: foundIssues, fixedCount: 0 });
+      setFixAssetsModal({ show: true, loading: false, issues: formattedIssues, fixedCount: 0 });
 
     } catch (err) {
       console.error("Failed to scan assets:", err);
-      alert("Failed to scan assets");
+      const errorMessage = err.response?.data?.details || err.message || "Failed to scan assets";
+      alert(`Failed to scan assets: ${errorMessage}`);
       setFixAssetsModal({ show: false, loading: false, issues: [], fixedCount: 0 });
     }
   };
 
   const handleFixAssets = async () => {
     setFixAssetsModal(prev => ({ ...prev, loading: true }));
-    let fixed = 0;
+    try {
+      const res = await api.post(`/admin/courses/${courseId}/fix-assets`, { dryRun: false });
 
-    const assetsRes = await api.get('/assets');
-    const availableAssets = assetsRes.data.map(a => a.name);
-
-    // Group issues by question (though our scan already produced one issue object per question, 
-    // but defensive coding if we change scan logic later)
-    const issuesToFix = fixAssetsModal.issues;
-
-    for (const issue of issuesToFix) {
-      // Find latest question data
-      const q = Object.values(questions).flat().find(quest => quest.id === issue.questionId);
-      if (!q) continue;
-
-      let updatedFields = {};
-      let modified = false;
-
-      // Helper to replace text
-      const applyReplacement = (text) => {
-        if (!text) return text;
-        let newText = text;
-        availableAssets.forEach(asset => {
-          // Replace standalone filename with /assets/filename
-          // Regex: Lookbehind to ensure not already assets/
-          const regex = new RegExp(`(?<!\\/?assets\\/)(?<!http:\\/\\/)(?<!https:\\/\\/)\\b${asset.replace('.', '\\.')}\\b`, 'g');
-          newText = newText.replace(regex, `/assets/${asset}`);
-        });
-        return newText;
-      };
-
-      // 1. Fix Description
-      if (q.description) {
-        const newDesc = applyReplacement(q.description);
-        if (newDesc !== q.description) {
-          updatedFields.description = newDesc;
-          modified = true;
-        }
-      }
-
-      // 2. Fix Reference Solution
-      if (q.reference_solution) {
-        try {
-          const parsed = JSON.parse(q.reference_solution);
-          if (parsed && typeof parsed === 'object' && (parsed.html || parsed.css || parsed.js)) {
-            // It is our Web Question JSON format
-            const newHtml = applyReplacement(parsed.html);
-            const newCss = applyReplacement(parsed.css);
-            const newJs = applyReplacement(parsed.js);
-
-            if (newHtml !== parsed.html || newCss !== parsed.css || newJs !== parsed.js) {
-              updatedFields.reference_solution = JSON.stringify({
-                ...parsed,
-                html: newHtml,
-                css: newCss,
-                js: newJs
-              });
-              modified = true;
-            }
-          } else {
-            throw new Error("Not Web JSON");
-          }
-        } catch (e) {
-          // Treat as raw string
-          const newSol = applyReplacement(q.reference_solution);
-          if (newSol !== q.reference_solution) {
-            updatedFields.reference_solution = newSol;
-            modified = true;
-          }
-        }
-      }
-
-      // 3. Fix Output Format (Assets Config)
-      if (q.output_format) {
-        try {
-          let config = typeof q.output_format === 'string' ? JSON.parse(q.output_format) : q.output_format;
-          if (Array.isArray(config)) {
-            let configChanged = false;
-            const newConfig = config.map(a => {
-              if (availableAssets.includes(a.name) && a.path !== `/assets/${a.name}`) {
-                configChanged = true;
-                return { ...a, path: `/assets/${a.name}` };
-              }
-              return a;
-            });
-            if (configChanged) {
-              updatedFields.output_format = JSON.stringify(newConfig);
-              modified = true;
-            }
-          }
-        } catch (e) { }
-      }
-
-      if (modified) {
-        try {
-          // Determine endpoint based on type
-          const type = q.question_type === 'mcq' ? 'mcq' : 'coding';
-          await api.put(`/admin/questions/${type}/${q.id}`, updatedFields);
-          fixed++;
-        } catch (e) {
-          console.error(`Failed to update question ${q.id}`, e);
-        }
-      }
+      setFixAssetsModal(prev => ({
+        ...prev,
+        loading: false,
+        fixedCount: res.data.fixedCount,
+        issues: []
+      }));
+      fetchData(); // Refresh data
+    } catch (err) {
+      console.error("Failed to fix assets:", err);
+      alert("Failed to fix assets");
+      setFixAssetsModal(prev => ({ ...prev, loading: false }));
     }
-
-    setFixAssetsModal(prev => ({ ...prev, loading: false, fixedCount: fixed, issues: [] }));
-    fetchData(); // Refresh
   };
 
 

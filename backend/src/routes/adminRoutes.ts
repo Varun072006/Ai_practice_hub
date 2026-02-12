@@ -30,6 +30,7 @@ import {
   createAssignmentController,
   getAssignmentsController,
   getAssignmentDetailsController,
+  fixAssetsController,
 } from '../controllers/adminController';
 import { getSessionResultsForAdminController } from '../controllers/resultController';
 import { authenticate, requireAdmin } from '../middlewares/auth';
@@ -65,6 +66,7 @@ router.put('/levels/:levelId/time-limit', updateLevelTimeLimitController);
 router.put('/levels/:levelId/details', updateLevelDetailsController);
 router.post('/questions/bulk-delete', deleteQuestionsController);
 router.post('/questions/upload-csv', uploadCSVMiddleware, uploadCSVQuestionsController);
+router.post('/courses/:courseId/fix-assets', fixAssetsController);
 
 router.post('/assignments', createAssignmentController);
 router.get('/assignments', getAssignmentsController);

@@ -505,3 +505,20 @@ export const getAssignmentsController = async (req: AuthRequest, res: Response):
     res.status(500).json({ error: 'Failed to fetch assignments' });
   }
 };
+
+export const fixAssetsController = async (req: AuthRequest, res: Response): Promise<void> => {
+  const { fixCourseAssets } = await import('../services/assetFixService');
+  try {
+    const { courseId } = req.params;
+    const { dryRun } = req.body;
+
+    // Default dryRun to true if not specified, for safety
+    const isDryRun = dryRun !== false;
+
+    const result = await fixCourseAssets(courseId, isDryRun);
+    res.json(result);
+  } catch (error: any) {
+    logger.error('Fix assets error:', error);
+    res.status(500).json({ error: 'Failed to fix assets', details: error.message });
+  }
+};
