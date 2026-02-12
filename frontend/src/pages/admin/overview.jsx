@@ -60,8 +60,8 @@ const AdminOverview = () => {
                 <Users size={20} />
               </div>
               <span className={`text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1 ${(stats?.user_growth || 0) >= 0
-                  ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20'
-                  : 'text-red-600 bg-red-50 dark:bg-red-900/20'
+                ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20'
+                : 'text-red-600 bg-red-50 dark:bg-red-900/20'
                 }`}>
                 <TrendingUp size={12} />
                 {(stats?.user_growth || 0) > 0 ? '+' : ''}{stats?.user_growth || 0}%
@@ -137,7 +137,7 @@ const AdminOverview = () => {
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-base font-semibold text-slate-800 dark:text-white">Question Attempts</h3>
             </div>
-            <div className="h-64">
+            <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={questionAttemptsData} barSize={32}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
@@ -167,7 +167,7 @@ const AdminOverview = () => {
                 <span className="flex items-center gap-1 text-slate-400">● Previous</span>
               </div>
             </div>
-            <div className="h-64">
+            <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={successRateData}>
                   <defs>

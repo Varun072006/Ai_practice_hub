@@ -133,6 +133,10 @@ const AppRoutes = () => {
 
       {/* Admin Routes */}
       <Route
+        path="/admin/dashboard"
+        element={<Navigate to="/admin/overview" replace />}
+      />
+      <Route
         path="/admin/overview"
         element={
           <ProtectedRoute requireAdmin>
