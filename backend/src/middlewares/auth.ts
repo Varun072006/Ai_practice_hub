@@ -23,19 +23,8 @@ export const authenticate = (
     const token = authHeader.split(' ')[1]; // Safer than substring(7)
     console.error(`[DEBUG AUTH] Token: '${token}' (len: ${token?.length})`);
 
-    // DEV BYPASS - Accept both admin and user bypass tokens
-    if (token === 'mock-jwt-token-dev-bypass' || token === 'mock-jwt-token-dev-bypass-user') {
-      // Determine role based on token
-      const isAdmin = token === 'mock-jwt-token-dev-bypass';
-      req.user = {
-        userId: isAdmin ? 'admin-1' : 'user-1',
-        username: isAdmin ? 'admin' : 'user',
-        role: isAdmin ? 'admin' : 'student'
-      };
-      console.log(`[${new Date().toISOString()}] Bypass Success. Role: ${req.user.role}`);
-      next();
-      return;
-    }
+    // DEV BYPASS REMOVED - Security Fix
+    // if (token === 'mock-jwt-token-dev-bypass' ... ) { ... }
 
     const decoded = verifyToken(token);
     req.user = decoded;
