@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import Editor from '@monaco-editor/react';
 
-export default function CodeEditor({ code, onChange, readOnly = false }) {
-    const [activeTab, setActiveTab] = useState('html');
+export default function CodeEditor({ code, onChange, readOnly = false, visibleTabs }) {
+    const [activeTab, setActiveTab] = useState(visibleTabs ? visibleTabs[0] : 'html');
 
     const tabs = [
         { id: 'html', label: 'HTML', language: 'html' },
         { id: 'css', label: 'CSS', language: 'css' },
         { id: 'js', label: 'JavaScript', language: 'javascript' }
-    ];
+    ].filter(tab => !visibleTabs || visibleTabs.includes(tab.id));
 
     const handleEditorChange = (value) => {
         if (readOnly) return;
