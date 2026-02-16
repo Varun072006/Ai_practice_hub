@@ -103,7 +103,7 @@ export const completeSessionController = async (req: AuthRequest, res: Response)
 export const runCodeController = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { sessionId } = req.params;
-    const { code, language, customInput } = req.body;
+    const { code, language, customInput, files } = req.body;
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -111,7 +111,7 @@ export const runCodeController = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    const result = await runCode(sessionId, code, language, customInput);
+    const result = await runCode(sessionId, code, language, customInput, files);
     res.json(result);
   } catch (error: any) {
     logger.error('Run code error:', error);
@@ -122,7 +122,7 @@ export const runCodeController = async (req: AuthRequest, res: Response): Promis
 export const runTestCasesController = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { sessionId } = req.params;
-    const { questionId, code, language } = req.body;
+    const { questionId, code, language, includeHidden } = req.body;
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -130,7 +130,7 @@ export const runTestCasesController = async (req: AuthRequest, res: Response): P
       return;
     }
 
-    const result = await runTestCases(sessionId, questionId, code, language);
+    const result = await runTestCases(sessionId, questionId, code, language, includeHidden);
     res.json(result);
   } catch (error: any) {
     logger.error('Run test cases error:', error);

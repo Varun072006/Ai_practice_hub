@@ -134,43 +134,50 @@ const Leaderboard = () => {
 
                 {/* Your Performance Card */}
                 {myRank && (
-                    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-5 mb-6 text-white shadow-lg shadow-blue-500/20">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 mb-6 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 dark:bg-blue-900/10 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110 duration-500"></div>
+
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10">
                             <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                                    <Zap size={24} />
+                                <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                    <Zap size={28} />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-lg">Your Performance</h3>
-                                    <p className="text-blue-100 text-sm">
+                                    <h3 className="font-bold text-xl text-slate-800 dark:text-white">Your Performance</h3>
+                                    <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
                                         {myRank.rank > 0 ? 'Keep pushing to climb the ranks!' : 'Complete sessions to get ranked!'}
                                     </p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-6 sm:gap-8">
+
+                            <div className="flex flex-wrap items-center gap-8 md:gap-12">
                                 <div className="text-center">
-                                    <p className="text-[10px] uppercase tracking-wider text-blue-200 font-medium mb-0.5">Your Rank</p>
-                                    <p className="text-3xl font-bold">#{myRank.rank > 0 ? myRank.rank : '—'}</p>
+                                    <p className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-1">Your Rank</p>
+                                    <p className="text-3xl font-bold text-slate-800 dark:text-white">#{myRank.rank > 0 ? myRank.rank : '—'}</p>
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-[10px] uppercase tracking-wider text-blue-200 font-medium mb-0.5">Levels</p>
-                                    <p className="text-3xl font-bold">{myRank.levels_cleared}</p>
+                                    <p className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-1">Levels</p>
+                                    <p className="text-3xl font-bold text-slate-800 dark:text-white">{myRank.levels_cleared}</p>
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-[10px] uppercase tracking-wider text-blue-200 font-medium mb-0.5">Problems</p>
-                                    <p className="text-3xl font-bold">{myRank.problems_solved}</p>
+                                    <p className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-1">Problems</p>
+                                    <p className="text-3xl font-bold text-slate-800 dark:text-white">{myRank.problems_solved}</p>
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-[10px] uppercase tracking-wider text-blue-200 font-medium mb-0.5">Efficiency</p>
-                                    <p className="text-3xl font-bold">{myRank.efficiency}%</p>
+                                    <p className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold mb-1">Efficiency</p>
+                                    <div className="flex items-baseline justify-center gap-1">
+                                        <p className="text-3xl font-bold text-slate-800 dark:text-white">{myRank.efficiency}</p>
+                                        <span className="text-sm font-medium text-slate-400">%</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+
                         {myRank.rank > 1 && (
-                            <div className="mt-4 bg-white/10 rounded-lg px-4 py-2 flex items-center gap-2 backdrop-blur-sm">
-                                <TrendingUp size={14} className="text-blue-200" />
-                                <span className="text-sm text-blue-100">
-                                    You are <span className="font-semibold text-white">rank #{myRank.rank}</span> out of <span className="font-semibold text-white">{myRank.total_users}</span> users
+                            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700 flex items-center gap-2">
+                                <TrendingUp size={16} className="text-blue-500" />
+                                <span className="text-sm text-slate-600 dark:text-slate-400">
+                                    You are <span className="font-semibold text-slate-900 dark:text-white">rank #{myRank.rank}</span> out of <span className="font-semibold text-slate-900 dark:text-white">{myRank.total_users}</span> users
                                 </span>
                             </div>
                         )}
@@ -220,7 +227,8 @@ const Leaderboard = () => {
                                 <thead>
                                     <tr className="bg-slate-50 dark:bg-slate-800/50">
                                         <th className="text-left py-3 px-4 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider w-16">Rank</th>
-                                        <th className="text-left py-3 px-4 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">User</th>
+                                        <th className="text-left py-3 px-4 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Roll Number</th>
+                                        <th className="text-left py-3 px-4 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Name</th>
                                         <th className="text-center py-3 px-4 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Levels Cleared</th>
                                         <th className="text-center py-3 px-4 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden sm:table-cell">Problems Solved</th>
                                         <th className="text-center py-3 px-4 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Efficiency</th>
@@ -247,6 +255,11 @@ const Leaderboard = () => {
                                                             {entry.rank}
                                                         </span>
                                                     </div>
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    <span className="text-sm font-mono text-slate-600 dark:text-slate-400">
+                                                        {entry.roll_number || '-'}
+                                                    </span>
                                                 </td>
                                                 <td className="py-3 px-4">
                                                     <div className="flex items-center gap-3">

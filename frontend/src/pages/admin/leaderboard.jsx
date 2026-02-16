@@ -204,11 +204,10 @@ const AdminLeaderboard = () => {
                                 <thead>
                                     <tr className="bg-slate-50 dark:bg-slate-800/50">
                                         <th className="text-left py-3 px-4 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider w-16">Rank</th>
-                                        <th className="text-left py-3 px-4 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Student</th>
-                                        <th className="text-left py-3 px-4 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden md:table-cell">Student ID</th>
-                                        <th className="text-left py-3 px-4 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden lg:table-cell">Department</th>
-                                        <th className="text-center py-3 px-4 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Levels</th>
-                                        <th className="text-center py-3 px-4 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Problems</th>
+                                        <th className="text-left py-3 px-4 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Roll Number</th>
+                                        <th className="text-left py-3 px-4 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Name</th>
+                                        <th className="text-center py-3 px-4 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Levels Cleared</th>
+                                        <th className="text-center py-3 px-4 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Problems Solved</th>
                                         <th className="text-center py-3 px-4 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Efficiency</th>
                                     </tr>
                                 </thead>
@@ -229,6 +228,11 @@ const AdminLeaderboard = () => {
                                                     </div>
                                                 </td>
                                                 <td className="py-3 px-4">
+                                                    <span className="text-sm font-mono text-slate-600 dark:text-slate-400">
+                                                        {user.roll_number || '-'}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ${isTop3
                                                             ? `bg-gradient-to-br ${podiumColors[user.rank - 1]?.bg || 'from-slate-200 to-slate-300'} text-white`
@@ -238,12 +242,6 @@ const AdminLeaderboard = () => {
                                                         </div>
                                                         <span className="text-sm font-medium text-slate-800 dark:text-white">{user.name || 'Unknown'}</span>
                                                     </div>
-                                                </td>
-                                                <td className="py-3 px-4 text-sm text-slate-500 dark:text-slate-400 hidden md:table-cell font-mono">
-                                                    {user.roll_number || user.id?.substring(0, 8)}
-                                                </td>
-                                                <td className="py-3 px-4 text-sm text-slate-500 dark:text-slate-400 hidden lg:table-cell">
-                                                    {user.department || '—'}
                                                 </td>
                                                 <td className="py-3 px-4 text-center">
                                                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">

@@ -207,10 +207,17 @@ const LevelOverview = () => {
                 }
             }
 
+            const isJsCourse = cTitle.includes('javascript') || cTitle.includes('js');
+
+            if (isJsCourse) {
+                navigate(`/html-css-practice/${courseId}/${levelId}`, {
+                    state: { sessionType: 'coding' }
+                });
+                return;
+            }
+
             const isWebCourse = cTitle.includes('html') ||
-                cTitle.includes('css') ||
-                cTitle.includes('javascript') ||
-                cTitle.includes('js');
+                cTitle.includes('css');
 
             if (isWebCourse) {
                 navigate(`/html-css-practice/${courseId}/${levelId}`, {

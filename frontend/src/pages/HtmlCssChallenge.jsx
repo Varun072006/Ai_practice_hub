@@ -42,6 +42,9 @@ export default function HtmlCssChallenge() {
     const [consoleOutput, setConsoleOutput] = useState([]);
     const [isRunning, setIsRunning] = useState(false);
     const [runError, setRunError] = useState(null);
+    const [testResults, setTestResults] = useState([]);
+    const [customInput, setCustomInput] = useState("");
+    const [files, setFiles] = useState([]); // Array of { name, language, content }
 
     // Start session on mount
     useEffect(() => {
@@ -130,6 +133,7 @@ export default function HtmlCssChallenge() {
 
             const currentCode = recoveredData?.code || initialUserCodeMap[initialQuestionIndex] || { html: '', css: '', js: '' };
             setCode(currentCode);
+            setFiles(initFilesFromCode(currentCode));
 
             // Parse expected code and assets
             const expectedCodeMap = {};
@@ -219,6 +223,16 @@ export default function HtmlCssChallenge() {
             setCode(emptyCode);
         }
 
+        // Initialize files from code for the new question
+        const initialFiles = [];
+        const codeSource = savedCode || { html: '', css: '', js: '' };
+
+        if (codeSource.html !== undefined) initialFiles.push({ name: 'index.html', language: 'html', content: codeSource.html });
+        if (codeSource.css !== undefined) initialFiles.push({ name: 'style.css', language: 'css', content: codeSource.css });
+        if (codeSource.js !== undefined) initialFiles.push({ name: 'script.js', language: 'javascript', content: codeSource.js });
+
+        setFiles(initialFiles);
+
         // Load expected code for this question
         setExpectedCode(expectedCodeByQuestion[index] || { html: '', css: '', js: '' });
 
@@ -226,6 +240,7 @@ export default function HtmlCssChallenge() {
         setHint(null);
         setShowHint(false);
         setHintAttemptCount(1);
+        setTestResults([]);
         setConsoleOutput([]);
         setRunError(null);
 
@@ -233,6 +248,49 @@ export default function HtmlCssChallenge() {
             setPreviewTab("terminal");
         } else {
             setPreviewTab("live");
+        }
+    };
+
+    const initFilesFromCode = (codeSource) => {
+        const files = [];
+        // Always add index.html, style.css, script.js to ensure tabs exist
+        files.push({ name: 'index.html', language: 'html', content: codeSource.html || '' });
+        files.push({ name: 'style.css', language: 'css', content: codeSource.css || '' });
+        files.push({ name: 'script.js', language: 'javascript', content: codeSource.js || '' });
+        return files;
+    };
+
+    // File Management Handlers
+    const handleFileChange = (newFiles) => {
+        setFiles(newFiles);
+        // Sync back to code object for backward compatibility (Preview, Submit, etc.)
+        const newCode = { ...code };
+        const htmlFile = newFiles.find(f => f.name === 'index.html' || f.language === 'html');
+        const cssFile = newFiles.find(f => f.name === 'style.css' || f.language === 'css');
+        const jsFile = newFiles.find(f => f.name === 'script.js' || f.language === 'javascript');
+
+        if (htmlFile) newCode.html = htmlFile.content;
+        if (cssFile) newCode.css = cssFile.content;
+        if (jsFile) newCode.js = jsFile.content;
+
+        setCode(newCode);
+    };
+
+    const handleFileCreate = (name, language) => {
+        setFiles(prev => [...prev, { name, language, content: '' }]);
+    };
+
+    const handleFileRename = (oldName, newName) => {
+        setFiles(prev => prev.map(f => f.name === oldName ? { ...f, name: newName } : f));
+    };
+
+    const handleFileDelete = (name) => {
+        if (files.length <= 1) {
+            alert("You must have at least one file.");
+            return;
+        }
+        if (window.confirm(`Are you sure you want to delete ${name}?`)) {
+            setFiles(prev => prev.filter(f => f.name !== name));
         }
     };
 
@@ -256,8 +314,8 @@ export default function HtmlCssChallenge() {
                 const response = await api.post(`/sessions/${session.id}/run`, {
                     code: code.js,
                     language: 'javascript', // or 'nodejs' depending on backend
-                    customInput: '' // Use empty input for now, or add input field if needed
-                    // questionId: session.questions[currentQuestionIndex].question_id // Optional depending on backend
+                    customInput: customInput,
+                    files: files.map(f => ({ name: f.name, content: f.content })) // Send all files
                 });
 
                 const { output, error } = response.data;
@@ -307,11 +365,13 @@ export default function HtmlCssChallenge() {
                 const response = await api.post(`/sessions/${session.id}/run-tests`, {
                     code: code.js,
                     language: 'javascript',
-                    questionId: currentQuestion.question_id
+                    questionId: currentQuestion.question_id,
+                    includeHidden: true
                 });
 
                 // Check if all tests passed
                 const testResults = response.data.test_results || [];
+                setTestResults(testResults);
                 const passedCount = testResults.filter(r => r.passed).length;
                 const totalCount = testResults.length;
 
@@ -445,7 +505,7 @@ export default function HtmlCssChallenge() {
 
     const currentQuestion = session.questions[currentQuestionIndex];
     const currentAssets = assetsByQuestion[currentQuestionIndex] || [];
-    const visibleTabs = isNodeJS ? ['js'] : ['html', 'css', 'js'];
+    const visibleTabs = ['html', 'css', 'js'];
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300">
@@ -466,8 +526,8 @@ export default function HtmlCssChallenge() {
                                     {currentQuestion.title || 'Challenge'}
                                 </h1>
                                 <span className={`px-2 py-0.5 text-[10px] font-mono rounded border ${isNodeJS
-                                        ? 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800'
-                                        : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
+                                    ? 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800'
+                                    : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
                                     }`}>
                                     {isNodeJS ? 'JavaScript' : 'HTML/CSS'}
                                 </span>
@@ -483,8 +543,8 @@ export default function HtmlCssChallenge() {
                     <div className="flex items-center gap-3">
                         {/* Timer */}
                         <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border font-mono font-bold ${timeLeft <= 300
-                                ? "bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400"
-                                : "bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-700 dark:text-slate-300"
+                            ? "bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400"
+                            : "bg-gray-50 dark:bg-slate-700 border-gray-200 dark:border-slate-600 text-gray-700 dark:text-slate-300"
                             }`}>
                             <Clock size={14} />
                             {formatTime(timeLeft)}
@@ -500,10 +560,10 @@ export default function HtmlCssChallenge() {
                                             key={q.question_id}
                                             onClick={() => handleQuestionChange(index)}
                                             className={`w-8 h-8 rounded-lg flex items-center justify-center font-semibold text-xs transition-colors ${index === currentQuestionIndex
-                                                    ? "bg-blue-600 text-white shadow-sm"
-                                                    : isSubmitted
-                                                        ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                                                        : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-600"
+                                                ? "bg-blue-600 text-white shadow-sm"
+                                                : isSubmitted
+                                                    ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                                                    : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-600"
                                                 }`}
                                         >
                                             {index + 1}
@@ -519,8 +579,8 @@ export default function HtmlCssChallenge() {
                             onClick={handleRunCode}
                             disabled={isRunning}
                             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium transition-colors ${isRunning
-                                    ? 'bg-gray-100 dark:bg-slate-700 text-gray-400 cursor-not-allowed'
-                                    : 'bg-green-600 hover:bg-green-700 text-white shadow-sm'
+                                ? 'bg-gray-100 dark:bg-slate-700 text-gray-400 cursor-not-allowed'
+                                : 'bg-green-600 hover:bg-green-700 text-white shadow-sm'
                                 }`}
                             title={isNodeJS ? "Run Code (Ctrl+Enter)" : "Update Preview"}
                         >
@@ -634,32 +694,27 @@ export default function HtmlCssChallenge() {
                             code={code}
                             onChange={setCode}
                             visibleTabs={visibleTabs}
+                            files={files}
+                            onFileChange={handleFileChange}
+                            onFileCreate={handleFileCreate}
+                            onFileRename={handleFileRename}
+                            onFileDelete={handleFileDelete}
                         />
                     </div>
                 </div>
 
                 {/* Right Panel: Preview or Terminal */}
-                <div className="lg:w-[45%] flex flex-col min-w-0 bg-gray-50 dark:bg-slate-900 border-l border-gray-200 dark:border-slate-700">
-                    <div className="flex items-center justify-between px-4 py-2 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
-                        <div className="flex gap-2">
-                            {/* Tabs for Preview Side */}
-                            {isNodeJS ? (
-                                <button
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-lg flex items-center gap-2 ${previewTab === "terminal"
-                                            ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                                            : "text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-700"
-                                        }`}
-                                >
-                                    <Terminal size={14} />
-                                    Terminal
-                                </button>
-                            ) : (
+                <div className="lg:w-[45%] flex flex-col min-w-0 bg-gray-50 dark:bg-slate-900 border-l border-gray-200 dark:border-slate-700 overflow-hidden">
+                    <div className="flex flex-col min-h-0 h-full">
+                        <div className="flex items-center justify-between px-4 py-2 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 shrink-0">
+                            <div className="flex gap-2">
+                                {/* Tabs for Preview Side */}
                                 <>
                                     <button
                                         onClick={() => setPreviewTab("live")}
                                         className={`px-3 py-1.5 text-xs font-medium rounded-lg ${previewTab === "live"
-                                                ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                                                : "text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-700"
+                                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                            : "text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-700"
                                             }`}
                                     >
                                         Live Preview
@@ -667,78 +722,208 @@ export default function HtmlCssChallenge() {
                                     <button
                                         onClick={() => setPreviewTab("expected")}
                                         className={`px-3 py-1.5 text-xs font-medium rounded-lg ${previewTab === "expected"
-                                                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                                : "text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-700"
+                                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                            : "text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-700"
                                             }`}
                                     >
                                         Expected
                                     </button>
+                                    {isNodeJS && (
+                                        <button
+                                            onClick={() => setPreviewTab("terminal")}
+                                            className={`px-3 py-1.5 text-xs font-medium rounded-lg flex items-center gap-2 ${previewTab === "terminal"
+                                                ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
+                                                : "text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-700"
+                                                }`}
+                                        >
+                                            <Terminal size={14} />
+                                            Execution Output
+                                        </button>
+                                    )}
+                                    {isNodeJS && currentQuestion.test_cases && currentQuestion.test_cases.length > 0 && (
+                                        <button
+                                            onClick={() => setPreviewTab("testcases")}
+                                            className={`px-3 py-1.5 text-xs font-medium rounded-lg flex items-center gap-2 ${previewTab === "testcases"
+                                                ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
+                                                : "text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-700"
+                                                }`}
+                                        >
+                                            <CheckCircle size={14} />
+                                            Test Cases
+                                        </button>
+                                    )}
                                 </>
-                            )}
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            {previewTab === 'terminal' && (
-                                <button
-                                    onClick={handleClearTerminal}
-                                    className="p-1.5 text-gray-500 hover:text-red-500 transition-colors"
-                                    title="Clear Terminal"
-                                >
-                                    <RotateCcw size={14} />
-                                </button>
-                            )}
-                            <button
-                                onClick={() => setFullScreenView(previewTab)}
-                                className="p-1.5 text-gray-500 hover:text-blue-500 transition-colors"
-                                title="Full Screen"
-                            >
-                                <Maximize2 size={14} />
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="flex-1 overflow-hidden relative">
-                        {isNodeJS ? (
-                            /* Terminal View */
-                            <div className="absolute inset-0 bg-[#0f172a] p-4 font-mono text-sm overflow-y-auto">
-                                {consoleOutput.length === 0 ? (
-                                    <div className="text-slate-500 mt-4 text-center select-none">
-                                        <Terminal size={48} className="mx-auto mb-2 opacity-20" />
-                                        <p>Ready to execute</p>
-                                        <p className="text-xs mt-1 opacity-70">Click Run to see output</p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-1">
-                                        {consoleOutput.map((line, i) => (
-                                            <div key={i} className={`${line.type === 'error' ? 'text-red-400' :
-                                                    line.type === 'success' ? 'text-green-400' :
-                                                        'text-slate-300'
-                                                } whitespace-pre-wrap break-words`}>
-                                                <span className="opacity-50 mr-2 select-none">$</span>
-                                                {line.content}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                                {isRunning && (
-                                    <div className="mt-2 text-blue-400 animate-pulse">Running...</div>
-                                )}
                             </div>
-                        ) : (
-                            /* Web Preview View */
-                            previewTab === "live" ? (
-                                <PreviewFrame ref={previewRef} code={code} assets={currentAssets} />
-                            ) : (
-                                expectedCode.html || expectedCode.css || expectedCode.js ? (
-                                    <PreviewFrame ref={expectedPreviewRef} code={expectedCode} assets={currentAssets} />
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                                        <p>No expected reference available.</p>
+
+                            <div className="flex items-center gap-2">
+                                {previewTab === 'terminal' && (
+                                    <button
+                                        onClick={handleClearTerminal}
+                                        className="p-1.5 text-gray-500 hover:text-red-500 transition-colors"
+                                        title="Clear Output"
+                                    >
+                                        <RotateCcw size={14} />
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => setFullScreenView(previewTab)}
+                                    className="p-1.5 text-gray-500 hover:text-blue-500 transition-colors"
+                                    title="Full Screen"
+                                >
+                                    <Maximize2 size={14} />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-hidden relative">
+                            {previewTab === 'terminal' ? (
+                                /* Execution Output View (STDIN + Output) */
+                                <div className="absolute inset-0 bg-white dark:bg-slate-900 flex flex-col font-mono text-sm">
+                                    {/* STDIN Section */}
+                                    <div className="h-1/3 border-b border-gray-200 dark:border-slate-700 flex flex-col">
+                                        <div className="px-4 py-2 bg-gray-50 dark:bg-slate-800 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                                            STDIN (Optional Input)
+                                        </div>
+                                        <textarea
+                                            value={customInput}
+                                            onChange={(e) => setCustomInput(e.target.value)}
+                                            placeholder="Type input here... (e.g. 1 10)"
+                                            className="flex-1 w-full p-4 resize-none bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-200 focus:outline-none placeholder:text-gray-300 dark:placeholder:text-slate-600"
+                                        />
                                     </div>
+
+                                    {/* OUTPUT Section */}
+                                    <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-900 overflow-hidden">
+                                        <div className="px-4 py-2 bg-gray-50 dark:bg-slate-800 text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider border-b border-gray-200 dark:border-slate-700">
+                                            Output
+                                        </div>
+                                        <div className="flex-1 p-4 overflow-y-auto text-gray-800 dark:text-slate-200 whitespace-pre-wrap">
+                                            {consoleOutput.length === 0 ? (
+                                                <div className="h-full flex flex-col items-center justify-center text-gray-400 dark:text-slate-600 opacity-50 select-none">
+                                                    <Play size={32} className="mb-2" />
+                                                    <p>Run your code to see output</p>
+                                                </div>
+                                            ) : (
+                                                consoleOutput.map((line, i) => (
+                                                    <div key={i} className={`${line.type === 'error' ? 'text-red-600 dark:text-red-400' :
+                                                        line.type === 'success' ? 'text-green-600 dark:text-green-400' :
+                                                            'text-gray-800 dark:text-slate-300'
+                                                        } mb-1`}>
+                                                        {line.content}
+                                                    </div>
+                                                ))
+                                            )}
+                                            {isRunning && (
+                                                <div className="mt-2 text-blue-500 animate-pulse">Running...</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : previewTab === 'testcases' ? (
+                                /* Test Cases View */
+                                <div className="absolute inset-0 bg-gray-50 dark:bg-slate-900 overflow-y-auto p-4 space-y-4">
+                                    <div className="px-4 py-3 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg shadow-sm mb-4">
+                                        <h3 className="font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                                            <CheckCircle size={16} className="text-blue-600 dark:text-blue-400" />
+                                            Test Case Results
+                                        </h3>
+                                        <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                                            {testResults.length > 0
+                                                ? `${testResults.filter(t => t.passed).length} / ${testResults.length} Passed`
+                                                : "Run your code to see results"}
+                                        </p>
+                                    </div>
+
+                                    {currentQuestion.test_cases?.map((testCase, index) => {
+                                        const result = testResults[index];
+                                        let status = result ? (result.passed ? 'passed' : 'failed') : 'pending';
+                                        const isSystemError = result?.error_message?.includes('Execution Service Error');
+
+                                        if (isSystemError) status = 'system_error';
+
+                                        if (testCase.is_hidden && status === 'pending') {
+                                            return (
+                                                <div key={index} className="border border-gray-200 dark:border-slate-700 rounded-lg p-3 bg-white dark:bg-slate-800 opacity-70">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="font-medium text-sm text-gray-700 dark:text-slate-300">Test Case {index + 1}</span>
+                                                        <span className="text-xs font-bold px-2 py-0.5 rounded uppercase bg-gray-200 text-gray-600 dark:bg-slate-700 dark:text-slate-400">Hidden</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+
+                                        return (
+                                            <div key={index} className={`border rounded-lg p-3 ${status === 'passed' ? 'border-green-200 dark:border-green-900/50 bg-green-50 dark:bg-green-900/10' :
+                                                status === 'system_error' ? 'border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-900/10' :
+                                                    status === 'failed' ? 'border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10' :
+                                                        'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800'
+                                                }`}>
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <span className="font-medium text-sm text-gray-700 dark:text-slate-300">Test Case {index + 1}</span>
+                                                    {result && (
+                                                        <span className={`text-xs font-bold px-2 py-0.5 rounded uppercase ${status === 'passed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                                            status === 'system_error' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                                                'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                            }`}>
+                                                            {status === 'system_error' ? 'System Error' : status}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="grid grid-cols-1 gap-2 text-xs font-mono">
+                                                    {!testCase.is_hidden && (
+                                                        <>
+                                                            <div>
+                                                                <span className="text-gray-500 dark:text-slate-500 block mb-1">Input:</span>
+                                                                <div className="bg-white dark:bg-slate-900 p-2 rounded border border-gray-100 dark:border-slate-700 overflow-x-auto whitespace-pre-wrap">
+                                                                    {testCase.input_data}
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-gray-500 dark:text-slate-500 block mb-1">Expected Output:</span>
+                                                                <div className="bg-white dark:bg-slate-900 p-2 rounded border border-gray-100 dark:border-slate-700 overflow-x-auto whitespace-pre-wrap">
+                                                                    {testCase.expected_output}
+                                                                </div>
+                                                            </div>
+                                                        </>
+                                                    )}
+
+                                                    {status === 'failed' && result?.actual_output && (
+                                                        <div>
+                                                            <span className="text-red-500 dark:text-red-400 block mb-1">Your Output:</span>
+                                                            <div className="bg-red-50 dark:bg-red-900/20 p-2 rounded border border-red-100 dark:border-red-800/30 overflow-x-auto text-red-700 dark:text-red-300 whitespace-pre-wrap">
+                                                                {result.actual_output}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {status === 'failed' && result?.error_message && (
+                                                        <div className="mt-1 text-red-600 dark:text-red-400 font-semibold">
+                                                            {result.error_message}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                /* Web Preview View */
+                                previewTab === "live" ? (
+                                    <PreviewFrame ref={previewRef} code={code} assets={currentAssets} />
+                                ) : (
+                                    expectedCode.html || expectedCode.css || expectedCode.js ? (
+                                        <PreviewFrame ref={expectedPreviewRef} code={expectedCode} assets={currentAssets} />
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                                            <p>No expected reference available.</p>
+                                        </div>
+                                    )
                                 )
-                            )
-                        )}
+                            )}
+                        </div>
                     </div>
+
+
                 </div>
             </div>
 
@@ -759,11 +944,11 @@ export default function HtmlCssChallenge() {
                     </div>
                     <div className="flex-1 relative overflow-hidden">
                         {fullScreenView === 'terminal' ? (
-                            <div className="absolute inset-0 bg-[#0f172a] p-6 font-mono text-lg overflow-y-auto">
+                            <div className="absolute inset-0 bg-white dark:bg-slate-900 p-6 font-mono text-lg overflow-y-auto">
                                 {consoleOutput.map((line, i) => (
-                                    <div key={i} className={`${line.type === 'error' ? 'text-red-400' :
-                                            line.type === 'success' ? 'text-green-400' :
-                                                'text-slate-300'
+                                    <div key={i} className={`${line.type === 'error' ? 'text-red-600 dark:text-red-400' :
+                                        line.type === 'success' ? 'text-green-600 dark:text-green-400' :
+                                            'text-gray-800 dark:text-slate-300'
                                         } mb-2`}>
                                         <span className="opacity-50 mr-4">$</span>
                                         {line.content}

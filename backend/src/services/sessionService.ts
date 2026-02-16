@@ -670,7 +670,8 @@ export const runCode = async (
   sessionId: string,
   code: string,
   language: string,
-  customInput?: string
+  customInput?: string,
+  files?: { name: string, content: string }[]
 ): Promise<{ output: string; error?: string; execution_time?: number }> => {
   // Validate Session
   const sessionResult = await pool.query(
@@ -697,7 +698,7 @@ export const runCode = async (
   const { executeCode } = await import('../utils/codeExecutor');
   const { normalizeExecutionInput } = await import('../utils/inputNormalizer');
   const normalizedInput = normalizeExecutionInput(customInput || '');
-  const result = await executeCode(code, language, normalizedInput);
+  const result = await executeCode(code, language, normalizedInput, files);
 
   return {
     output: result.output || '',
@@ -715,7 +716,8 @@ export const runTestCases = async (
   sessionId: string,
   questionId: string,
   code: string,
-  language: string
+  language: string,
+  includeHidden: boolean = false
 ) => {
   // TiDB/MySQL connections can be dropped intermittently (ECONNRESET / PROTOCOL_CONNECTION_LOST).
   // Add a small retry to make "Run test cases" resilient.
@@ -762,24 +764,27 @@ export const runTestCases = async (
     throw new Error(`Invalid language for ${courseName}. Please use the correct programming language for this course.`);
   }
 
-  // Get ONLY visible test cases for "Run" mode
-  const testCasesResult = await queryWithRetry(
-    `SELECT id, input_data, expected_output, test_case_number 
+  // Get test cases (Hidden optional)
+  let query = `SELECT id, input_data, expected_output, test_case_number, is_hidden 
      FROM test_cases 
-     WHERE question_id = ? AND is_hidden = 0
-     ORDER BY test_case_number`,
-    [questionId]
-  );
+     WHERE question_id = ?`;
+
+  if (!includeHidden) {
+    query += ` AND is_hidden = 0`;
+  }
+  query += ` ORDER BY test_case_number`;
+
+  const testCasesResult = await queryWithRetry(query, [questionId]);
 
   const testCasesRows = getRows(testCasesResult);
   if (testCasesRows.length === 0) {
     return {
       test_results: [],
-      message: 'No visible test cases to run'
+      message: 'No test cases to run'
     };
   }
 
-  // Execute code against visible test cases
+  // Execute code against test cases
   const { evaluateCode } = await import('./codeExecutionService');
   const testResults = await evaluateCode(
     code,
@@ -788,10 +793,27 @@ export const runTestCases = async (
     courseName
   );
 
-  const passedCount = testResults.filter((r) => r.passed).length;
+  // Post-process results to mask hidden test cases
+  const processedResults = testResults.map(result => {
+    // Find corresponding test case to check if hidden
+    const testCase = testCasesRows.find((tc: any) => tc.id === result.test_case_id);
+    const isHidden = testCase?.is_hidden === 1 || testCase?.is_hidden === true;
+
+    if (isHidden && includeHidden) {
+      return {
+        ...result,
+        expected_output: 'Hidden',
+        actual_output: 'Hidden',
+        error_message: result.passed ? undefined : 'Test case failed (Hidden)'
+      };
+    }
+    return result;
+  });
+
+  const passedCount = processedResults.filter((r) => r.passed).length;
 
   return {
-    test_results: testResults,
+    test_results: processedResults,
     test_cases_passed: passedCount,
     total_test_cases: testCasesRows.length,
   };

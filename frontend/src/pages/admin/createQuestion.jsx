@@ -62,6 +62,9 @@ const CreateQuestion = () => {
     course?.title?.toLowerCase().includes('javascript') ||
     course?.title?.toLowerCase().includes('js');
 
+  const isJsCourse = course?.title?.toLowerCase().includes('javascript') ||
+    course?.title?.toLowerCase().includes('js');
+
   useEffect(() => {
     // Get course info to determine language
     // Try to get courseId from search params or from URL path
@@ -297,12 +300,15 @@ const CreateQuestion = () => {
           // Store assets as JSON in output_format field
           const assetsJson = assets.length > 0 ? JSON.stringify(assets) : '';
 
-          // For HTML/CSS, we use empty test cases since visual testing is different
+          // For HTML/CSS, we use empty test cases since visual testing is different. 
+          // However, for JS courses, we use the provided test cases.
+          const questionsTestCases = isJsCourse ? formData.test_cases : [{ input_data: '', expected_output: '', is_hidden: false }];
+
           const submitData = {
             ...formData,
             reference_solution: referenceSolution,
             output_format: assetsJson,
-            test_cases: [{ input_data: '', expected_output: '', is_hidden: false }],
+            test_cases: questionsTestCases,
           };
 
           if (isEditMode) {
@@ -375,6 +381,83 @@ const CreateQuestion = () => {
     newTestCases[index][field] = value;
     setFormData({ ...formData, test_cases: newTestCases });
   };
+
+  const renderTestCases = () => (
+    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700 mt-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-bold text-gray-800 dark:text-white">Test Cases</h3>
+        <button
+          type="button"
+          onClick={addTestCase}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          <Plus size={18} />
+          Add Test Case
+        </button>
+      </div>
+      <div className="space-y-4">
+        {formData.test_cases.map((testCase, index) => (
+          <div key={index} className="border border-gray-200 dark:border-slate-600 rounded-lg p-4 bg-gray-50 dark:bg-slate-700/50">
+            <div className="flex items-center justify-between mb-3">
+              <span className="font-medium text-gray-800 dark:text-white">Test Case {index + 1}</span>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={testCase.is_hidden}
+                    onChange={(e) =>
+                      updateTestCase(index, 'is_hidden', e.target.checked)
+                    }
+                    className="mr-2"
+                  />
+                  <span className="text-sm text-gray-600 dark:text-slate-400">Hidden</span>
+                </label>
+                {formData.test_cases.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeTestCase(index)}
+                    className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                  Input
+                </label>
+                <textarea
+                  value={testCase.input_data}
+                  onChange={(e) =>
+                    updateTestCase(index, 'input_data', e.target.value)
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
+                  rows={3}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                  Expected Output
+                </label>
+                <textarea
+                  value={testCase.expected_output}
+                  onChange={(e) =>
+                    updateTestCase(index, 'expected_output', e.target.value)
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
+                  rows={3}
+                  required
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
 
 
@@ -674,6 +757,9 @@ const CreateQuestion = () => {
                         <strong>Web Development Challenge Mode:</strong> Students will write HTML, CSS, and JS code to match the expected output. The expected code above serves as the reference solution.
                       </p>
                     </div>
+
+                    {/* Test Cases for JS Courses */}
+                    {isJsCourse && renderTestCases()}
                   </>
                 ) : (
                   /* Regular Coding Course */
@@ -718,80 +804,7 @@ const CreateQuestion = () => {
                       />
                     </div>
 
-                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 border border-transparent dark:border-slate-700">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold text-gray-800 dark:text-white">Test Cases</h3>
-                        <button
-                          type="button"
-                          onClick={addTestCase}
-                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                        >
-                          <Plus size={18} />
-                          Add Test Case
-                        </button>
-                      </div>
-                      <div className="space-y-4">
-                        {formData.test_cases.map((testCase, index) => (
-                          <div key={index} className="border border-gray-200 dark:border-slate-600 rounded-lg p-4 bg-gray-50 dark:bg-slate-700/50">
-                            <div className="flex items-center justify-between mb-3">
-                              <span className="font-medium text-gray-800 dark:text-white">Test Case {index + 1}</span>
-                              <div className="flex items-center gap-4">
-                                <label className="flex items-center">
-                                  <input
-                                    type="checkbox"
-                                    checked={testCase.is_hidden}
-                                    onChange={(e) =>
-                                      updateTestCase(index, 'is_hidden', e.target.checked)
-                                    }
-                                    className="mr-2"
-                                  />
-                                  <span className="text-sm text-gray-600 dark:text-slate-400">Hidden</span>
-                                </label>
-                                {formData.test_cases.length > 1 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => removeTestCase(index)}
-                                    className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
-                                  >
-                                    <Trash2 size={18} />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
-                                  Input
-                                </label>
-                                <textarea
-                                  value={testCase.input_data}
-                                  onChange={(e) =>
-                                    updateTestCase(index, 'input_data', e.target.value)
-                                  }
-                                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
-                                  rows={3}
-                                  required
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
-                                  Expected Output
-                                </label>
-                                <textarea
-                                  value={testCase.expected_output}
-                                  onChange={(e) =>
-                                    updateTestCase(index, 'expected_output', e.target.value)
-                                  }
-                                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-600 text-gray-800 dark:text-white"
-                                  rows={3}
-                                  required
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    {renderTestCases()}
                   </>
                 )}
               </>

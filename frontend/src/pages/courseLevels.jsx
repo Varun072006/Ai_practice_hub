@@ -260,11 +260,14 @@ const CourseLevels = () => {
                 <button
                   onClick={() => {
                     const courseTitle = (course?.title || '').toLowerCase();
-                    const isHtmlCssCourse = courseTitle.includes('html') || courseTitle.includes('css');
+                    const isWebCourse = courseTitle.includes('html') ||
+                      courseTitle.includes('css') ||
+                      courseTitle.includes('javascript') ||
+                      courseTitle.includes('js');
 
-                    if (isHtmlCssCourse) {
+                    if (isWebCourse) {
                       navigate(`/html-css-practice/${courseId}/${modeSelection.level.id}`, {
-                        state: { sessionType: 'coding' },
+                        state: { sessionType: isWebCourse && (courseTitle.includes('html') || courseTitle.includes('css')) ? 'html-css-challenge' : 'coding' },
                       });
                     } else {
                       navigate(`/practice/${courseId}/${modeSelection.level.id}`, {

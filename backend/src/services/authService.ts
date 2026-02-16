@@ -16,6 +16,7 @@ export interface UserData {
   role: string;
   name: string | null;
   email: string | null;
+  roll_number: string | null;
 }
 
 export const login = async (credentials: LoginCredentials) => {
@@ -84,13 +85,14 @@ export const login = async (credentials: LoginCredentials) => {
       role: user.role,
       name: user.name,
       email: user.email,
+      roll_number: user.roll_number,
     },
   };
 };
 
 
 export const register = async (userData: any) => {
-  const { name, email, password, department, year } = userData;
+  const { name, email, password, department, year, roll_number } = userData;
 
   // Check if user exists
   const existingUser = await pool.query(
@@ -108,8 +110,8 @@ export const register = async (userData: any) => {
 
   // Insert new user
   await pool.query(
-    'INSERT INTO users (id, username, password_hash, role, name, email, department, year) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [userId, username, hashedPassword, 'student', name, email, department || null, year || null]
+    'INSERT INTO users (id, username, password_hash, role, name, email, department, year, roll_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [userId, username, hashedPassword, 'student', name, email, department || null, year || null, roll_number || null]
   );
 
   // Auto-login after register
@@ -119,15 +121,18 @@ export const register = async (userData: any) => {
     role: 'student',
   });
 
+  const user: UserData = {
+    id: userId,
+    username,
+    role: 'student',
+    name: name || null,
+    email: email || null,
+    roll_number: roll_number || null
+  };
+
   return {
     token,
-    user: {
-      id: userId,
-      username,
-      role: 'student',
-      name,
-      email,
-    },
+    user,
   };
 };
 
