@@ -169,7 +169,7 @@ const MCQPractice = () => {
 
   return (
     <Layout>
-      <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] bg-gray-50 dark:bg-slate-900 overflow-hidden">
+      <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] bg-gray-50 dark:bg-slate-900 overflow-hidden max-w-full">
 
         {/* Sidebar - Question Navigator */}
         <div className="hidden lg:flex flex-col w-80 bg-white dark:bg-slate-800 border-r border-gray-200 dark:border-slate-700 shadow-sm z-10">

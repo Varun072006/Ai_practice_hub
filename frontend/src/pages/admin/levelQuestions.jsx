@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import Sidebar from '../../components/Sidebar';
+import Layout from '../../components/Layout';
 import AdminBreadcrumb from '../../components/AdminBreadcrumb';
 import api from '../../services/api';
 import { Edit, Trash2, Plus, Search, ArrowLeft } from 'lucide-react';
@@ -119,9 +119,8 @@ const LevelQuestions = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-slate-900 font-sans">
-      <Sidebar />
-      <div className="flex-1 p-8 overflow-y-auto">
+    <Layout>
+      <div className="p-8 overflow-y-auto font-sans">
         {/* Breadcrumb */}
         <AdminBreadcrumb items={[
           { label: 'Courses', path: '/admin/courses' },
@@ -131,22 +130,13 @@ const LevelQuestions = () => {
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <div className="flex items-start gap-3">
-            <button
-              onClick={() => navigate(`/admin/courses/${courseId}/levels`)}
-              className="mt-1 p-2 text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-              title="Back to Levels"
-            >
-              <ArrowLeft size={22} />
-            </button>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
-                {level?.title ? `Level ${level?.level_number}: ${level?.title}` : 'Level Questions'}
-              </h1>
-              <p className="text-gray-600 dark:text-slate-400">
-                {level?.description ? `${level.description} • ` : ''}{questions.length} {questionType === 'coding' ? 'Coding' : 'MCQ'} Questions
-              </p>
-            </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
+              {level?.title ? `Level ${level?.level_number}: ${level?.title}` : 'Level Questions'}
+            </h1>
+            <p className="text-gray-600 dark:text-slate-400">
+              {level?.description ? `${level.description} • ` : ''}{questions.length} {questionType === 'coding' ? 'Coding' : 'MCQ'} Questions
+            </p>
           </div>
           <div className="flex items-center gap-3">
             {selectedIds.size > 0 && (
@@ -312,7 +302,7 @@ const LevelQuestions = () => {
           </div>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 };
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Sidebar from '../../components/Sidebar';
+import Layout from '../../components/Layout';
 import AdminBreadcrumb from '../../components/AdminBreadcrumb';
 import api from '../../services/api';
 import { Plus, Edit, Trash2, Upload, Loader, X, Search, Eye, Code, FileQuestion, ExternalLink, ArrowLeft, Image as ImageIcon, AlertTriangle, Check } from 'lucide-react';
@@ -247,24 +247,13 @@ const AdminCourseLevels = () => {
 
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-slate-900 font-sans">
-      <Sidebar />
-      <div className="flex-1 p-8 overflow-y-auto">
-        {/* Breadcrumb + Back Button */}
-        <div className="flex items-center justify-between">
-          <AdminBreadcrumb items={[
-            { label: 'Courses', path: '/admin/courses' },
-            { label: course?.title || 'Course', path: null }
-          ]} />
-          <button
-            onClick={() => navigate('/admin/courses')}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors text-sm"
-            title="Back to Courses"
-          >
-            <ArrowLeft size={16} />
-            Back
-          </button>
-        </div>
+    <Layout>
+      <div className="p-8 overflow-y-auto font-sans">
+        {/* Breadcrumb */}
+        <AdminBreadcrumb items={[
+          { label: 'Courses', path: '/admin/courses' },
+          { label: course?.title || 'Course', path: null }
+        ]} />
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -693,7 +682,7 @@ const AdminCourseLevels = () => {
           </div>
         )}
       </div>
-    </div>
+    </Layout>
   );
 };
 

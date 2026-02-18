@@ -16,7 +16,7 @@ export const getAllCoursesController = async (req: AuthRequest, res: Response): 
     logger.error('[getAllCoursesController] Get courses error:', error);
     logger.error('[getAllCoursesController] Error stack:', error.stack);
     // On database timeout, return empty array so frontend doesn't break
-    if (error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED' || error.code === 'PROTOCOL_CONNECTION_LOST') {
+    if (error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED' || error.code === 'PROTOCOL_CONNECTION_LOST' || error.code === 'ENOTFOUND') {
       logger.warn('[getAllCoursesController] Database timeout/connection error, returning empty courses array');
       res.json([]);
     } else {
@@ -44,7 +44,7 @@ export const getCourseLevelsController = async (req: AuthRequest, res: Response)
     logger.error('Get course levels error:', error);
     logger.error('Error stack:', error.stack);
     // On database timeout, return empty array so frontend doesn't break
-    if (error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED' || error.code === 'PROTOCOL_CONNECTION_LOST') {
+    if (error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED' || error.code === 'PROTOCOL_CONNECTION_LOST' || error.code === 'ENOTFOUND') {
       logger.warn('Database timeout/connection error, returning empty levels array');
       res.json([]);
     } else {

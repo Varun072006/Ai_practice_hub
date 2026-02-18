@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -7,6 +8,7 @@ const Sidebar = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
+  const [isHovered, setIsHovered] = useState(false);
 
   const studentMenuItems = [
     { path: '/dashboard', label: 'Courses', image: '/assets/user-icons/courses.png' },
@@ -46,11 +48,15 @@ const Sidebar = () => {
       </div>
 
       {/* Desktop Sidebar Shover Effect */}
-      <div className="hidden md:flex sticky left-0 top-0 h-screen bg-gray-50 dark:bg-slate-900 flex-col border-r border-gray-200 dark:border-slate-800 z-50 transition-all duration-300 w-20 hover:w-64 group shadow-lg shrink-0">
+      <div
+        className={`hidden md:flex h-full bg-gray-50 dark:bg-slate-900 flex-col border-r border-gray-200 dark:border-slate-800 z-50 transition-all duration-300 ${isHovered ? 'w-64' : 'w-16'} group shadow-lg shrink-0 overflow-hidden`}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
         <div className="mb-8 p-6">
           <div className="flex items-center gap-2 mb-2 overflow-hidden whitespace-nowrap">
             <img src={theme === 'dark' ? '/assets/logo-light.png' : '/assets/logo-dark.png'} alt="Practice Hub" className="w-8 h-8 rounded-lg min-w-[2rem] object-contain" />
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <div className={`transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
               <h1 className="text-xl font-bold text-gray-800 dark:text-white">Practice Hub</h1>
               {user?.role === 'admin' && (
                 <p className="text-xs text-gray-500 dark:text-gray-400">Admin Dashboard</p>
@@ -59,7 +65,7 @@ const Sidebar = () => {
           </div>
         </div>
 
-        <nav className="flex-1 px-4">
+        <nav className={`flex-1 ${isHovered ? 'px-4' : 'px-2'}`}>
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path ||
@@ -69,9 +75,9 @@ const Sidebar = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-3 px-3 py-3 mb-2 rounded-lg transition-all duration-200 overflow-hidden whitespace-nowrap group relative ${isActive
-                  ? 'bg-blue-100/80 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-gray-100'
+                className={`flex items-center p-3 rounded-lg transition-all duration-200 group relative ${isHovered ? 'justify-start' : 'justify-center'} ${isActive
+                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
               >
                 {isActive && (
@@ -88,14 +94,14 @@ const Sidebar = () => {
                     <Icon size={24} className={`transition-all duration-300 ${isActive ? 'scale-110 text-blue-600 dark:text-blue-400' : 'text-gray-500 group-hover:text-blue-600 group-hover:scale-110'}`} />
                   )}
                 </div>
-                <span className={`transition-opacity duration-300 delay-75 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>{item.label}</span>
+                <span className={`transition-opacity duration-300 delay-75 whitespace-nowrap overflow-hidden ${isHovered ? 'w-auto opacity-100 ml-3' : 'w-0 opacity-0 ml-0 hidden'}`}>{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        <div className="mt-auto pt-4 border-t border-gray-200 dark:border-slate-800 p-4">
-          <div className="mb-4 overflow-hidden whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <div className={`mt-auto border-t border-gray-200 dark:border-slate-800 ${isHovered ? 'p-4' : 'p-2 pt-4'}`}>
+          <div className={`mb-4 ${isHovered ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300 overflow-hidden whitespace-nowrap`}>
             <p className="font-semibold text-gray-800 dark:text-white truncate">{user?.name || user?.username}</p>
             {user?.role === 'student' && (
               <p className="text-sm text-gray-500 dark:text-gray-400">Student</p>
@@ -104,24 +110,24 @@ const Sidebar = () => {
 
           <button
             onClick={toggleTheme}
-            className="flex items-center gap-3 px-3 py-3 w-full text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm rounded-lg transition-all overflow-hidden whitespace-nowrap mb-2"
+            className={`flex items-center w-full p-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 group relative mb-2 ${isHovered ? 'justify-start' : 'justify-center'}`}
           >
-            <div className="min-w-[1.25rem]">
-              {theme === 'dark' ? <Sun size={20} className="text-yellow-400" /> : <Moon size={20} className="text-slate-600" />}
+            <div className="min-w-[2rem] flex items-center justify-center">
+              {theme === 'dark' ? <Sun size={24} className="text-yellow-400" /> : <Moon size={24} className="text-slate-600" />}
             </div>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex-1 text-left">
+            <span className={`flex-1 text-left transition-opacity duration-300 whitespace-nowrap overflow-hidden ${isHovered ? 'w-auto opacity-100 ml-3' : 'w-0 opacity-0 ml-0 hidden'}`}>
               {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
             </span>
           </button>
 
           <button
-            onClick={logout}
-            className="flex items-center gap-3 px-3 py-3 w-full text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm rounded-lg transition-all overflow-hidden whitespace-nowrap"
+            onClick={logout} // Changed from handleLogout to logout as per existing context
+            className={`flex items-center w-full p-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400 transition-all duration-200 group relative ${isHovered ? 'justify-start' : 'justify-center'}`}
           >
-            <div className="min-w-[1.25rem]">
-              <LogOut size={20} />
+            <div className="min-w-[2rem] flex items-center justify-center">
+              <LogOut size={24} />
             </div>
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">Logout</span>
+            <span className={`transition-opacity duration-300 whitespace-nowrap overflow-hidden ${isHovered ? 'w-auto opacity-100 ml-3' : 'w-0 opacity-0 ml-0 hidden'}`}>Logout</span>
           </button>
         </div>
       </div>

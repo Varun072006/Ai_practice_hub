@@ -108,21 +108,13 @@ const AdminAssets = () => {
             <div className="p-8 pb-20 max-w-7xl mx-auto space-y-8 font-sans">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => navigate(-1)}
-                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                        >
-                            <ArrowLeft size={24} className="text-slate-600 dark:text-slate-300" />
-                        </button>
-                        <div>
-                            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                                Asset Library
-                            </h1>
-                            <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
-                                Manage images and resources for your courses.
-                            </p>
-                        </div>
+                    <div>
+                        <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                            Asset Library
+                        </h1>
+                        <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
+                            Manage images and resources for your courses.
+                        </p>
                     </div>
 
                     <div className="flex items-center gap-3 w-full md:w-auto">

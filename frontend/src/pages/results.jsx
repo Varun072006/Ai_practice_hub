@@ -177,9 +177,9 @@ const Results = () => {
 
   return (
     <Layout>
-      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-slate-900">
+      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-slate-900 max-w-full">
         {/* Header */}
-        <div className="px-6 py-4 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+        <div className="px-4 md:px-6 py-3 md:py-4 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
@@ -203,7 +203,7 @@ const Results = () => {
 
         {/* Question Selector */}
         {results.questions.length > 1 && (
-          <div className="mx-6 mt-4 p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl flex items-center gap-4">
+          <div className="mx-4 md:mx-6 mt-4 p-3 md:p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl flex items-center gap-3 md:gap-4 overflow-x-auto">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Select Question:</span>
             <div className="flex items-center gap-2">
               {results.questions.map((question, index) => (
@@ -213,7 +213,7 @@ const Results = () => {
                     setSelectedQuestionIndex(index);
                     setSelectedTestCaseIndex(0);
                   }}
-                  className={`w-12 h-12 rounded-lg font-bold text-lg transition-all ${selectedQuestionIndex === index
+                  className={`w-10 h-10 md:w-12 md:h-12 rounded-lg font-bold text-base md:text-lg transition-all shrink-0 ${selectedQuestionIndex === index
                     ? 'bg-blue-600 text-white shadow-lg scale-105'
                     : question.submission?.is_correct
                       ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 border-2 border-green-300 dark:border-green-700'
@@ -224,16 +224,16 @@ const Results = () => {
                 </button>
               ))}
             </div>
-            <div className="ml-4 text-sm text-gray-500 dark:text-gray-400">
+            <div className="ml-4 text-sm text-gray-500 dark:text-gray-400 shrink-0">
               {results.questions.filter(q => q.submission?.is_correct).length}/{results.questions.length} Passed
             </div>
           </div>
         )}
 
         {/* Main Content - Two Column Layout */}
-        <div className="p-6 flex gap-6 flex-1 min-h-0">
+        <div className="p-4 md:p-6 flex flex-col lg:flex-row gap-4 md:gap-6 flex-1 min-h-0 max-w-full overflow-hidden">
           {/* Left Column - AI Review & Test Cases */}
-          <div className="w-1/3 space-y-4">
+          <div className="w-full lg:w-1/3 space-y-4">
             {/* AI Performance Review Card */}
             <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-5">
               <div className="flex items-center justify-between mb-4">
@@ -339,7 +339,7 @@ const Results = () => {
 
               {/* Test Case Details Grid */}
               {selectedTestCase && (
-                <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-4">
                   <div>
                     <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Input</label>
                     <div className="mt-1 p-3 bg-gray-50 dark:bg-slate-900 rounded-lg font-mono text-sm text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-slate-700">
