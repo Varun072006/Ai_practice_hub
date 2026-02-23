@@ -58,6 +58,13 @@ export default function CodeEditor({
         return name;
     };
 
+    const getTabIconColor = (name) => {
+        if (name.endsWith('.html') || name === 'html') return 'text-orange-500';
+        if (name.endsWith('.css') || name === 'css') return 'text-blue-500';
+        if (name.endsWith('.js') || name === 'js' || name === 'javascript') return 'text-yellow-500';
+        return 'text-gray-400';
+    };
+
     const sortedFiles = isMultiFile ? [...files].sort((a, b) => {
         const indexA = protectedFiles.indexOf(a.name);
         const indexB = protectedFiles.indexOf(b.name);
@@ -142,7 +149,7 @@ export default function CodeEditor({
         : code[activeTab] || '';
 
     return (
-        <div className="flex flex-col h-full bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden">
+        <div className="flex flex-col h-full bg-white dark:bg-slate-900 overflow-hidden">
             {/* Tabs Header */}
             <div className="flex items-center bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
                 <div className="flex-1 flex items-center overflow-x-auto no-scrollbar">
@@ -150,9 +157,9 @@ export default function CodeEditor({
                         <div
                             key={tab.id}
                             onClick={() => !editingFile && setActiveTab(tab.id)}
-                            className={`group flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-r border-gray-200 dark:border-slate-700 cursor-pointer select-none min-w-[120px] max-w-[200px] hover:bg-white dark:hover:bg-slate-700 transition-colors ${activeTab === tab.id
-                                ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 border-t-2 border-t-blue-600 dark:border-t-blue-400'
-                                : 'text-gray-600 dark:text-slate-400 border-t-2 border-t-transparent'
+                            className={`group flex items-center gap-2 px-4 py-2 text-[13px] font-medium border-r border-gray-200 dark:border-slate-700 cursor-pointer select-none min-w-[100px] max-w-[200px] transition-all duration-150 ${activeTab === tab.id
+                                ? 'bg-white dark:bg-slate-900 text-gray-900 dark:text-white'
+                                : 'text-gray-500 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-700/50 hover:text-gray-700 dark:hover:text-slate-300'
                                 } ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
                             onDoubleClick={(e) => {
                                 if (isMultiFile && !readOnly && !protectedFiles.includes(tab.id)) {
@@ -160,7 +167,7 @@ export default function CodeEditor({
                                 }
                             }}
                         >
-                            <FileCode size={14} className={activeTab === tab.id ? 'opacity-100' : 'opacity-70'} />
+                            <FileCode size={14} className={activeTab === tab.id ? getTabIconColor(tab.id) : 'text-gray-400 dark:text-slate-500'} />
 
                             {editingFile === tab.id ? (
                                 <input
@@ -201,18 +208,18 @@ export default function CodeEditor({
                         </button>
 
                         {showAddMenu && (
-                            <div className="absolute top-full right-0 mt-1 w-48 bg-[#1e1e2e] border border-gray-700 rounded-lg shadow-xl z-50 py-1 animate-in fade-in zoom-in-95 duration-100 overflow-hidden">
-                                <button onClick={() => handleCreateFile('html')} className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-700 flex items-center gap-3 transition-colors">
-                                    <div className="text-orange-500"><FileCode size={16} /></div> New HTML file
+                            <div className="absolute top-full right-0 mt-1 w-48 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-xl z-50 py-1 overflow-hidden">
+                                <button onClick={() => handleCreateFile('html')} className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center gap-3 transition-colors">
+                                    <div className="text-orange-500"><FileCode size={15} /></div> New HTML file
                                 </button>
-                                <button onClick={() => handleCreateFile('css')} className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-700 flex items-center gap-3 transition-colors">
-                                    <div className="text-blue-500"><FileType size={16} /></div> New CSS file
+                                <button onClick={() => handleCreateFile('css')} className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center gap-3 transition-colors">
+                                    <div className="text-blue-500"><FileType size={15} /></div> New CSS file
                                 </button>
-                                <button onClick={() => handleCreateFile('javascript')} className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-700 flex items-center gap-3 transition-colors">
-                                    <div className="text-yellow-500"><FileCode size={16} /></div> New JS file
+                                <button onClick={() => handleCreateFile('javascript')} className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center gap-3 transition-colors">
+                                    <div className="text-yellow-500"><FileCode size={15} /></div> New JS file
                                 </button>
-                                <button onClick={() => handleCreateFile('text')} className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-700 flex items-center gap-3 transition-colors">
-                                    <div className="text-gray-400"><FileText size={16} /></div> New TXT file
+                                <button onClick={() => handleCreateFile('text')} className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center gap-3 transition-colors">
+                                    <div className="text-gray-400"><FileText size={15} /></div> New TXT file
                                 </button>
                             </div>
                         )}

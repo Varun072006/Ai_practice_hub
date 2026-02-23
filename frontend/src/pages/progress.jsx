@@ -154,7 +154,7 @@ const Progress = () => {
 
   return (
     <Layout>
-      <div className="flex-1 p-4 md:p-6 pb-24 md:pb-8 overflow-y-auto bg-gray-50 dark:bg-slate-900 min-h-screen">
+      <div className="flex-1 p-4 md:p-6 pb-24 md:pb-8 overflow-y-auto overflow-x-hidden bg-gray-50 dark:bg-slate-900 min-h-screen max-w-full">
 
         {/* Header */}
         <div className="mb-6">

@@ -75,7 +75,7 @@ export const getAllCourses = async (userId?: string): Promise<Course[]> => {
     }
   } catch (error: any) {
     console.error('[getAllCourses] Error fetching courses:', error);
-    if (error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED' || error.code === 'PROTOCOL_CONNECTION_LOST') {
+    if (error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED' || error.code === 'PROTOCOL_CONNECTION_LOST' || error.code === 'ENOTFOUND') {
       return [];
     }
     throw error;
@@ -270,7 +270,7 @@ export const getCourseLevels = async (
     console.error('[getCourseLevels] Error:', error);
     console.error('[getCourseLevels] Error stack:', error.stack);
     // On database timeout or any error, return empty array so frontend doesn't break
-    if (error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED' || error.code === 'PROTOCOL_CONNECTION_LOST') {
+    if (error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED' || error.code === 'PROTOCOL_CONNECTION_LOST' || error.code === 'ENOTFOUND') {
       console.warn('[getCourseLevels] Database timeout/connection error, returning empty array');
       return [];
     }

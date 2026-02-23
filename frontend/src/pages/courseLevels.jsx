@@ -2,7 +2,18 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import api from '../services/api';
-import { Check, Lock, BookOpen, ExternalLink, ChevronDown, ChevronUp, GraduationCap, X, CheckCircle, Code } from 'lucide-react';
+import {
+  Check,
+  Lock,
+  BookOpen,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  GraduationCap,
+  X,
+  CheckCircle,
+  Code,
+} from 'lucide-react';
 
 const CourseLevels = () => {
   const { courseId } = useParams();
@@ -20,18 +31,17 @@ const CourseLevels = () => {
     fetchCourseData();
   }, [courseId]);
 
-
   const fetchCourseData = async () => {
     try {
       setLoading(true);
       console.log(`[CourseLevels] Fetching data for courseId: ${courseId}`);
 
       const [courseResponse, levelsResponse] = await Promise.all([
-        api.get('/courses').catch(err => {
+        api.get('/courses').catch((err) => {
           console.error('[CourseLevels] Error fetching courses:', err);
           return { data: [] };
         }),
-        api.get(`/courses/${courseId}/levels`).catch(err => {
+        api.get(`/courses/${courseId}/levels`).catch((err) => {
           console.error(`[CourseLevels] Error fetching levels for course ${courseId}:`, err);
           return { data: [] };
         }),
@@ -96,7 +106,7 @@ const CourseLevels = () => {
 
   return (
     <Layout>
-      <div className="p-4 md:p-8 pb-24 md:pb-8">
+      <div className="p-4 md:p-8 pb-24 md:pb-8 max-w-[1600px] mx-auto overflow-hidden">
         <div className="mb-6">
           <nav className="text-sm text-gray-600 dark:text-gray-400 mb-4">
             Courses / {course?.title}
@@ -136,13 +146,13 @@ const CourseLevels = () => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {levels.map((level) => (
             <div
               key={level.id}
               className="bg-white dark:bg-slate-800 rounded-lg shadow-md hover:shadow-xl dark:shadow-slate-900/20 dark:hover:shadow-slate-900/50 overflow-hidden border border-transparent dark:border-slate-700/50 transition-all duration-300 transform hover:scale-[1.01]"
             >
-              <div className="h-48 w-full overflow-hidden bg-gray-200 relative">
+              <div className="w-full h-40 overflow-hidden bg-gray-200 relative">
                 {level.image_url ? (
                   <img
                     src={level.image_url}
@@ -150,7 +160,7 @@ const CourseLevels = () => {
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = "https://via.placeholder.com/400x200?text=No+Image";
+                      e.target.src = 'https://via.placeholder.com/400x200?text=No+Image';
                     }}
                   />
                 ) : getCourseImage() ? (
@@ -161,14 +171,15 @@ const CourseLevels = () => {
                     onError={(e) => {
                       e.target.onerror = null;
                       e.target.style.display = 'none';
-                      e.target.parentElement.style.background = 'linear-gradient(to bottom right, #667eea, #764ba2)';
+                      e.target.parentElement.style.background =
+                        'linear-gradient(to bottom right, #667eea, #764ba2)';
                     }}
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900"></div>
                 )}
               </div>
-              <div className="p-6">
+              <div className="p-5">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
                     Level {level.level_number}
@@ -177,8 +188,12 @@ const CourseLevels = () => {
                     <Check className="text-green-600 dark:text-green-400" size={20} />
                   )}
                 </div>
-                <h3 className="text-xl font-bold text-gray-800 dark:text-slate-100 mb-2">{level.title}</h3>
-                <p className="text-gray-600 dark:text-slate-400 text-sm mb-4">{level.description}</p>
+                <h3 className="text-xl font-bold text-gray-800 dark:text-slate-100 mb-2">
+                  {level.title}
+                </h3>
+                <p className="text-gray-600 dark:text-slate-400 text-sm mb-4">
+                  {level.description}
+                </p>
 
                 {/* Topic Description & Materials */}
                 {(level.topic_description || level.learning_materials) && (
@@ -189,34 +204,38 @@ const CourseLevels = () => {
                       </p>
                     )}
 
-                    {level.learning_materials && (() => {
-                      const materials = typeof level.learning_materials === 'string'
-                        ? JSON.parse(level.learning_materials)
-                        : level.learning_materials;
-                      const resources = materials.resources || [];
+                    {level.learning_materials &&
+                      (() => {
+                        const materials =
+                          typeof level.learning_materials === 'string'
+                            ? JSON.parse(level.learning_materials)
+                            : level.learning_materials;
+                        const resources = materials.resources || [];
 
-                      return resources.length > 0 && (
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
-                            <BookOpen size={12} /> Materials
-                          </div>
-                          <div className="space-y-1 pl-1">
-                            {resources.map((mat, idx) => (
-                              <a
-                                key={idx}
-                                href={mat.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline flex items-center gap-1 truncate block"
-                              >
-                                <ExternalLink size={10} className="flex-shrink-0" />
-                                {mat.title}
-                              </a>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })()}
+                        return (
+                          resources.length > 0 && (
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                                <BookOpen size={12} /> Materials
+                              </div>
+                              <div className="space-y-1 pl-1">
+                                {resources.map((mat, idx) => (
+                                  <a
+                                    key={idx}
+                                    href={mat.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline flex items-center gap-1 truncate block"
+                                  >
+                                    <ExternalLink size={10} className="flex-shrink-0" />
+                                    {mat.title}
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        );
+                      })()}
                   </div>
                 )}
 
@@ -230,9 +249,10 @@ const CourseLevels = () => {
                   </button>
                   <button
                     onClick={() => handleLevelClick(level)}
-                    className="flex-1 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                   >
-                    TEST
+                    <Code size={18} />
+                    Test
                   </button>
                 </div>
               </div>
@@ -260,14 +280,21 @@ const CourseLevels = () => {
                 <button
                   onClick={() => {
                     const courseTitle = (course?.title || '').toLowerCase();
-                    const isWebCourse = courseTitle.includes('html') ||
+                    const isWebCourse =
+                      courseTitle.includes('html') ||
                       courseTitle.includes('css') ||
                       courseTitle.includes('javascript') ||
                       courseTitle.includes('js');
 
                     if (isWebCourse) {
                       navigate(`/html-css-practice/${courseId}/${modeSelection.level.id}`, {
-                        state: { sessionType: isWebCourse && (courseTitle.includes('html') || courseTitle.includes('css')) ? 'html-css-challenge' : 'coding' },
+                        state: {
+                          sessionType:
+                            isWebCourse &&
+                            (courseTitle.includes('html') || courseTitle.includes('css'))
+                              ? 'html-css-challenge'
+                              : 'coding',
+                        },
                       });
                     } else {
                       navigate(`/practice/${courseId}/${modeSelection.level.id}`, {
@@ -291,11 +318,9 @@ const CourseLevels = () => {
             </div>
           </div>
         )}
-
       </div>
     </Layout>
   );
 };
 
 export default CourseLevels;
-

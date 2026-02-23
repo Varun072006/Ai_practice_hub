@@ -23,7 +23,7 @@ The AI Practice Hub is a full-stack application that provides:
 - **Node.js** - Runtime environment
 - **Express.js** - Web framework
 - **TypeScript** - Type-safe JavaScript
-- **PostgreSQL** - Relational database
+- **MySQL** - Relational database
 - **JWT** - Authentication
 
 ### DevOps
@@ -143,7 +143,7 @@ npm run dev
 ```
 PORT=5000
 FRONTEND_URL=http://localhost:5173
-DATABASE_URL=postgresql://practicehub:practicehub123@localhost:5432/practice_hub
+DATABASE_URL=mysql://practicehub:practicehub123@localhost:3306/practice_hub
 JWT_SECRET=your-super-secret-jwt-key-change-in-production
 LOG_LEVEL=debug
 ```

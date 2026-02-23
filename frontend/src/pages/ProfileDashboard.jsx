@@ -108,7 +108,7 @@ const ProfileDashboard = () => {
 
   return (
     <Layout>
-      <div className="flex-1 bg-[#f4f6fb] dark:bg-slate-900 min-h-screen pb-24 md:pb-8">
+      <div className="flex-1 bg-[#f4f6fb] dark:bg-slate-900 min-h-screen pb-24 md:pb-8 max-w-full overflow-hidden">
         <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-4 md:py-6">
 
           {/* Breadcrumb */}

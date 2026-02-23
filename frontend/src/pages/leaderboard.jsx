@@ -82,7 +82,7 @@ const Leaderboard = () => {
 
     return (
         <Layout>
-            <div className="flex-1 p-4 md:p-8 bg-gray-50 dark:bg-slate-900 min-h-screen">
+            <div className="flex-1 p-4 md:p-8 bg-gray-50 dark:bg-slate-900 min-h-screen max-w-full overflow-hidden">
                 {/* Header */}
                 <div className="mb-6">
                     <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">

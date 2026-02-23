@@ -30,7 +30,10 @@ const Dashboard = () => {
   const fetchCourses = async () => {
     try {
       const token = localStorage.getItem('token');
-      console.log('Fetching courses with token:', token ? token.substring(0, 30) + '...' : 'NO TOKEN');
+      console.log(
+        'Fetching courses with token:',
+        token ? token.substring(0, 30) + '...' : 'NO TOKEN'
+      );
 
       const response = await api.get('/courses');
       console.log('Courses fetched successfully:', response.data?.length || 0, 'courses');
@@ -44,7 +47,10 @@ const Dashboard = () => {
 
       // If 401, token might be invalid - clear it
       if (error.response?.status === 401) {
-        console.error('401 Unauthorized - Token issue. Current token:', localStorage.getItem('token'));
+        console.error(
+          '401 Unauthorized - Token issue. Current token:',
+          localStorage.getItem('token')
+        );
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         navigate('/login');
@@ -89,15 +95,22 @@ const Dashboard = () => {
 
   return (
     <Layout>
-      <div className="p-4 md:p-8 pb-24 md:pb-8">
+      <div className="p-4 md:p-8 pb-24 md:pb-8 max-w-[1600px] mx-auto overflow-hidden">
         <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white mb-2">Hello, {user?.name || user?.username || 'Student'}!</h1>
-          <p className="text-gray-600 dark:text-gray-400">Ready to code today? Your streak is on fire! 🔥</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white mb-2">
+            Hello, {user?.name || user?.username || 'Student'}!
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Ready to code today? Your streak is on fire! 🔥
+          </p>
         </div>
 
         <div className="mb-6">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              size={20}
+            />
             <input
               type="text"
               placeholder="Search for a skill or language..."
@@ -109,11 +122,15 @@ const Dashboard = () => {
         </div>
 
         <div>
-          <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white mb-4 md:mb-6">Available Courses</h2>
+          <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white mb-4 md:mb-6">
+            Available Courses
+          </h2>
           {loading ? (
-            <div className="text-center py-12 text-gray-600 dark:text-gray-400">Loading courses...</div>
+            <div className="text-center py-12 text-gray-600 dark:text-gray-400">
+              Loading courses...
+            </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredCourses.map((course) => {
                 const courseImage = course.image_url || getCourseImage(course.title);
                 return (
@@ -122,25 +139,34 @@ const Dashboard = () => {
                     onClick={() => navigate(`/courses/${course.id}/levels`)}
                     className="bg-white dark:bg-slate-800 rounded-lg shadow-md hover:shadow-xl dark:shadow-slate-900/20 dark:hover:shadow-slate-900/50 overflow-hidden transition-all duration-300 cursor-pointer hover:scale-[1.02] border border-transparent dark:border-slate-700/50"
                   >
-                    <div className="h-48 w-full overflow-hidden bg-gray-200 relative">
+                    <div className="w-full h-40 overflow-hidden bg-gray-200 relative">
                       {courseImage ? (
                         <img
-                          src={courseImage}
-                          alt={course.title || 'Course banner'}
-                          className="w-full h-full object-cover"
+                          src={
+                            course.thumbnail
+                              ? `/assets/${course.thumbnail}`
+                              : courseImage || '/api/placeholder/400/250'
+                          }
+                          alt={course.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.style.display = 'none';
-                            e.target.parentElement.style.background = 'linear-gradient(to bottom right, #3b82f6, #1e293b)';
+                            e.target.parentElement.style.background =
+                              'linear-gradient(to bottom right, #3b82f6, #1e293b)';
                           }}
                         />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-blue-900 to-slate-900"></div>
                       )}
                     </div>
-                    <div className="p-6">
-                      <h3 className="text-xl font-bold text-gray-800 dark:text-slate-100 mb-2">{course.title}</h3>
-                      <p className="text-gray-600 dark:text-slate-400 text-sm mb-3">{course.description}</p>
+                    <div className="p-5">
+                      <h3 className="text-xl font-bold text-gray-800 dark:text-slate-100 mb-2">
+                        {course.title}
+                      </h3>
+                      <p className="text-gray-600 dark:text-slate-400 text-sm mb-3">
+                        {course.description}
+                      </p>
 
                       {/* Course Overview Section */}
                       {course.overview && (
@@ -148,7 +174,9 @@ const Dashboard = () => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              setExpandedOverview(expandedOverview === course.id ? null : course.id);
+                              setExpandedOverview(
+                                expandedOverview === course.id ? null : course.id
+                              );
                             }}
                             className="flex items-center justify-between w-full text-left text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 mb-2 transition-colors"
                           >
@@ -171,7 +199,6 @@ const Dashboard = () => {
                           )}
                         </div>
                       )}
-
                     </div>
                   </div>
                 );
@@ -185,4 +212,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-
