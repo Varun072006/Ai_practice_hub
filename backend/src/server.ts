@@ -4,6 +4,7 @@ import { initializeUsers } from './controllers/authController';
 import pool from './config/database';
 import { hashPassword } from './utils/password';
 import { getRows } from './utils/mysqlHelper';
+import { initializeJudge0Languages } from './utils/codeExecutor';
 
 const PORT = process.env.PORT || 5000;
 
@@ -13,6 +14,9 @@ initializeUsers().catch((error) => {
   logger.warn('Default users initialization deferred. Server will continue to start.');
   logger.debug('Initialization error:', error);
 });
+
+// Initialize Judge0 Language Map
+initializeJudge0Languages();
 
 const server = app.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);

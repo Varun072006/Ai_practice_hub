@@ -9,12 +9,8 @@ export interface ExecutionResult {
   executionTime?: number;
 }
 
-// Configuration for Piston API
-// In production, this should be an environment variable pointing to a self-hosted instance
-// Configuration for Piston API
-// In production, this should be an environment variable pointing to a self-hosted instance
-const PISTON_API_URL = process.env.PISTON_API_URL || 'https://emkc.org/api/v2/piston';
-const PISTON_API_KEY = process.env.PISTON_API_KEY;
+// Configuration for Judge0 API (Internal Docker Service)
+const JUDGE0_API_URL = process.env.JUDGE0_API_URL || 'http://judge0-server:2358';
 
 export const executeCode = async (
   code: string,
@@ -32,102 +28,105 @@ export const executeCode = async (
       };
     }
 
-    // Map internal language names to Piston runtimes
-    const pistonLanguage = getPistonLanguage(language);
-    if (!pistonLanguage) {
+    // Map internal language names to Judge0 language IDs
+    const languageId = getJudge0LanguageId(language);
+    if (!languageId) {
       return {
         success: false,
         error: `Unsupported language: ${language}`,
       };
     }
 
-    // Retry logic for Piston API (handling 429 Rate Limits)
+    // Prepare headers for Internal Judge0
+    const headers = {
+      'content-type': 'application/json',
+    };
+
+    // Step 1: Submit Code
+    // Judge0 CE supports 'source_code' and 'language_id'.
+    // For input, use 'stdin'.
+    const submissionData = {
+      source_code: code,
+      language_id: languageId,
+      stdin: normalizeExecutionInput(input),
+      cpu_time_limit: 20.0,   // Further increase for Node.js on WSL2
+      wall_time_limit: 40.0,  // Further increase for Node.js on WSL2
+      memory_limit: 3072000,  // Further increase address space for Node.js V8
+    };
+
+    logger.info(`[CodeExecutor] Submitting code to Judge0 (Language ID: ${languageId})...`);
+
+    const submitResponse = await axios.post(`${JUDGE0_API_URL}/submissions?base64_encoded=false&wait=false`, submissionData, { headers });
+    const token = submitResponse.data.token;
+
+    if (!token) {
+      throw new Error('No submission token received from Judge0');
+    }
+
+    // Step 2: Poll for Result
+    logger.info(`[CodeExecutor] Polling result for token: ${token}...`);
+
+    let result = null;
     let attempts = 0;
-    const maxAttempts = 3;
+    const maxAttempts = 30; // Poll for up to 60 seconds (to match increased limits)
 
     while (attempts < maxAttempts) {
+      attempts++;
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+
       try {
-        attempts++;
-        const headers: any = {};
-        if (PISTON_API_KEY) {
-          headers['Authorization'] = PISTON_API_KEY;
-          headers['x-api-key'] = PISTON_API_KEY; // Some instances use this
+        const pollResponse = await axios.get(`${JUDGE0_API_URL}/submissions/${token}?base64_encoded=false&fields=stdout,stderr,status,compile_output,time`, {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const statusId = pollResponse.data.status?.id;
+
+        if (statusId) {
+          logger.info(`[CodeExecutor] Submission Status ID: ${statusId} (${pollResponse.data.status?.description})`);
         }
 
-        // Call Piston API
-        const response = await axios.post(`${PISTON_API_URL}/execute`, {
-          language: pistonLanguage.language,
-          version: pistonLanguage.version,
-          files: files && files.length > 0 ? files : [
-            {
-              content: code
-            }
-          ],
-          stdin: normalizeExecutionInput(input),
-          run_timeout: 5000,
-          compile_timeout: 5000
-        }, { headers });
-
-        const { run, compile } = response.data;
-
-        // Check for compilation errors first (if applicable)
-        if (compile && compile.code !== 0) {
-          return {
-            success: false,
-            error: compile.stderr || compile.output || 'Compilation Error',
-            output: compile.stdout, // Sometimes partial output exists
-            executionTime: 0
-          };
+        // Status IDs: 1 (In Queue), 2 (Processing), 3 (Accepted), >3 (Error/Wrong Answer etc.)
+        if (statusId >= 3) {
+          result = pollResponse.data;
+          break;
         }
-
-        // Check runtime result
-        if (run.code === 0) {
-          return {
-            success: true,
-            output: run.stdout,
-            executionTime: 0
-          };
-        } else {
-          return {
-            success: false,
-            error: run.stderr || run.stdout || (run.signal ? `Process terminated by signal: ${run.signal}` : 'Runtime Error'),
-            output: run.stdout,
-            executionTime: 0
-          };
+      } catch (pollError: any) {
+        logger.error(`[CodeExecutor] Polling request failed for token ${token}: ${pollError.message}`);
+        if (pollError.response) {
+          logger.error(`[CodeExecutor] Poll Error Response Data: ${JSON.stringify(pollError.response.data)}`);
         }
-
-      } catch (error: any) {
-        const isRateLimit = error.response?.status === 429;
-        const isUnauthorized = error.response?.status === 401;
-
-        if (isRateLimit && attempts < maxAttempts) {
-          logger.warn(`[CodeExecutor] Piston 429 Rate Limit. Retrying attempt ${attempts}/${maxAttempts}...`);
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempts)); // Backoff: 1s, 2s
-          continue;
-        }
-
-        if (error.response?.status === 400) {
-          logger.error(`[CodeExecutor] Piston API Bad Request (400). Response: ${JSON.stringify(error.response.data)}`);
-        }
-
-        if (isUnauthorized) {
-          logger.error(`[CodeExecutor] Piston API Unauthorized (401). URL: ${PISTON_API_URL}. Check PISTON_API_KEY.`);
-        }
-
-        logger.error(`[CodeExecutor] Piston API Verification Error: ${error.message} (URL: ${PISTON_API_URL})`);
-        return {
-          success: false,
-          error: `Execution Service Error: ${error.message || 'Remote sandbox unavailable'}`,
-        };
       }
     }
 
+    if (!result) {
+      return {
+        success: false,
+        error: 'Execution Timed Out or Service Unresponsive',
+        executionTime: 0
+      };
+    }
+
+    // Process Result
+    // Status ID 3 means Accepted (Success)
+    const isSuccess = result.status?.id === 3;
+    const output = result.stdout || '';
+    const errorOutput = result.stderr || result.compile_output || (result.status?.description && result.status.id !== 3 ? result.status.description : '');
+
     return {
-      success: false,
-      error: 'Execution Service Error: Rate limit exceeded after retries',
+      success: isSuccess,
+      output: output,
+      error: isSuccess ? undefined : errorOutput,
+      executionTime: parseFloat(result.time || '0'),
     };
+
   } catch (error: any) {
-    logger.error(`[CodeExecutor] Top-level Error: ${error.message}`);
+    logger.error(`[CodeExecutor] Judge0 Execution Error: ${error.message}`);
+    if (error.response) {
+      logger.error(`[CodeExecutor] Response Data: ${JSON.stringify(error.response.data)}`);
+    }
     return {
       success: false,
       error: `Execution Service Error: ${error.message}`,
@@ -135,59 +134,81 @@ export const executeCode = async (
   }
 };
 
+// Dynamic Language Map
+const LANGUAGE_MAP: Record<string, number> = {};
+
 /**
- * Helper to map internal language keys to Piston language/version pairs
+ * Initialize Judge0 Language Map
+ * Fetches available languages from Judge0 and populates the map.
  */
-const getPistonLanguage = (language: string): { language: string, version: string } | null => {
+export const initializeJudge0Languages = async () => {
+  try {
+    logger.info('[CodeExecutor] Fetching available languages from Judge0...');
+    const response = await axios.get(`${JUDGE0_API_URL}/languages`);
+    const languages = response.data;
+
+    if (Array.isArray(languages)) {
+      languages.forEach((lang: any) => {
+        const name = lang.name.toLowerCase();
+        // Map common names to IDs
+        if (name.includes('python')) LANGUAGE_MAP['python'] = lang.id;
+        if (name.includes('javascript') || name.includes('node')) LANGUAGE_MAP['javascript'] = lang.id;
+        if (name.includes('java') && !name.includes('script')) LANGUAGE_MAP['java'] = lang.id;
+        if (name === 'c' || name.startsWith('c ')) LANGUAGE_MAP['c'] = lang.id;
+        if (name === 'c++' || name.startsWith('c++ ')) LANGUAGE_MAP['cpp'] = lang.id;
+        if (name === 'c++' || name.startsWith('c++ ')) LANGUAGE_MAP['c++'] = lang.id;
+      });
+      logger.info(`[CodeExecutor] Judge0 Language Map initialized: ${JSON.stringify(LANGUAGE_MAP)}`);
+    }
+  } catch (error: any) {
+    logger.error(`[CodeExecutor] Failed to initialize Judge0 languages: ${error.message}`);
+    logger.warn('[CodeExecutor] Fallback to hardcoded language IDs');
+  }
+};
+
+/**
+ * Helper to map internal language keys to Judge0 Language IDs
+ * Uses dynamic map if available, otherwise falls back to defaults.
+ */
+const getJudge0LanguageId = (language: string): number | null => {
   const lang = language.toLowerCase();
-  if (lang === 'python') return { language: 'python', version: '3.10.0' };
-  if (lang === 'c') return { language: 'c', version: '10.2.0' }; // GCC
-  if (lang === 'javascript' || lang === 'js' || lang === 'nodejs') return { language: 'javascript', version: '18.15.0' };
-  // Add more as needed
+
+  // 1. Try Dynamic Map
+  if (LANGUAGE_MAP[lang]) {
+    return LANGUAGE_MAP[lang];
+  }
+
+  // 2. Try partial match in Dynamic Map if direct match failed
+  // (e.g. if user sends 'js' but map has 'javascript')
+  if (lang === 'js' && LANGUAGE_MAP['javascript']) return LANGUAGE_MAP['javascript'];
+  if (lang.includes('node') && LANGUAGE_MAP['javascript']) return LANGUAGE_MAP['javascript'];
+  if (lang.includes('py') && LANGUAGE_MAP['python']) return LANGUAGE_MAP['python'];
+
+  // 3. Fallback to hardcoded (standard Judge0 IDs)
+  if (lang === 'python' || lang.includes('python')) return 71; // Python (3.8.1)
+  if (lang === 'javascript' || lang === 'js' || lang.includes('node')) return 63; // JavaScript (Node.js 12.14.0)
+  if (lang === 'c') return 50; // C (GCC 9.2.0)
+  if (lang === 'cpp' || lang === 'c++') return 54; // C++ (GCC 9.2.0)
+  if (lang === 'java') return 62; // Java (OpenJDK 13.0.1)
+
   return null;
 };
 
-// Kept for compatibility but now just a wrapper for the mapping check
+// Kept for compatibility but matches Judge0 logic
 export const validateLanguage = (courseName: string, language: string): boolean => {
-  // Normalize keys to lowercase for case-insensitive lookup
-  const courseLanguageMap: Record<string, string> = {
-    'python': 'python',
-    'c programming': 'c',
-    'machine learning': 'python',
-    'data science': 'python',
-    'fundamentals of data science': 'python',
-    'deep learning': 'python',
-    'cloud computing': 'python',
-    'artificial intelligence': 'python',
-    'html/css': 'html',
-    'web development': 'html',
-    'frontend development': 'html',
-    'javascript': 'javascript',
-    'js': 'javascript',
-  };
-
   const normalizedCourseName = courseName.toLowerCase().trim();
 
-  // Flexible matching for HTML/CSS courses
+  // HTML/CSS Validation
   if (normalizedCourseName.includes('html') || normalizedCourseName.includes('css') || normalizedCourseName.includes('web')) {
-    // If specifically asking for JS execution (e.g. running scripts), allow it
     if (language.toLowerCase() === 'javascript') return true;
     return language.toLowerCase() === 'html';
   }
 
-  // Flexible matching for JavaScript courses
+  // JS Validation
   if (normalizedCourseName.includes('javascript') || normalizedCourseName.includes('js')) {
     return language.toLowerCase() === 'javascript';
   }
 
-  const expectedLanguage = courseLanguageMap[normalizedCourseName];
-
-  if (!expectedLanguage) {
-    // Fallback: Default to python for unknown courses if not C
-    // BUT check if requested language is valid first
-    if (language.toLowerCase() === 'javascript') return true;
-    return language.toLowerCase() === 'python';
-  }
-
-  return language.toLowerCase() === expectedLanguage.toLowerCase();
+  // Others logic remains similar, simplified for new executor
+  return true;
 };

@@ -1,47 +1,43 @@
+version: "3.9"
+
 services:
 
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: practice-hub-backend
-    env_file:
-      - .env
-      - ./backend/.env
-    ports:
-      - "5000:5000"
-    environment:
-      NODE_ENV: ${NODE_ENV:-production}
-      PORT: ${PORT:-5000}
-      DATABASE_URL: ${DATABASE_URL:-}
-      JWT_SECRET: ${JWT_SECRET}
-      FRONTEND_URL: ${FRONTEND_URL}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-
-    volumes:
-      - ./backend/logs:/app/logs
-    restart: unless-stopped
-
+  # ---------------- FRONTEND ----------------
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: practice-hub-frontend
-    env_file:
-      - .env
-      - ./frontend/.env
     ports:
-      - "5173:5173"
-    environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL}
-      VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - "5173:80"
     depends_on:
       - backend
     restart: unless-stopped
+    networks:
+      - practice-hub-net
+
+  # ---------------- BACKEND ----------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: practice-hub-backend
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: "mysql://h5q6pohuKN2GBRF.root:RHGiEhQLB6Kqq4gY@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test"
+      PORT: 5000
+      JWT_SECRET: ${JWT_SECRET}
+      JUDGE0_API_URL: http://judge0-server:2358
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+    depends_on:
+      - judge0-server
+    restart: unless-stopped
+    networks:
+      - practice-hub-net
+
+  # ---------------- MYSQL (OPTIONAL) ----------------
   mysql:
     image: mysql:8.0
     container_name: practice-hub-mysql
@@ -54,14 +50,11 @@ services:
       MYSQL_PASSWORD: practicehub123
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./db/schema_mysql.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    networks:
+      - practice-hub-net
 
+  # ---------------- CHROMADB ----------------
   chromadb:
     image: chromadb/chroma:latest
     container_name: practice-hub-chromadb
@@ -69,11 +62,112 @@ services:
       - "8001:8000"
     volumes:
       - chroma_data:/chroma/chroma
-    environment:
-      - IS_PERSISTENT=TRUE
-      - ANONYMIZED_TELEMETRY=FALSE
     restart: unless-stopped
+    networks:
+      - practice-hub-net
 
+  # ---------------- JUDGE0 SERVER ----------------
+  judge0-server:
+    image: judge0/judge0:1.13.1
+    container_name: judge0-server
+    privileged: true
+    ports:
+      - "2358:2358"
+    environment:
+      REDIS_HOST: judge0-redis
+      REDIS_PASSWORD: judge0redis
+      POSTGRES_HOST: judge0-db
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0db
+      POSTGRES_DB: judge0
+      JUDGE0_USE_ISOLATE: ""
+      DISABLE_RESOURCE_LIMITS: "true"
+      MAX_CPU_TIME_LIMIT: "30"
+      MAX_WALL_TIME_LIMIT: "60"
+      MAX_MEMORY_LIMIT: "4194304"
+      MEMORY_LIMIT: "512000"
+    volumes:
+      - ./isolate_job.rb:/api/app/jobs/isolate_job.rb
+    depends_on:
+      - judge0-db
+      - judge0-redis
+    restart: always
+    networks:
+      - practice-hub-net
+
+  # ---------------- JUDGE0 WORKER ----------------
+  judge0-worker:
+    # Build custom image with Node.js added to 1.13.1-extra
+    # build:
+    #   context: .
+    #   dockerfile: judge0.Dockerfile
+    image: judge0/judge0:1.13.1
+    container_name: judge0-worker
+    privileged: true
+    # cgroup: host <--- Removing this as it might conflict with v2
+    command: ["./scripts/workers"]
+
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - judge0_box:/box
+      - ./isolate_job.rb:/api/app/jobs/isolate_job.rb
+
+    environment:
+      REDIS_HOST: judge0-redis
+      REDIS_PASSWORD: judge0redis
+      POSTGRES_HOST: judge0-db
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0db
+      POSTGRES_DB: judge0
+      JUDGE0_USE_ISOLATE: ""
+      DISABLE_RESOURCE_LIMITS: "true"
+      MAX_CPU_TIME_LIMIT: "30"
+      MAX_WALL_TIME_LIMIT: "60"
+      MAX_MEMORY_LIMIT: "4194304"
+      MEMORY_LIMIT: "512000"
+      RAILS_LOG_TO_STDOUT: "true"
+
+    depends_on:
+      - judge0-db
+      - judge0-redis
+    restart: always
+    networks:
+      - practice-hub-net
+
+  # ---------------- JUDGE0 POSTGRES ----------------
+  judge0-db:
+    image: postgres:13
+    container_name: judge0-db
+    environment:
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: judge0db
+      POSTGRES_DB: judge0
+    volumes:
+      - judge0_postgres_data:/var/lib/postgresql/data
+    restart: always
+    networks:
+      - practice-hub-net
+
+  # ---------------- JUDGE0 REDIS ----------------
+  judge0-redis:
+    image: redis:6
+    container_name: judge0-redis
+    command: ["redis-server", "--requirepass", "judge0redis"]
+    volumes:
+      - judge0_redis_data:/data
+    restart: always
+    networks:
+      - practice-hub-net
+
+# ---------------- NETWORK ----------------
+networks:
+  practice-hub-net:
+    driver: bridge
+
+# ---------------- VOLUMES ----------------
 volumes:
   mysql_data:
   chroma_data:
+  judge0_postgres_data:
+  judge0_redis_data:
+  judge0_box:

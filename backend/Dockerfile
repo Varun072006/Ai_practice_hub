@@ -1,35 +1,35 @@
-FROM node:18
+# Build Stage
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# System dependencies for code execution (Python + C)
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends \
-  python3 \
-  python3-pip \
-  gcc \
-  g++ \
-  make \
-  && rm -rf /var/lib/apt/lists/*
-
-# Copy package files
 COPY package*.json ./
+# Install dependencies including devDependencies for building
+# npm ci is faster and more reliable for builds
+RUN npm ci --legacy-peer-deps
 
-# Install dependencies
-RUN npm install
-
-# Copy TiDB CA certificate (if exists)
-COPY tidb-ca.pem* ./
-
-# Copy source code
 COPY . .
 
-# Build TypeScript
+# Build TypeScript code
 RUN npm run build
 
-# Expose port
+# Production Stage
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+
+# Install only production dependencies
+RUN npm ci --only=production --legacy-peer-deps
+
+# Copy built artifacts from builder stage
+COPY --from=builder /app/dist ./dist
+
+# Expose backend port
 EXPOSE 5000
 
-# Start server
-CMD ["npm", "start"]
+# Environment variables will be passed via docker-compose
+ENV NODE_ENV=production
 
+CMD ["npm", "start"]
