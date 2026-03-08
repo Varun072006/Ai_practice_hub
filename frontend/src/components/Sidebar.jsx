@@ -8,7 +8,6 @@ const Sidebar = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
-  const [isHovered, setIsHovered] = useState(false);
 
   const studentMenuItems = [
     { path: '/dashboard', label: 'Courses', image: '/assets/user-icons/courses.png' },
@@ -47,25 +46,26 @@ const Sidebar = () => {
         </button>
       </div>
 
-      {/* Desktop Sidebar Shover Effect */}
+      {/* Desktop Sidebar - Fixed Width with Tooltips */}
       <div
-        className={`hidden md:flex h-full bg-gray-50 dark:bg-slate-900 flex-col border-r border-gray-200 dark:border-slate-800 z-50 transition-all duration-300 ${isHovered ? 'w-64' : 'w-16'} group shadow-lg shrink-0 overflow-hidden`}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        className="hidden md:flex h-full bg-gray-50 dark:bg-slate-900 flex-col border-r border-gray-200 dark:border-slate-800 z-50 w-20 group/sidebar shadow-lg shrink-0 overflow-visible transition-colors duration-300"
       >
-        <div className="mb-8 p-6">
-          <div className="flex items-center gap-2 mb-2 overflow-hidden whitespace-nowrap">
-            <img src={theme === 'dark' ? '/assets/logo-light.png' : '/assets/logo-dark.png'} alt="Practice Hub" className="w-8 h-8 rounded-lg min-w-[2rem] object-contain" />
-            <div className={`transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
-              <h1 className="text-xl font-bold text-gray-800 dark:text-white">Practice Hub</h1>
-              {user?.role === 'admin' && (
-                <p className="text-xs text-gray-500 dark:text-gray-400">Admin Dashboard</p>
-              )}
+        <div className="mb-8 p-6 flex justify-center">
+          <div className="relative group flex justify-center items-center">
+            <img
+              src={theme === 'dark' ? '/assets/logo-light.png' : '/assets/logo-dark.png'}
+              alt="Practice Hub"
+              className="w-10 h-10 rounded-lg object-contain cursor-pointer transition-transform hover:scale-110 active:scale-95"
+            />
+            {/* Logo Tooltip */}
+            <div className="absolute left-full ml-4 px-3 py-2 bg-slate-800/95 dark:bg-slate-700/95 backdrop-blur-sm text-white text-sm font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-[-10px] group-hover:translate-x-0 pointer-events-none whitespace-nowrap z-[100] shadow-xl border border-white/10">
+              Practice Hub
+              {user?.role === 'admin' && <span className="block text-[10px] opacity-70 font-normal">Admin Dashboard</span>}
             </div>
           </div>
         </div>
 
-        <nav className={`flex-1 ${isHovered ? 'px-4' : 'px-2'}`}>
+        <nav className="flex-1 px-3 space-y-3">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path ||
@@ -75,59 +75,65 @@ const Sidebar = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center p-3 rounded-lg transition-all duration-200 group relative ${isHovered ? 'justify-start' : 'justify-center'} ${isActive
-                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200'
+                className={`flex items-center justify-center p-3 rounded-xl transition-all duration-200 group relative ${isActive
+                  ? 'border-2 border-blue-600 bg-blue-50/50 dark:bg-blue-900/10 shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 hover:shadow-sm'
                   }`}
               >
                 {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-600 rounded-r-full" />
+                  <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-blue-600 rounded-r-full" />
                 )}
-                <div className="min-w-[2rem] flex items-center justify-center">
+                <div className="flex items-center justify-center relative">
                   {item.image ? (
                     <img
                       src={item.image}
                       alt={item.label}
-                      className={`w-7 h-7 object-contain transition-all duration-300 filter ${isActive ? 'grayscale-0 opacity-100 drop-shadow-sm scale-110' : 'grayscale-[50%] opacity-70 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-110'}`}
+                      className={`w-7 h-7 object-contain transition-all duration-300 ${isActive ? 'scale-110' : 'grayscale-[40%] opacity-70 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-110'}`}
                     />
                   ) : (
-                    <Icon size={24} className={`transition-all duration-300 ${isActive ? 'scale-110 text-blue-600 dark:text-blue-400' : 'text-gray-500 group-hover:text-blue-600 group-hover:scale-110'}`} />
+                    <Icon size={24} className={`transition-all duration-200 ${isActive ? 'scale-110 text-blue-600' : 'group-hover:scale-110'}`} />
                   )}
                 </div>
-                <span className={`transition-opacity duration-300 delay-75 whitespace-nowrap overflow-hidden ${isHovered ? 'w-auto opacity-100 ml-3' : 'w-0 opacity-0 ml-0 hidden'}`}>{item.label}</span>
+
+                {/* Menu Label Tooltip */}
+                <span className="absolute left-full ml-4 px-3 py-2 bg-slate-800/95 dark:bg-slate-700/95 backdrop-blur-sm text-white text-sm font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-[-10px] group-hover:translate-x-0 pointer-events-none whitespace-nowrap z-[100] shadow-xl border border-white/10">
+                  {item.label}
+                </span>
               </Link>
             );
           })}
         </nav>
 
-        <div className={`mt-auto border-t border-gray-200 dark:border-slate-800 ${isHovered ? 'p-4' : 'p-2 pt-4'}`}>
-          <div className={`mb-4 ${isHovered ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300 overflow-hidden whitespace-nowrap`}>
-            <p className="font-semibold text-gray-800 dark:text-white truncate">{user?.name || user?.username}</p>
-            {user?.role === 'student' && (
-              <p className="text-sm text-gray-500 dark:text-gray-400">Student</p>
-            )}
+        <div className="mt-auto border-t border-gray-100 dark:border-slate-800 p-3 space-y-3">
+          {/* User Profile Tooltip */}
+          <div className="relative group mb-2">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center mx-auto text-blue-600 dark:text-blue-400 font-bold border border-blue-200/50 dark:border-slate-700 cursor-default shadow-sm group-hover:shadow-md transition-all">
+              {(user?.name || user?.username || 'U').charAt(0).toUpperCase()}
+            </div>
+            <div className="absolute left-full bottom-0 ml-4 px-3 py-2 bg-slate-800/95 dark:bg-slate-700/95 backdrop-blur-sm text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-[-10px] group-hover:translate-x-0 pointer-events-none whitespace-nowrap z-[100] shadow-xl border border-white/10">
+              <p className="font-bold">{user?.name || user?.username}</p>
+              <p className="text-xs opacity-70 capitalize">{user?.role}</p>
+            </div>
           </div>
 
           <button
             onClick={toggleTheme}
-            className={`flex items-center w-full p-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 group relative mb-2 ${isHovered ? 'justify-start' : 'justify-center'}`}
+            className="flex items-center justify-center w-12 h-12 mx-auto rounded-xl text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 hover:text-yellow-500 transition-all duration-200 group relative shadow-none hover:shadow-sm"
           >
-            <div className="min-w-[2rem] flex items-center justify-center">
-              {theme === 'dark' ? <Sun size={24} className="text-yellow-400" /> : <Moon size={24} className="text-slate-600" />}
-            </div>
-            <span className={`flex-1 text-left transition-opacity duration-300 whitespace-nowrap overflow-hidden ${isHovered ? 'w-auto opacity-100 ml-3' : 'w-0 opacity-0 ml-0 hidden'}`}>
+            {theme === 'dark' ? <Sun size={24} /> : <Moon size={24} />}
+            <span className="absolute left-full ml-4 px-3 py-2 bg-slate-800/95 dark:bg-slate-700/95 backdrop-blur-sm text-white text-sm font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-[-10px] group-hover:translate-x-0 pointer-events-none whitespace-nowrap z-[100] shadow-xl border border-white/10">
               {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
             </span>
           </button>
 
           <button
-            onClick={logout} // Changed from handleLogout to logout as per existing context
-            className={`flex items-center w-full p-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 dark:hover:text-red-400 transition-all duration-200 group relative ${isHovered ? 'justify-start' : 'justify-center'}`}
+            onClick={logout}
+            className="flex items-center justify-center w-12 h-12 mx-auto rounded-xl text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 transition-all duration-200 group relative"
           >
-            <div className="min-w-[2rem] flex items-center justify-center">
-              <LogOut size={24} />
-            </div>
-            <span className={`transition-opacity duration-300 whitespace-nowrap overflow-hidden ${isHovered ? 'w-auto opacity-100 ml-3' : 'w-0 opacity-0 ml-0 hidden'}`}>Logout</span>
+            <LogOut size={24} />
+            <span className="absolute left-full ml-4 px-3 py-2 bg-red-600 text-white text-sm font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-[-10px] group-hover:translate-x-0 pointer-events-none whitespace-nowrap z-[100] shadow-xl">
+              Logout
+            </span>
           </button>
         </div>
       </div>
