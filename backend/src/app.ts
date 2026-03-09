@@ -12,7 +12,6 @@ import sessionRoutes from './routes/sessionRoutes';
 import resultRoutes from './routes/resultRoutes';
 import progressRoutes from './routes/progressRoutes';
 import adminRoutes from './routes/adminRoutes';
-import aiTutorRoutes from './routes/aiTutorRoutes';
 import userRoutes from './routes/userRoutes';
 import questionRoutes from './routes/questionRoutes';
 import skillRoutes from './routes/skillRoutes';
@@ -92,7 +91,6 @@ app.get('/', (req, res) => {
       results: '/api/results',
       progress: '/api/progress',
       admin: '/api/admin',
-      aiTutor: '/api/ai-tutor',
       skills: '/api/skills',
       onboarding: '/api/onboarding',
       practice: '/api/practice',
@@ -119,7 +117,6 @@ app.use('/api/sessions', sessionRoutes);
 app.use('/api/results', resultRoutes);
 app.use('/api/progress', progressRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/ai-tutor', aiTutorRoutes);
 app.use('/api/skills', skillRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/practice', skillPracticeRoutes);

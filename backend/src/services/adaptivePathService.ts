@@ -18,22 +18,10 @@ import {
 // ============================================================================
 
 /**
- * Determine path type based on mastery
+ * Determine path type - Refactored: Always returns standard
  */
 const getPathType = (mastery: number): { pathType: PathType; pathSubType: PathSubType } => {
-    const thresholds = DEFAULT_PATH_THRESHOLDS;
-
-    if (mastery < thresholds.remedialCritical) {
-        return { pathType: 'remedial', pathSubType: 'critical' };
-    } else if (mastery < thresholds.remedialModerate) {
-        return { pathType: 'remedial', pathSubType: 'moderate' };
-    } else if (mastery < thresholds.standard) {
-        return { pathType: 'standard', pathSubType: 'normal' };
-    } else if (mastery < thresholds.acceleratedFast) {
-        return { pathType: 'accelerated', pathSubType: 'fast' };
-    } else {
-        return { pathType: 'accelerated', pathSubType: 'expert' };
-    }
+    return { pathType: 'standard', pathSubType: 'normal' };
 };
 
 /**

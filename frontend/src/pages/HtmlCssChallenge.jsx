@@ -54,11 +54,6 @@ export default function HtmlCssChallenge() {
   const expectedPreviewRef = useRef();
   const [fullScreenView, setFullScreenView] = useState(null);
 
-  // AI Hint state
-  const [hint, setHint] = useState(null);
-  const [loadingHint, setLoadingHint] = useState(false);
-  const [showHint, setShowHint] = useState(false);
-  const [hintAttemptCount, setHintAttemptCount] = useState(1);
 
   // JS/Terminal State
   const [isNodeJS, setIsNodeJS] = useState(false);
@@ -270,10 +265,7 @@ export default function HtmlCssChallenge() {
     // Load expected code for this question
     setExpectedCode(expectedCodeByQuestion[index] || { html: '', css: '', js: '' });
 
-    // Clear hints and terminal for new question
-    setHint(null);
-    setShowHint(false);
-    setHintAttemptCount(1);
+    // Clear terminal for new question
     setTestResults([]);
     setConsoleOutput([]);
     setRunError(null);
@@ -494,35 +486,6 @@ export default function HtmlCssChallenge() {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  const handleGetHint = async () => {
-    if (hint) {
-      setShowHint(true);
-      return;
-    }
-
-    setLoadingHint(true);
-    setShowHint(true);
-    try {
-      const currentQ = session.questions[currentQuestionIndex];
-      const response = await api.post('/ai-tutor/coding-hint', {
-        questionId: currentQ.question_id,
-        userCode: isNodeJS ? code.js : code.html + code.css + code.js,
-        attemptCount: hintAttemptCount,
-        questionType: isNodeJS ? 'coding' : 'html-css-challenge',
-      });
-      setHint(response.data.hint);
-      setHintAttemptCount((prev) => prev + 1);
-    } catch (error) {
-      console.error('Failed to get hint:', error);
-      setHint(
-        isNodeJS
-          ? 'Check your logic. Ensure you are handling edge cases.'
-          : 'Think about the HTML structure first. What elements do you need?'
-      );
-    } finally {
-      setLoadingHint(false);
-    }
-  };
 
   const handleClearTerminal = () => {
     setConsoleOutput([]);
@@ -564,11 +527,10 @@ export default function HtmlCssChallenge() {
                   {currentQuestion.title || 'Challenge'}
                 </h1>
                 <span
-                  className={`shrink-0 px-2 py-0.5 text-[10px] font-semibold rounded-full ${
-                    isNodeJS
+                  className={`shrink-0 px-2 py-0.5 text-[10px] font-semibold rounded-full ${isNodeJS
                       ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
                       : 'bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300'
-                  }`}
+                    }`}
                 >
                   {isNodeJS ? 'JS' : 'HTML/CSS'}
                 </span>
@@ -580,11 +542,10 @@ export default function HtmlCssChallenge() {
           <div className="flex items-center gap-2">
             {/* Timer */}
             <div
-              className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-mono text-xs font-bold ${
-                timeLeft <= 300
+              className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-mono text-xs font-bold ${timeLeft <= 300
                   ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400'
                   : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300'
-              }`}
+                }`}
             >
               <Clock size={12} />
               {formatTime(timeLeft)}
@@ -600,13 +561,12 @@ export default function HtmlCssChallenge() {
                       key={q.question_id}
                       onClick={() => handleQuestionChange(index)}
                       title={`Question ${index + 1}`}
-                      className={`w-7 h-7 rounded-md flex items-center justify-center font-semibold text-[11px] transition-all ${
-                        index === currentQuestionIndex
+                      className={`w-7 h-7 rounded-md flex items-center justify-center font-semibold text-[11px] transition-all ${index === currentQuestionIndex
                           ? 'bg-blue-600 text-white shadow-sm'
                           : isSubmitted
                             ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
                             : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-600'
-                      }`}
+                        }`}
                     >
                       {index + 1}
                     </button>
@@ -619,11 +579,10 @@ export default function HtmlCssChallenge() {
             <button
               onClick={handleRunCode}
               disabled={isRunning}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                isRunning
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${isRunning
                   ? 'bg-gray-100 dark:bg-slate-700 text-gray-400 cursor-not-allowed'
                   : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
-              }`}
+                }`}
               title={isNodeJS ? 'Run Code' : 'Update Preview'}
             >
               {isRunning ? (
@@ -732,23 +691,6 @@ export default function HtmlCssChallenge() {
                   </div>
                 )}
 
-                {/* Hint */}
-                <div className="pt-1">
-                  <button
-                    onClick={handleGetHint}
-                    disabled={loadingHint}
-                    className="text-sm text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 flex items-center gap-1.5 transition-colors disabled:opacity-50"
-                  >
-                    <Lightbulb size={14} />
-                    {loadingHint ? 'Generating...' : 'Need a hint?'}
-                  </button>
-
-                  {showHint && hint && (
-                    <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 rounded-lg text-sm text-amber-900 dark:text-amber-100">
-                      {hint}
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
           )}
@@ -777,11 +719,10 @@ export default function HtmlCssChallenge() {
                 <>
                   <button
                     onClick={() => setPreviewTab('live')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
-                      previewTab === 'live'
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${previewTab === 'live'
                         ? 'bg-blue-600 text-white shadow-sm'
                         : 'text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-700 hover:text-gray-700 dark:hover:text-slate-300'
-                    }`}
+                      }`}
                     title="Live Preview"
                   >
                     <Monitor size={13} />
@@ -789,11 +730,10 @@ export default function HtmlCssChallenge() {
                   </button>
                   <button
                     onClick={() => setPreviewTab('expected')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
-                      previewTab === 'expected'
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${previewTab === 'expected'
                         ? 'bg-emerald-600 text-white shadow-sm'
                         : 'text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-700 hover:text-gray-700 dark:hover:text-slate-300'
-                    }`}
+                      }`}
                     title="Expected Output"
                   >
                     <Eye size={13} />
@@ -802,11 +742,10 @@ export default function HtmlCssChallenge() {
                   {isNodeJS && (
                     <button
                       onClick={() => setPreviewTab('terminal')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
-                        previewTab === 'terminal'
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${previewTab === 'terminal'
                           ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 shadow-sm'
                           : 'text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-700 hover:text-gray-700 dark:hover:text-slate-300'
-                      }`}
+                        }`}
                       title="Terminal Output"
                     >
                       <Terminal size={13} />
@@ -818,11 +757,10 @@ export default function HtmlCssChallenge() {
                     currentQuestion.test_cases.length > 0 && (
                       <button
                         onClick={() => setPreviewTab('testcases')}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
-                          previewTab === 'testcases'
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${previewTab === 'testcases'
                             ? 'bg-indigo-600 text-white shadow-sm'
                             : 'text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-700 hover:text-gray-700 dark:hover:text-slate-300'
-                        }`}
+                          }`}
                         title="Test Cases"
                       >
                         <CheckCircle size={13} />
@@ -893,13 +831,12 @@ export default function HtmlCssChallenge() {
                         consoleOutput.map((line, i) => (
                           <div
                             key={i}
-                            className={`flex gap-3 ${
-                              line.type === 'error'
+                            className={`flex gap-3 ${line.type === 'error'
                                 ? 'text-red-600 dark:text-red-400'
                                 : line.type === 'success'
                                   ? 'text-green-600 dark:text-green-400'
                                   : 'text-gray-800 dark:text-slate-300'
-                            } mb-1 text-[13px] leading-relaxed`}
+                              } mb-1 text-[13px] leading-relaxed`}
                           >
                             <span className="text-gray-300 dark:text-slate-600 select-none shrink-0 w-4 text-right text-[11px]">
                               {i + 1}
@@ -961,15 +898,14 @@ export default function HtmlCssChallenge() {
                     return (
                       <div
                         key={index}
-                        className={`border rounded-lg p-3 ${
-                          status === 'passed'
+                        className={`border rounded-lg p-3 ${status === 'passed'
                             ? 'border-green-200 dark:border-green-900/50 bg-green-50 dark:bg-green-900/10'
                             : status === 'system_error'
                               ? 'border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-900/10'
                               : status === 'failed'
                                 ? 'border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10'
                                 : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800'
-                        }`}
+                          }`}
                       >
                         <div className="flex justify-between items-start mb-2">
                           <span className="font-medium text-sm text-gray-700 dark:text-slate-300">
@@ -977,13 +913,12 @@ export default function HtmlCssChallenge() {
                           </span>
                           {result && (
                             <span
-                              className={`text-xs font-bold px-2 py-0.5 rounded uppercase ${
-                                status === 'passed'
+                              className={`text-xs font-bold px-2 py-0.5 rounded uppercase ${status === 'passed'
                                   ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                                   : status === 'system_error'
                                     ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
                                     : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                              }`}
+                                }`}
                             >
                               {status === 'system_error' ? 'System Error' : status}
                             </span>
@@ -1033,23 +968,23 @@ export default function HtmlCssChallenge() {
                   })}
                 </div>
               ) : /* Web Preview View */
-              previewTab === 'live' ? (
-                <PreviewFrame ref={previewRef} code={code} assets={currentAssets} />
-              ) : expectedCode.html || expectedCode.css || expectedCode.js ? (
-                <PreviewFrame ref={expectedPreviewRef} code={expectedCode} assets={currentAssets} />
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full select-none">
-                  <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center mb-3">
-                    <Eye size={24} className="text-gray-300 dark:text-slate-600" />
+                previewTab === 'live' ? (
+                  <PreviewFrame ref={previewRef} code={code} assets={currentAssets} />
+                ) : expectedCode.html || expectedCode.css || expectedCode.js ? (
+                  <PreviewFrame ref={expectedPreviewRef} code={expectedCode} assets={currentAssets} />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full select-none">
+                    <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center mb-3">
+                      <Eye size={24} className="text-gray-300 dark:text-slate-600" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-400 dark:text-slate-500">
+                      No expected reference available
+                    </p>
+                    <p className="text-xs text-gray-300 dark:text-slate-600 mt-1">
+                      Check back when expected output is provided
+                    </p>
                   </div>
-                  <p className="text-sm font-medium text-gray-400 dark:text-slate-500">
-                    No expected reference available
-                  </p>
-                  <p className="text-xs text-gray-300 dark:text-slate-600 mt-1">
-                    Check back when expected output is provided
-                  </p>
-                </div>
-              )}
+                )}
             </div>
           </div>
         </div>
@@ -1097,13 +1032,12 @@ export default function HtmlCssChallenge() {
                 {consoleOutput.map((line, i) => (
                   <div
                     key={i}
-                    className={`flex gap-4 ${
-                      line.type === 'error'
+                    className={`flex gap-4 ${line.type === 'error'
                         ? 'text-red-600 dark:text-red-400'
                         : line.type === 'success'
                           ? 'text-green-600 dark:text-green-400'
                           : 'text-gray-800 dark:text-slate-300'
-                    } mb-1 text-sm leading-relaxed`}
+                      } mb-1 text-sm leading-relaxed`}
                   >
                     <span className="text-gray-300 dark:text-slate-600 select-none w-6 text-right text-xs">
                       {i + 1}

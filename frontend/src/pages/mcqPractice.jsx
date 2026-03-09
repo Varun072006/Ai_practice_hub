@@ -15,10 +15,6 @@ const MCQPractice = () => {
   const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState(1200); // 20 minutes
   const [autoSubmitted, setAutoSubmitted] = useState(false);
-  const [hint, setHint] = useState(null);
-  const [previousHints, setPreviousHints] = useState([]); // Track hints to prevent repetition
-  const [loadingHint, setLoadingHint] = useState(false);
-  const [showHint, setShowHint] = useState(false);
 
   useEffect(() => {
     startSession();
@@ -63,33 +59,6 @@ const MCQPractice = () => {
     setSelectedOptions(newSelectedOptions);
   };
 
-  const handleGetHint = async () => {
-    if (hint && !loadingHint) {
-      setShowHint(true);
-      return;
-    }
-    setLoadingHint(true);
-    setShowHint(true);
-    try {
-      const currentQuestion = session.questions[currentQuestionIndex];
-      const attemptCount = previousHints.length + 1;
-
-      const response = await api.post('/ai-tutor/mcq-hint', {
-        questionId: currentQuestion.question_id,
-        attemptCount: attemptCount,
-        previousHints: previousHints, // Send previous hints to avoid repetition
-      });
-
-      const newHint = response.data.hint;
-      setHint(newHint);
-      setPreviousHints(prev => [...prev, newHint]); // Track this hint
-    } catch (error) {
-      console.error('Failed to get hint:', error);
-      setHint("Review the question's key terms. Try to eliminate obviously incorrect options first.");
-    } finally {
-      setLoadingHint(false);
-    }
-  };
 
   const handleNext = async () => {
     const selectedOptionId = selectedOptions[currentQuestionIndex];
@@ -107,9 +76,6 @@ const MCQPractice = () => {
 
       if (currentQuestionIndex < session.questions.length - 1) {
         setCurrentQuestionIndex(prev => prev + 1);
-        setHint(null);
-        setPreviousHints([]); // Reset hints for new question
-        setShowHint(false);
       } else {
         handleFinish(false);
       }
@@ -187,7 +153,7 @@ const MCQPractice = () => {
                 return (
                   <button
                     key={index}
-                    onClick={() => { setCurrentQuestionIndex(index); setHint(null); setPreviousHints([]); setShowHint(false); }}
+                    onClick={() => { setCurrentQuestionIndex(index); }}
                     className={`
                       relative flex items-center justify-center w-12 h-12 rounded-xl text-sm font-bold transition-all duration-200
                       ${isCurrent
@@ -274,51 +240,6 @@ const MCQPractice = () => {
               {/* Description */}
               <div className="prose prose-lg dark:prose-invert max-w-none text-gray-600 dark:text-slate-300 mb-10 leading-relaxed">
                 {currentQuestion.description}
-              </div>
-
-              {/* Hint Section */}
-              <div className="mb-8">
-                {!showHint ? (
-                  <button
-                    onClick={handleGetHint}
-                    className="group flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-500 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/20 transition-all font-medium text-sm"
-                  >
-                    <Lightbulb size={18} className="group-hover:scale-110 transition-transform" />
-                    <span>Stuck? Get a Hint</span>
-                  </button>
-                ) : (
-                  <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50 rounded-xl p-5 animate-in fade-in slide-in-from-top-2">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center gap-2 text-amber-700 dark:text-amber-500 font-semibold">
-                        <Lightbulb size={18} />
-                        <h3>AI Coach Hint</h3>
-                      </div>
-                      <button onClick={() => setShowHint(false)} className="text-amber-500 hover:text-amber-700 dark:hover:text-amber-400">
-                        <X size={18} />
-                      </button>
-                    </div>
-
-                    {loadingHint ? (
-                      <div className="flex items-center gap-2 py-2 text-amber-600/70">
-                        <div className="w-4 h-4 border-2 border-amber-500/50 border-t-amber-600 rounded-full animate-spin"></div>
-                        <span className="text-sm">Consulting AI tutor...</span>
-                      </div>
-                    ) : (
-                      <div className="text-amber-800 dark:text-amber-200/90 text-sm leading-relaxed">
-                        {hint}
-                      </div>
-                    )}
-
-                    {!loadingHint && (
-                      <button
-                        onClick={() => { setHint(null); handleGetHint(); }}
-                        className="mt-3 text-xs font-semibold text-amber-600 dark:text-amber-500 hover:underline"
-                      >
-                        Need more help? Ask again
-                      </button>
-                    )}
-                  </div>
-                )}
               </div>
 
               {/* Options */}

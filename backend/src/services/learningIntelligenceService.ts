@@ -97,25 +97,13 @@ export const computeUserSkillMetrics = async (
     // Consistency score
     const consistencyScore = Math.min(100, uniqueDays * 10);
 
-    // Predictions
+    // Simplified metrics - Removed AI predictions
     const currentMastery = mastery?.mastery_score || 0;
-    const predicted7d = Math.min(100, Math.max(0, currentMastery + velocity * 7));
-    const predicted14d = Math.min(100, Math.max(0, currentMastery + velocity * 14));
-    const predicted30d = Math.min(100, Math.max(0, currentMastery + velocity * 30));
 
-    // Estimated mastery date
-    let estimatedMasteryDate: Date | null = null;
-    if (currentMastery < 80 && velocity > 0) {
-        const daysToMastery = (80 - currentMastery) / velocity;
-        estimatedMasteryDate = new Date(Date.now() + daysToMastery * 24 * 60 * 60 * 1000);
-    }
-
-    // Risk assessment
+    // Risk assessment based on basic heuristics
     const riskFactors: string[] = [];
-    if (velocity < -1) riskFactors.push('declining_mastery');
-    if (attemptFrequency < 0.5) riskFactors.push('low_engagement');
     if (recentSuccessRate < 40) riskFactors.push('struggling');
-    if (!mastery?.last_practiced_at || Date.now() - new Date(mastery.last_practiced_at).getTime() > 7 * 24 * 60 * 60 * 1000) {
+    if (!mastery?.last_practiced_at || Date.now() - new Date(mastery.last_practiced_at).getTime() > 14 * 24 * 60 * 60 * 1000) {
         riskFactors.push('inactive');
     }
     const isAtRisk = riskFactors.length >= 2;
@@ -130,16 +118,16 @@ export const computeUserSkillMetrics = async (
         lastAttemptAt: mastery?.last_practiced_at || null,
         successRate,
         recentSuccessRate,
-        currentStreak: 0, // Would need streak tracking
+        currentStreak: 0,
         bestStreak: 0,
         improvementVelocity: velocity,
         acceleration: 0,
         engagementScore,
         consistencyScore,
-        predictedMastery7d: predicted7d,
-        predictedMastery14d: predicted14d,
-        predictedMastery30d: predicted30d,
-        estimatedMasteryDate,
+        predictedMastery7d: currentMastery, // Static
+        predictedMastery14d: currentMastery, // Static
+        predictedMastery30d: currentMastery, // Static
+        estimatedMasteryDate: null, // Removed
         isAtRisk,
         riskFactors,
         computedAt: new Date(),
@@ -168,8 +156,8 @@ export const computeUserSkillMetrics = async (
        risk_factors = VALUES(risk_factors),
        computed_at = NOW()`,
         [uuidv4(), userId, skillId, avgTime, attemptFrequency, successRate, recentSuccessRate,
-            velocity, engagementScore, consistencyScore, predicted7d, predicted14d, predicted30d,
-            estimatedMasteryDate, isAtRisk, JSON.stringify(riskFactors)]
+            velocity, engagementScore, consistencyScore, currentMastery, currentMastery, currentMastery,
+            null, isAtRisk, JSON.stringify(riskFactors)]
     );
 
     return metrics;

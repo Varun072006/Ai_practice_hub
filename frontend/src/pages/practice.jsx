@@ -44,11 +44,6 @@ const Practice = () => {
   const [userCodeByQuestion, setUserCodeByQuestion] = useState({});
   // LeetCode-style result state
   const [submitResult, setSubmitResult] = useState(null); // { status: 'Accepted'|'Wrong Answer'|'Runtime Error'|'Time Limit Exceeded', passed: number, total: number, runtime?: number }
-  // AI Hint state
-  const [hint, setHint] = useState(null);
-  const [loadingHint, setLoadingHint] = useState(false);
-  const [showHint, setShowHint] = useState(false);
-  const [hintAttemptCount, setHintAttemptCount] = useState(1);
 
   useEffect(() => {
     startSession();
@@ -290,34 +285,6 @@ const Practice = () => {
     return session?.questions || [];
   };
 
-  const handleGetHint = async () => {
-    if (hint) {
-      setShowHint(true);
-      return;
-    }
-
-    setLoadingHint(true);
-    setShowHint(true);
-    try {
-      const questionsForTest = getActiveQuestions();
-      const currentQ = questionsForTest[currentQuestionIndex];
-      const response = await api.post('/ai-tutor/coding-hint', {
-        questionId: currentQ.question_id,
-        userCode: code || null,
-        attemptCount: hintAttemptCount,
-        questionType: 'coding',
-      });
-      setHint(response.data.hint);
-      setHintAttemptCount((prev) => prev + 1);
-    } catch (error) {
-      console.error('Failed to get hint:', error);
-      setHint(
-        'Read the problem carefully. Think about the algorithm step by step. Consider edge cases like empty input.'
-      );
-    } finally {
-      setLoadingHint(false);
-    }
-  };
 
   if (loading || !session) {
     return (
@@ -366,16 +333,11 @@ const Practice = () => {
                     setSubmitResult(null);
                     setOutput('');
                     setLastRunError(null);
-                    // Clear hints for new question
-                    setHint(null);
-                    setShowHint(false);
-                    setHintAttemptCount(1);
                   }}
-                  className={`px-4 py-2 rounded-lg font-medium border ${
-                    index === currentQuestionIndex
+                  className={`px-4 py-2 rounded-lg font-medium border ${index === currentQuestionIndex
                       ? 'bg-blue-600 text-white border-blue-600'
                       : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 border-gray-300 dark:border-slate-600'
-                  }`}
+                    }`}
                 >
                   Q{index + 1}
                 </button>
@@ -453,13 +415,12 @@ const Practice = () => {
                   return (
                     <div
                       key={tc.id}
-                      className={`p-3 rounded border text-sm ${
-                        status === 'passed'
+                      className={`p-3 rounded border text-sm ${status === 'passed'
                           ? 'border-green-500 bg-green-50 dark:bg-green-900/20 test-case-passed'
                           : status === 'failed'
                             ? 'border-red-500 bg-red-50 dark:bg-red-900/20 test-case-failed'
                             : 'border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-medium text-gray-900 dark:text-white">
@@ -506,13 +467,12 @@ const Practice = () => {
                   return (
                     <div
                       key={tc.id}
-                      className={`p-3 rounded border flex items-center justify-between text-sm ${
-                        status === 'passed'
+                      className={`p-3 rounded border flex items-center justify-between text-sm ${status === 'passed'
                           ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
                           : status === 'failed'
                             ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
                             : 'border-gray-300 dark:border-slate-700 bg-gray-100 dark:bg-slate-800'
-                      }`}
+                        }`}
                     >
                       <span className="font-medium text-gray-900 dark:text-white">
                         Hidden Test Case {visibleTestCases.length + index + 1}
@@ -557,19 +517,6 @@ const Practice = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleGetHint}
-                disabled={loadingHint}
-                className="flex items-center justify-center gap-2 px-3 py-2.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-medium"
-                title="Get AI Hint"
-              >
-                {loadingHint ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <Lightbulb size={18} />
-                )}
-                <span className="hidden sm:inline">Hint</span>
-              </button>
               <button
                 onClick={handleRun}
                 disabled={isRunning}
@@ -664,56 +611,19 @@ const Practice = () => {
           {/* Bottom Section: Results and Output */}
           <div className="p-4 border-t border-gray-200 dark:border-slate-700 space-y-4 bg-white dark:bg-slate-800">
             {/* AI Hint Panel */}
-            {showHint && (
-              <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Lightbulb size={18} className="text-amber-600" />
-                    <span className="font-semibold text-amber-700 dark:text-amber-400">
-                      AI Hint
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setShowHint(false)}
-                    className="text-amber-600 hover:text-amber-800 dark:hover:text-amber-300"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-                {loadingHint ? (
-                  <div className="flex items-center gap-2 text-amber-600">
-                    <div className="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin"></div>
-                    <span>Generating hint...</span>
-                  </div>
-                ) : (
-                  <p className="text-gray-700 dark:text-slate-300 whitespace-pre-wrap">{hint}</p>
-                )}
-                <button
-                  onClick={() => {
-                    setHint(null);
-                    handleGetHint();
-                  }}
-                  className="mt-2 text-xs text-amber-600 hover:text-amber-800 dark:hover:text-amber-300"
-                >
-                  Get another hint
-                </button>
-              </div>
-            )}
 
             {/* LeetCode-style Submit Result Panel */}
             {submitResult && (
               <div
-                className={`p-4 rounded-lg border-l-4 ${
-                  submitResult.status === 'Accepted'
+                className={`p-4 rounded-lg border-l-4 ${submitResult.status === 'Accepted'
                     ? 'bg-green-50 dark:bg-green-900/20 border-green-500'
                     : 'bg-red-50 dark:bg-red-900/20 border-red-500'
-                }`}
+                  }`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <span
-                    className={`text-lg font-bold ${
-                      submitResult.status === 'Accepted' ? 'text-green-600' : 'text-red-600'
-                    }`}
+                    className={`text-lg font-bold ${submitResult.status === 'Accepted' ? 'text-green-600' : 'text-red-600'
+                      }`}
                   >
                     {submitResult.status}
                   </span>

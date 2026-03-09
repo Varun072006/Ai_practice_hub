@@ -23,33 +23,10 @@ const AIAnalysisCard = ({ sessionId, score, isPass }) => {
     });
 
     useEffect(() => {
-        const fetchAnalysis = async () => {
-            if (!sessionId) {
-                setAnalysis(getFallbackAnalysis());
-                setLoading(false);
-                return;
-            }
-
-            try {
-                setLoading(true);
-
-                const response = await api.get(`/ai-tutor/analysis/${sessionId}`);
-
-                if (response.data && response.data.analysis) {
-                    setAnalysis(response.data);
-                } else {
-                    setAnalysis(getFallbackAnalysis());
-                }
-            } catch (err) {
-                console.error('Failed to fetch AI analysis:', err);
-                setAnalysis(getFallbackAnalysis());
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchAnalysis();
-    }, [sessionId, score, isPass]);
+        // AI analysis removed - using static performance review
+        setAnalysis(getFallbackAnalysis());
+        setLoading(false);
+    }, [score, isPass]);
 
 
     // --- LOADING STATE (SHIMMER) ---

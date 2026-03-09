@@ -4,8 +4,7 @@ import Layout from '../components/Layout';
 import HtmlCssResult from '../components/HtmlCssResult';
 import McqResult from '../components/McqResult';
 import api from '../services/api';
-import { CheckCircle, XCircle, MessageSquare, Send, X, Trophy, Sparkles, ChevronRight, AlertCircle, Clock, Maximize2, Copy, Info } from 'lucide-react';
-import AIAnalysisCard from '../components/AIAnalysisCard';
+import { CheckCircle, XCircle, Send, X, Trophy, ChevronRight, AlertCircle, Clock, Maximize2, Copy, Info } from 'lucide-react';
 import Confetti from 'react-confetti';
 
 const Results = () => {
@@ -18,10 +17,6 @@ const Results = () => {
   const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0);
   const [selectedTestCaseIndex, setSelectedTestCaseIndex] = useState(0);
   const [activeTab, setActiveTab] = useState('user');
-  const [showTutor, setShowTutor] = useState(false);
-  const [tutorMessages, setTutorMessages] = useState([]);
-  const [tutorInput, setTutorInput] = useState('');
-  const [tutorLoading, setTutorLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -63,46 +58,6 @@ const Results = () => {
     };
   }, [navigate]);
 
-  // AI Tutor logic for Coding View
-  const fetchInitialHint = async () => {
-    try {
-      const response = await api.get(`/ai-tutor/hint/${sessionId}`);
-      if (response.data.hint) {
-        setTutorMessages([{ role: 'assistant', content: response.data.hint }]);
-      }
-    } catch (error) {
-      console.error('Failed to fetch initial hint:', error);
-    }
-  };
-
-  const handleTutorSubmit = async (e) => {
-    e.preventDefault();
-    if (!tutorInput.trim() || tutorLoading) return;
-
-    const userMessage = tutorInput.trim();
-    setTutorInput('');
-    setTutorMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
-    setTutorLoading(true);
-
-    try {
-      const response = await api.post('/ai-tutor/chat', {
-        sessionId,
-        message: userMessage,
-      });
-      setTutorMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: response.data.message },
-      ]);
-    } catch (error) {
-      console.error('Failed to get tutor response:', error);
-      setTutorMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' },
-      ]);
-    } finally {
-      setTutorLoading(false);
-    }
-  };
 
   if (loading || !results) {
     return (
@@ -183,7 +138,7 @@ const Results = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <MessageSquare className="text-blue-600 dark:text-blue-400" size={20} />
+                <Trophy className="text-blue-600 dark:text-blue-400" size={20} />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">Practice Session Results</h1>
@@ -234,48 +189,6 @@ const Results = () => {
         <div className="p-4 md:p-6 flex flex-col lg:flex-row gap-4 md:gap-6 flex-1 min-h-0 max-w-full overflow-hidden">
           {/* Left Column - AI Review & Test Cases */}
           <div className="w-full lg:w-1/3 space-y-4">
-            {/* AI Performance Review Card */}
-            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="text-blue-500" size={20} />
-                  <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white">AI Performance Review</h3>
-                    <p className="text-xs text-blue-500">Personalized Feedback</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className={`text-2xl font-bold ${isPass ? 'text-green-500' : 'text-red-500'}`}>
-                    {sessionScore}%
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">Session Score</p>
-                </div>
-              </div>
-
-              {/* Areas for Improvement */}
-              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <AlertCircle className="text-red-500" size={16} />
-                  <span className="font-medium text-red-700 dark:text-red-400 text-sm">Areas for Improvement</span>
-                </div>
-                <ul className="text-sm text-red-600 dark:text-red-400 space-y-1 ml-6 list-disc">
-                  <li>Review conditional logic specifically for edge cases</li>
-                  <li>Practice 'while' loop exit conditions to avoid infinite loops</li>
-                  <li>Focus on variable scope within loop blocks</li>
-                </ul>
-              </div>
-
-              {/* Recommended Focus */}
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/10 border-l-4 border-blue-500 rounded-r-lg">
-                <div className="flex items-center gap-2 mb-1">
-                  <Info className="text-blue-500" size={16} />
-                  <span className="font-medium text-blue-700 dark:text-blue-400 text-sm">Recommended Focus</span>
-                </div>
-                <p className="text-sm text-blue-600 dark:text-blue-400">
-                  Review the tutorial on "<span className="font-semibold">Logical Operators</span>" before attempting these problems again.
-                </p>
-              </div>
-            </div>
 
             {/* Test Cases Sidebar */}
             <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700">
@@ -446,91 +359,6 @@ const Results = () => {
           </div>
         </div>
 
-        {/* Floating Chat Button */}
-        <button
-          onClick={() => {
-            setShowTutor(true);
-            fetchInitialHint();
-          }}
-          className="fixed bottom-6 right-6 flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-full shadow-lg transition-all hover:shadow-xl"
-        >
-          <MessageSquare size={20} />
-          Chat with Tutor
-        </button>
-
-        {/* AI Tutor Chat Modal */}
-        {showTutor && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl h-[600px] flex flex-col border dark:border-slate-700">
-              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700">
-                <div className="flex items-center gap-3">
-                  <MessageSquare className="text-blue-600 dark:text-blue-400" size={24} />
-                  <h3 className="text-lg font-bold text-gray-800 dark:text-white">AI Tutor</h3>
-                  <span className="text-xs text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full">Online</span>
-                </div>
-                <button
-                  onClick={() => setShowTutor(false)}
-                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {tutorMessages.length === 0 && (
-                  <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-                    <p>Ask me anything about this question!</p>
-                  </div>
-                )}
-                {tutorMessages.map((msg, index) => (
-                  <div
-                    key={index}
-                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[80%] rounded-lg p-3 ${msg.role === 'user'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200'
-                        }`}
-                    >
-                      <p className="whitespace-pre-wrap">{msg.content}</p>
-                    </div>
-                  </div>
-                ))}
-                {tutorLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-gray-100 dark:bg-slate-700 rounded-lg p-3">
-                      <p className="text-gray-600 dark:text-gray-300">Thinking...</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="p-4 border-t border-gray-200 dark:border-slate-700">
-                <form onSubmit={handleTutorSubmit} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={tutorInput}
-                    onChange={(e) => setTutorInput(e.target.value)}
-                    placeholder="Ask a question about your code..."
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-900 text-gray-900 dark:text-white"
-                    disabled={tutorLoading}
-                  />
-                  <button
-                    type="submit"
-                    disabled={!tutorInput.trim() || tutorLoading}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Send size={18} />
-                  </button>
-                </form>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                  AI can make mistakes. Review generated code carefully.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </Layout>
   );

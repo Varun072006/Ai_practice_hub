@@ -15,7 +15,6 @@ import MCQPractice from './pages/mcqPractice';
 import Results from './pages/results';
 import Progress from './pages/progress';
 import Leaderboard from './pages/leaderboard';
-import AICoach from './pages/aiCoach';
 import LevelOverview from './pages/LevelOverview';
 import HtmlCssChallenge from './pages/HtmlCssChallenge';
 import ProfileDashboard from './pages/ProfileDashboard';
@@ -111,14 +110,6 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Leaderboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/ai-coach"
-        element={
-          <ProtectedRoute>
-            <AICoach />
           </ProtectedRoute>
         }
       />

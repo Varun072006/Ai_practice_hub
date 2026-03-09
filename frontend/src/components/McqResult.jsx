@@ -1,57 +1,12 @@
 import React, { useState } from 'react';
 import Layout from './Layout';
-import { CheckCircle, XCircle, MessageSquare, Send, X } from 'lucide-react';
-import api from '../services/api';
-import AIAnalysisCard from './AIAnalysisCard';
+import { CheckCircle, XCircle, X } from 'lucide-react';
 
 const McqResult = ({ results, onBack }) => {
     const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0);
-    const [showTutor, setShowTutor] = useState(false);
-    const [tutorMessages, setTutorMessages] = useState([]);
-    const [tutorInput, setTutorInput] = useState('');
-    const [tutorLoading, setTutorLoading] = useState(false);
 
     const selectedQuestion = results.questions[selectedQuestionIndex];
 
-    const fetchInitialHint = async () => {
-        try {
-            const response = await api.get(`/ai-tutor/hint/${results.session.id}`);
-            if (response.data.hint) {
-                setTutorMessages([{ role: 'assistant', content: response.data.hint }]);
-            }
-        } catch (error) {
-            console.error('Failed to fetch initial hint:', error);
-        }
-    };
-
-    const handleTutorSubmit = async (e) => {
-        e.preventDefault();
-        if (!tutorInput.trim() || tutorLoading) return;
-
-        const userMessage = tutorInput.trim();
-        setTutorInput('');
-        setTutorMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
-        setTutorLoading(true);
-
-        try {
-            const response = await api.post('/ai-tutor/chat', {
-                sessionId: results.session.id,
-                message: userMessage,
-            });
-            setTutorMessages((prev) => [
-                ...prev,
-                { role: 'assistant', content: response.data.message },
-            ]);
-        } catch (error) {
-            console.error('Failed to get tutor response:', error);
-            setTutorMessages((prev) => [
-                ...prev,
-                { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' },
-            ]);
-        } finally {
-            setTutorLoading(false);
-        }
-    };
 
     // Calculate Score
     const correctCount = results.questions.filter(q => q.submission?.is_correct).length;
@@ -111,14 +66,6 @@ const McqResult = ({ results, onBack }) => {
                     </div>
                 </div>
 
-                {/* AI Performance Analysis */}
-                <div className="mb-8">
-                    <AIAnalysisCard
-                        sessionId={results.session.id}
-                        score={scorePercentage}
-                        isPass={isPassing}
-                    />
-                </div>
 
                 {/* Question Navigation */}
                 <div className="mb-6 flex gap-2 flex-wrap">
@@ -254,109 +201,20 @@ const McqResult = ({ results, onBack }) => {
                         )}
 
                         <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-lg p-6 text-white shadow-md">
-                            <h3 className="font-bold text-lg mb-2">Still confused?</h3>
+                            <h3 className="font-bold text-lg mb-2">Need help?</h3>
                             <p className="text-blue-100 text-sm mb-4">
-                                Our AI Tutor can explain this concept in simple terms.
+                                Review the concepts and explanations to better understand the correct answers.
                             </p>
                             <button
-                                onClick={() => {
-                                    setShowTutor(true);
-                                    fetchInitialHint();
-                                }}
+                                onClick={onBack}
                                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white text-blue-700 rounded-lg hover:bg-blue-50 transition-colors font-bold shadow-sm"
                             >
-                                <MessageSquare size={18} />
-                                Ask AI Tutor
+                                Back to Course
                             </button>
                         </div>
                     </div>
                 </div>
 
-                {/* AI Tutor Chat Modal */}
-                {showTutor && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
-                        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-2xl h-[600px] flex flex-col overflow-hidden animate-fade-in-up">
-                            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
-                                        <MessageSquare className="text-blue-600 dark:text-blue-400" size={20} />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold text-gray-800 dark:text-white">AI Tutor</h3>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">Always here to help</p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => setShowTutor(false)}
-                                    className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full transition-colors text-gray-500 dark:text-gray-400"
-                                >
-                                    <X size={20} />
-                                </button>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50 dark:bg-slate-900/50">
-                                {tutorMessages.length === 0 && (
-                                    <div className="text-center text-gray-500 dark:text-gray-400 py-12">
-                                        <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                                            <MessageSquare className="text-blue-500 dark:text-blue-400" size={32} />
-                                        </div>
-                                        <p className="font-medium">Ask me anything about this question!</p>
-                                        <p className="text-sm mt-1">I can explain why an option is correct or incorrect.</p>
-                                    </div>
-                                )}
-                                {tutorMessages.map((msg, index) => (
-                                    <div
-                                        key={index}
-                                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                                    >
-                                        <div
-                                            className={`max-w-[80%] rounded-2xl p-4 shadow-sm ${msg.role === 'user'
-                                                ? 'bg-blue-600 text-white rounded-br-none'
-                                                : 'bg-white dark:bg-slate-700 text-gray-800 dark:text-white border border-gray-100 dark:border-slate-600 rounded-bl-none'
-                                                }`}
-                                        >
-                                            <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                                {tutorLoading && (
-                                    <div className="flex justify-start">
-                                        <div className="bg-white dark:bg-slate-700 border border-gray-100 dark:border-slate-600 rounded-2xl p-4 rounded-bl-none shadow-sm">
-                                            <div className="flex gap-1.5">
-                                                <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce"></div>
-                                                <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce delay-100"></div>
-                                                <div className="w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce delay-200"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="p-4 border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-                                <form
-                                    onSubmit={handleTutorSubmit}
-                                    className="flex gap-2"
-                                >
-                                    <input
-                                        type="text"
-                                        value={tutorInput}
-                                        onChange={(e) => setTutorInput(e.target.value)}
-                                        placeholder="Ask a question..."
-                                        className="flex-1 px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 dark:bg-slate-700 focus:bg-white dark:focus:bg-slate-600 transition-colors text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                                        disabled={tutorLoading}
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={!tutorInput.trim() || tutorLoading}
-                                        className="px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-                                    >
-                                        <Send size={20} />
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
         </Layout>
     );

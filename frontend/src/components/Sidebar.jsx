@@ -12,7 +12,6 @@ const Sidebar = () => {
   const studentMenuItems = [
     { path: '/dashboard', label: 'Courses', image: '/assets/user-icons/courses.png' },
     { path: '/progress', label: 'My Progress', image: '/assets/user-icons/progress.png' },
-    { path: '/ai-coach', label: 'AI Coach', image: '/assets/user-icons/ai-coach.png' },
     { path: '/leaderboard', label: 'Leaderboard', image: '/assets/user-icons/leaderboard.png' },
     { path: '/profile', label: 'My Profile', image: '/assets/user-icons/profile.png' },
   ];

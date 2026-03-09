@@ -87,65 +87,21 @@ JSON format required:
 /**
  * Generate performance analysis using structured data input
  * Produces structured output for consistent UI rendering
+ * REFACTORED: Now returns static analysis instead of AI-generated content
  */
 export const generateSessionAnalysis = async (input: AnalysisInput): Promise<AnalysisResult> => {
-    const { sessionType, courseTitle, levelTitle, score, questions, correctCount, totalQuestions } = input;
-
+    const { sessionType, score, courseTitle, questions } = input;
     const isPassing = score >= (sessionType === 'mcq' ? 60 : 70);
 
-    logger.info(`[Analysis Service] Generating analysis for ${sessionType} session. Score: ${score}%, Pass: ${isPassing}`);
-
-    // Build structured data prompt (not conversational)
     const incorrectQuestions = questions.filter(q => !q.isCorrect);
-    const correctQuestions = questions.filter(q => q.isCorrect);
-
-    // Extract topics from questions (properly typed)
     const weakTopics: string[] = incorrectQuestions
         .map(q => q.concepts)
         .filter((c): c is string => typeof c === 'string' && c.length > 0)
         .slice(0, 3);
 
-    const strongTopics: string[] = correctQuestions
-        .map(q => q.concepts)
-        .filter((c): c is string => typeof c === 'string' && c.length > 0)
-        .slice(0, 3);
+    logger.info(`[Analysis Service] Returning static analysis for ${sessionType} session. Score: ${score}%`);
 
-    const dataPrompt = `SESSION DATA:
-- Course: "${courseTitle}" - ${levelTitle}
-- Type: ${sessionType.toUpperCase()}
-- Result: ${isPassing ? 'PASSED' : 'FAILED'}
-- Score: ${score}% (${correctCount}/${totalQuestions})
-
-QUESTION BREAKDOWN:
-${questions.map((q, i) =>
-        `Q${i + 1}: "${q.title}" - ${q.isCorrect ? '✓ CORRECT' : '✗ WRONG'}${q.concepts ? ` [Topic: ${q.concepts}]` : ''}`
-    ).join('\n')}
-
-${incorrectQuestions.length > 0 ? `
-WRONG ANSWERS (Focus on these):
-${incorrectQuestions.map(q => `- "${q.title}"${q.concepts ? ` (${q.concepts})` : ''}`).join('\n')}
-` : ''}
-
-${weakTopics.length > 0 ? `Weak Topics: ${weakTopics.join(', ')}` : ''}
-${strongTopics.length > 0 ? `Strong Topics: ${strongTopics.join(', ')}` : ''}
-
-Generate analysis JSON now:`;
-
-    try {
-        const jsonResponse = await callAnalysisInference(
-            isPassing ? ANALYSIS_PROMPTS.passed : ANALYSIS_PROMPTS.failed,
-            dataPrompt
-        );
-
-        // Parse and validate response
-        const parsed = parseAnalysisResponse(jsonResponse, isPassing, score, weakTopics);
-        logger.info(`[Analysis Service] Successfully generated analysis`);
-        return parsed;
-
-    } catch (error: any) {
-        logger.error(`[Analysis Service] Inference failed: ${error.message}`);
-        return getAnalysisFallback(isPassing, score, weakTopics, courseTitle);
-    }
+    return getAnalysisFallback(isPassing, score, weakTopics, courseTitle);
 };
 
 // ============================================================================
