@@ -137,7 +137,7 @@ const AdminOverview = () => {
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-base font-semibold text-slate-800 dark:text-white">Question Attempts</h3>
             </div>
-            <div className="h-64 w-full">
+            <div className="h-64 w-full min-h-[256px] min-w-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={questionAttemptsData} barSize={32}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
@@ -167,7 +167,7 @@ const AdminOverview = () => {
                 <span className="flex items-center gap-1 text-slate-400">● Previous</span>
               </div>
             </div>
-            <div className="h-64 w-full">
+            <div className="h-64 w-full min-h-[256px] min-w-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={successRateData}>
                   <defs>

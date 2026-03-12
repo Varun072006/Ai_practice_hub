@@ -101,9 +101,11 @@ export const getSessionResults = async (sessionId: string, userId: string) => {
     `SELECT s.id, s.session_type, s.status, s.started_at, s.completed_at,
             s.course_id, s.level_id,
             c.title as course_title, l.title as level_title,
-            (SELECT COUNT(*) FROM student_tasks st 
-             JOIN assignments a ON st.assignment_id = a.id
-             WHERE st.user_id = s.user_id AND a.level_id = s.level_id AND st.status = 'completed') > 0 as is_assignment_completed
+            COALESCE(
+              (SELECT COUNT(*) FROM student_tasks st 
+               JOIN assignments a ON st.assignment_id = a.id
+               WHERE st.user_id = s.user_id AND a.level_id = s.level_id AND st.status = 'completed'), 0
+            ) > 0 as is_assignment_completed
      FROM practice_sessions s
      JOIN courses c ON s.course_id = c.id
      JOIN levels l ON s.level_id = l.id

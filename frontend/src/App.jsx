@@ -247,8 +247,11 @@ const AppRoutes = () => {
 };
 
 function App() {
+  // Use Vite's BASE_URL: '/aipracticehub/' in production, '/' in dev
+  const base = import.meta.env.BASE_URL.replace(/\/+$/, ''); // strip trailing slash
+
   return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <Router basename={base || '/'} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ThemeProvider>
         <AuthProvider>
           <NavigationProvider>

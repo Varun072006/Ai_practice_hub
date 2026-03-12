@@ -55,7 +55,7 @@ const Layout = ({ children }) => {
                   {user.name || user.username}
                 </div>
                 <div className="text-xs text-gray-500 dark:text-slate-400 font-mono mt-0.5">
-                  {user.roll_number || user.id.substring(0, 8)}
+                  {user.email || user.roll_number || user.id.substring(0, 8)}
                 </div>
               </div>
             )}

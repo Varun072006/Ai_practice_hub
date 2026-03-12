@@ -1,0 +1,12 @@
+FROM mysql:8.0.44
+
+# Copy initialization scripts into the image so they run on first startup
+COPY ./db/init/ /docker-entrypoint-initdb.d/
+
+# Set default MySQL configurations
+ENV MYSQL_ROOT_PASSWORD=rootpassword
+ENV MYSQL_DATABASE=practice_hub
+ENV MYSQL_USER=practicehub
+ENV MYSQL_PASSWORD=practicehub123
+
+EXPOSE 3306

@@ -4,6 +4,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { errorHandler } from './middlewares/errorHandler';
 import logger from './config/logger';
+import helmet from 'helmet';
+import compression from 'compression';
 
 // Routes
 import authRoutes from './routes/authRoutes';
@@ -30,11 +32,31 @@ dotenv.config();
 
 const app: Application = express();
 
-// Middleware - CORS Configuration
+// Security and Optimization Middlewares
+app.use(helmet());
+app.use(compression());
+
 const isDevelopment = process.env.NODE_ENV !== 'production';
-const allowedOrigins = process.env.FRONTEND_URL
-  ? [process.env.FRONTEND_URL]
-  : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'];
+
+// CORS Configuration: Origins must NOT contain paths
+const defaultOrigins = ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'https://pcdp.bitsathy.ac.in'];
+
+const allowedOrigins: string[] = (() => {
+  const raw = process.env.FRONTEND_URL;
+  if (!raw) return defaultOrigins;
+
+  const origins = raw.split(',').map(s => s.trim()).filter(Boolean).map(entry => {
+    if (entry === '*') return entry;
+    try {
+      const url = new URL(entry);
+      return `${url.protocol}//${url.host}`;
+    } catch {
+      return entry;
+    }
+  });
+
+  return [...new Set([...origins, 'https://pcdp.bitsathy.ac.in'])];
+})();
 
 app.use(cors({
   origin: function (origin, callback) {

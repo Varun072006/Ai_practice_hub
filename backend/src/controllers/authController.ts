@@ -28,7 +28,7 @@ export const loginController = async (req: Request, res: Response): Promise<void
     // Provide helpful error messages
     if (errorMessage.includes('Invalid credentials')) {
       res.status(401).json({
-        error: 'Invalid username or password. Default credentials: USER/123 or ADMIN/123'
+        error: 'Invalid credentials',
       });
     } else {
       res.status(401).json({ error: errorMessage });

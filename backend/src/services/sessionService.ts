@@ -640,30 +640,38 @@ export const completeSession = async (sessionId: string, userId: string) => {
     const hasCoding = completedTypes.includes('coding') || completedTypes.includes('html-css-challenge');
 
     if (hasCoding) {
-      // Mark assignment/task as completed
-      await pool.query(
-        `UPDATE student_tasks st
-           JOIN assignments a ON st.assignment_id = a.id
-           SET st.status = 'completed', st.completed_at = CURRENT_TIMESTAMP
-           WHERE st.user_id = ? AND a.level_id = ? AND st.status = 'pending'`,
-        [userId, level_id]
-      );
-      console.log(`[completeSession] Task marked as COMPLETED for user ${userId}, level ${level_id}`);
+      // Mark assignment/task as completed (non-critical, don't fail session completion)
+      try {
+        await pool.query(
+          `UPDATE student_tasks st
+             JOIN assignments a ON st.assignment_id = a.id
+             SET st.status = 'completed', st.completed_at = CURRENT_TIMESTAMP
+             WHERE st.user_id = ? AND a.level_id = ? AND st.status = 'pending'`,
+          [userId, level_id]
+        );
+        console.log(`[completeSession] Task marked as COMPLETED for user ${userId}, level ${level_id}`);
+      } catch (taskErr: any) {
+        console.warn(`[completeSession] Non-critical: Failed to update student_tasks for user ${userId}, level ${level_id}:`, taskErr.message);
+      }
     }
   } else {
     // User did NOT pass! Auto-reassign the task
     console.log(`[completeSession] User ${userId} did NOT meet threshold (${passRate.toFixed(1)}% < ${passThreshold}%). Reassigning task...`);
 
-    // Increment reassign_count and keep status as pending
-    await pool.query(
-      `UPDATE student_tasks st
-         JOIN assignments a ON st.assignment_id = a.id
-         SET st.reassign_count = COALESCE(st.reassign_count, 0) + 1,
-             st.status = 'pending'
-         WHERE st.user_id = ? AND a.level_id = ?`,
-      [userId, level_id]
-    );
-    console.log(`[completeSession] Task REASSIGNED for user ${userId}, level ${level_id}`);
+    // Increment reassign_count and keep status as pending (non-critical, don't fail session completion)
+    try {
+      await pool.query(
+        `UPDATE student_tasks st
+           JOIN assignments a ON st.assignment_id = a.id
+           SET st.reassign_count = COALESCE(st.reassign_count, 0) + 1,
+               st.status = 'pending'
+           WHERE st.user_id = ? AND a.level_id = ?`,
+        [userId, level_id]
+      );
+      console.log(`[completeSession] Task REASSIGNED for user ${userId}, level ${level_id}`);
+    } catch (taskErr: any) {
+      console.warn(`[completeSession] Non-critical: Failed to reassign student_tasks for user ${userId}, level ${level_id}:`, taskErr.message);
+    }
   }
 };
 export const runCode = async (

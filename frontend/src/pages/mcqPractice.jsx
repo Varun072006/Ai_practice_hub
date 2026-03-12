@@ -105,10 +105,11 @@ const MCQPractice = () => {
 
     try {
       await api.post(`/sessions/${session.id}/complete`);
-      navigate(`/results/${session.id}`, { replace: true });
     } catch (err) {
       console.error('Complete session error:', err);
     }
+    // Navigate to results regardless of whether complete succeeded
+    navigate(`/results/${session.id}`, { replace: true });
   };
 
   const formatTime = (seconds) => {

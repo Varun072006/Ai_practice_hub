@@ -1,13 +1,14 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  base: mode === 'production' ? '/aipracticehub/' : '/',
   plugins: [react()],
   server: {
     port: 5173,
-    host: '0.0.0.0', // Listen on all network interfaces
-    strictPort: true, // Fail if 5173 is busy
-    open: true, // Automatically open browser
+    host: '0.0.0.0',
+    strictPort: true,
+    open: true,
     proxy: {
       '/img': {
         target: 'http://127.0.0.1:5000',
@@ -19,7 +20,6 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
-
     },
   },
-});
+}));

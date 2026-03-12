@@ -3,11 +3,18 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-// Configure storage
+// Configure storage path
+const getAssetsPath = () => {
+    if (process.env.ASSETS_STORAGE_PATH) {
+        return process.env.ASSETS_STORAGE_PATH;
+    }
+    // Default for development
+    return path.join(process.cwd(), '../frontend/public/assets');
+};
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        // assets are now in frontend/public/assets
-        const assetsPath = path.join(process.cwd(), '../frontend/public/assets');
+        const assetsPath = getAssetsPath();
         // Ensure directory exists
         if (!fs.existsSync(assetsPath)) {
             fs.mkdirSync(assetsPath, { recursive: true });
@@ -54,8 +61,7 @@ export const uploadAsset = (req: Request, res: Response) => {
 };
 
 export const getAssets = (req: Request, res: Response) => {
-    // assets are now in frontend/public/assets
-    const assetsPath = path.join(process.cwd(), '../frontend/public/assets');
+    const assetsPath = getAssetsPath();
 
     if (!fs.existsSync(assetsPath)) {
         return res.status(200).json([]);
@@ -91,7 +97,7 @@ export const deleteAsset = (req: Request, res: Response) => {
 
     // Security check: prevent directory traversal
     const safeFilename = path.basename(filename);
-    const filePath = path.join(process.cwd(), '../frontend/public/assets', safeFilename);
+    const filePath = path.join(getAssetsPath(), safeFilename);
 
     if (fs.existsSync(filePath)) {
         fs.unlink(filePath, (err) => {

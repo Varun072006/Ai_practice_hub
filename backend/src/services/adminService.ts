@@ -29,7 +29,7 @@ export const getAllUsers = async (searchTerm?: string) => {
     params.push(searchPattern, searchPattern, searchPattern);
   }
 
-  query += ' GROUP BY u.id, u.username, u.email, u.role, u.name, u.roll_number, u.department, u.year, u.created_at';
+  query += ' GROUP BY u.id, u.username, u.email, u.role, u.name, u.roll_number, u.department, u.year, u.created_at, ps.status, ps.session_type';
   query += ' ORDER BY u.created_at DESC';
 
   const result = await pool.query(query, params);
@@ -431,7 +431,7 @@ export const getCoursesWithLevels = async () => {
        FROM levels l
        LEFT JOIN questions q ON l.id = q.level_id
        WHERE l.course_id = ?
-       GROUP BY l.id, l.level_number, l.title, l.description, l.time_limit
+       GROUP BY l.id, l.level_number, l.title, l.description, l.time_limit, l.image_url
        ORDER BY l.level_number`,
           [course.id]
         );
@@ -731,7 +731,7 @@ export const getAssignments = async () => {
     JOIN courses c ON a.course_id = c.id
     JOIN levels l ON a.level_id = l.id
     LEFT JOIN student_tasks st ON a.id = st.assignment_id
-    GROUP BY a.id, a.title, a.target_type, a.target_value, a.created_at, c.title, l.title, l.level_number
+    GROUP BY a.id, a.title, a.course_id, a.target_type, a.target_value, a.created_at, c.title, l.title, l.level_number
     ORDER BY a.created_at DESC
   `;
 
