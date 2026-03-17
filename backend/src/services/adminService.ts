@@ -19,7 +19,7 @@ export const getAllUsers = async (searchTerm?: string) => {
       MAX(ps.status) as last_status
     FROM users u
     LEFT JOIN practice_sessions ps ON u.id = ps.user_id
-    WHERE u.role = 'student'
+    WHERE 1=1
   `;
   const params: any[] = [];
 
@@ -29,7 +29,7 @@ export const getAllUsers = async (searchTerm?: string) => {
     params.push(searchPattern, searchPattern, searchPattern);
   }
 
-  query += ' GROUP BY u.id, u.username, u.email, u.role, u.name, u.roll_number, u.department, u.year, u.created_at, ps.status, ps.session_type';
+  query += ' GROUP BY u.id, u.username, u.email, u.role, u.name, u.roll_number, u.department, u.year, u.created_at';
   query += ' ORDER BY u.created_at DESC';
 
   const result = await pool.query(query, params);

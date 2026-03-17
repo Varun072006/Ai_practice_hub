@@ -121,16 +121,6 @@ cd frontend
 npm run dev
 ```
 
-## Default Credentials
-
-### Student Login
-- Username: `USER`
-- Password: `123`
-
-### Admin Login
-- Username: `ADMIN`
-- Password: `123`
-
 ## Ports
 
 - Frontend: `5173`

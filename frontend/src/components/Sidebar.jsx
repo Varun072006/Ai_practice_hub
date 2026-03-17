@@ -1,8 +1,11 @@
-import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { LogOut, Sun, Moon, Image as ImageIcon } from 'lucide-react';
+import {
+  LogOut, Sun, Moon, Image as ImageIcon,
+  BookOpen, BarChart3, Medal, UserCircle,
+  LayoutDashboard, Users, ClipboardList, GraduationCap, FileCheck
+} from 'lucide-react';
 
 const Sidebar = () => {
   const { user, logout } = useAuth();
@@ -10,19 +13,19 @@ const Sidebar = () => {
   const location = useLocation();
 
   const studentMenuItems = [
-    { path: '/dashboard', label: 'Courses', image: '/assets/user-icons/courses.png' },
-    { path: '/progress', label: 'My Progress', image: '/assets/user-icons/progress.png' },
-    { path: '/leaderboard', label: 'Leaderboard', image: '/assets/user-icons/leaderboard.png' },
-    { path: '/profile', label: 'My Profile', image: '/assets/user-icons/profile.png' },
+    { path: '/dashboard', label: 'Courses', icon: BookOpen },
+    { path: '/progress', label: 'My Progress', icon: BarChart3 },
+    { path: '/leaderboard', label: 'Leaderboard', icon: Medal },
+    { path: '/profile', label: 'My Profile', icon: UserCircle },
   ];
 
   const adminMenuItems = [
-    { path: '/admin/dashboard', label: 'Overview', image: '/assets/admin-icons/overview.png' },
-    { path: '/admin/users', label: 'User Management', image: '/assets/admin-icons/users.png' },
-    { path: '/admin/assignments', label: 'Assignments', image: '/assets/admin-icons/assignments.png' },
-    { path: '/admin/courses', label: 'Courses & Questions', image: '/assets/admin-icons/courses.png' },
-    { path: '/admin/results', label: 'Student Results', image: '/assets/admin-icons/results.png' },
-    { path: '/admin/leaderboard', label: 'Leaderboard', image: '/assets/admin-icons/leaderboard.png' },
+    { path: '/admin/overview', label: 'Overview', icon: LayoutDashboard },
+    { path: '/admin/users', label: 'User Management', icon: Users },
+    { path: '/admin/assignments', label: 'Assignments', icon: ClipboardList },
+    { path: '/admin/courses', label: 'Courses & Questions', icon: GraduationCap },
+    { path: '/admin/results', label: 'Student Results', icon: FileCheck },
+    { path: '/admin/leaderboard', label: 'Leaderboard', icon: Medal },
     { path: '/admin/assets', label: 'Assets', icon: ImageIcon },
   ];
 
@@ -33,7 +36,7 @@ const Sidebar = () => {
       {/* Mobile Header */}
       <div className="md:hidden bg-white dark:bg-slate-800 p-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between sticky top-0 z-40 transition-colors duration-300">
         <div className="flex items-center gap-2">
-          <img src={theme === 'dark' ? '/assets/logo-light.png' : '/assets/logo-dark.png'} alt="Practice Hub" className="w-8 h-8 rounded-lg object-contain" />
+          <img src={`${import.meta.env.BASE_URL}assets/logo-${theme === 'dark' ? 'dark' : 'light'}.png`} alt="Practice Hub" className="w-8 h-8 rounded-lg object-contain" />
           <h1 className="text-lg font-bold text-gray-800 dark:text-white">Practice Hub</h1>
         </div>
         <button
@@ -52,7 +55,7 @@ const Sidebar = () => {
         <div className="mb-8 p-6 flex justify-center">
           <div className="relative group flex justify-center items-center">
             <img
-              src={theme === 'dark' ? '/assets/logo-light.png' : '/assets/logo-dark.png'}
+              src={`${import.meta.env.BASE_URL}assets/logo-${theme === 'dark' ? 'dark' : 'light'}.png`}
               alt="Practice Hub"
               className="w-10 h-10 rounded-lg object-contain cursor-pointer transition-transform hover:scale-110 active:scale-95"
             />
@@ -83,15 +86,7 @@ const Sidebar = () => {
                   <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-blue-600 rounded-r-full" />
                 )}
                 <div className="flex items-center justify-center relative">
-                  {item.image ? (
-                    <img
-                      src={item.image}
-                      alt={item.label}
-                      className={`w-7 h-7 object-contain transition-all duration-300 ${isActive ? 'scale-110' : 'grayscale-[40%] opacity-70 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-110'}`}
-                    />
-                  ) : (
-                    <Icon size={24} className={`transition-all duration-200 ${isActive ? 'scale-110 text-blue-600' : 'group-hover:scale-110'}`} />
-                  )}
+                  <Icon size={24} className={`transition-all duration-200 ${isActive ? 'scale-110 text-blue-600 dark:text-blue-400' : 'group-hover:scale-110'}`} />
                 </div>
 
                 {/* Menu Label Tooltip */}
@@ -151,15 +146,7 @@ const Sidebar = () => {
               className={`flex flex-col items-center gap-1 text-xs font-medium transition-colors ${isActive ? 'text-blue-600' : 'text-gray-500 dark:text-gray-400'
                 }`}
             >
-              {item.image ? (
-                <img
-                  src={item.image}
-                  alt={item.label}
-                  className={`w-6 h-6 object-contain transition-all duration-300 filter ${isActive ? 'grayscale-0 opacity-100 scale-110' : 'grayscale-[50%] opacity-70'}`}
-                />
-              ) : (
-                <Icon size={24} className={`transition-all duration-300 ${isActive ? 'scale-110 text-blue-600' : 'text-gray-500'}`} />
-              )}
+              <Icon size={22} className={`transition-all duration-300 ${isActive ? 'scale-110 text-blue-600' : 'text-gray-500 dark:text-gray-400'}`} />
               <span>{item.label}</span>
             </Link>
           );

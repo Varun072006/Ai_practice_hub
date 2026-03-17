@@ -21,29 +21,28 @@ export const evaluateCode = async (
     throw new Error(`Invalid language for ${courseName} course. Expected: ${courseName === 'Python' ? 'python' : 'c'}`);
   }
 
-  const results: TestCaseResult[] = [];
+  // Execute test cases with limited concurrency (max 2 at a time)
+  // This prevents flooding Judge0's worker queue while staying fast
+  const MAX_CONCURRENCY = 2;
 
-  // Execute test cases sequentially (parallel could cause resource issues)
-  // Each execution has a 10-second timeout, so total time is bounded
-  for (const testCase of testCases) {
+  const executeOne = async (testCase: { id: string; input_data: string; expected_output: string }): Promise<TestCaseResult> => {
     try {
       const startTime = Date.now();
 
-      // Execute code with test case input (with 10s timeout per test case)
+      // Execute code with test case input (with timeout handled by Judge0 config)
       const executionResult = await executeCode(code, language, testCase.input_data);
       const executionTime = Date.now() - startTime;
 
       // If there's an error, test case fails
       if (executionResult.error) {
-        results.push({
+        return {
           test_case_id: testCase.id,
           passed: false,
           expected_output: testCase.expected_output,
           actual_output: executionResult.output || '',
           error_message: executionResult.error,
           execution_time: executionTime,
-        });
-        continue;
+        };
       }
 
       // Normalize outputs for comparison
@@ -53,27 +52,53 @@ export const evaluateCode = async (
       // Strict comparison - must match exactly after normalization
       const passed = expectedOutput === actualOutput;
 
-      results.push({
+      return {
         test_case_id: testCase.id,
         passed,
         expected_output: testCase.expected_output,
         actual_output: executionResult.output || '',
         error_message: undefined,
         execution_time: executionTime,
-      });
+      };
     } catch (error: any) {
-      results.push({
+      return {
         test_case_id: testCase.id,
         passed: false,
         expected_output: testCase.expected_output,
         actual_output: '',
         error_message: error.message || 'Execution error',
-      });
+      };
     }
-  }
+  };
 
+  const results = await runWithConcurrency(testCases, executeOne, MAX_CONCURRENCY);
   return results;
 };
+
+// Run async tasks with a concurrency limit
+async function runWithConcurrency<T, R>(
+  items: T[],
+  fn: (item: T) => Promise<R>,
+  concurrency: number
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let index = 0;
+
+  const worker = async () => {
+    while (index < items.length) {
+      const i = index++;
+      results[i] = await fn(items[i]);
+    }
+  };
+
+  const workers = Array.from(
+    { length: Math.min(concurrency, items.length) },
+    () => worker()
+  );
+  await Promise.all(workers);
+  return results;
+}
+
 
 const normalizeOutput = (output: string): string => {
   if (!output) return '';

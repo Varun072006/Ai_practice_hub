@@ -32,8 +32,22 @@ Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 
 # ------ Step 1: Build images using docker compose (uses .env.prod for build args) ------
-Write-Host "[1/4] Building Docker images..." -ForegroundColor Yellow
+Write-Host "[1/4] Loading environment variables from .env.prod for build args..." -ForegroundColor Yellow
+$envLines = Get-Content ".env.prod" | Where-Object { $_ -match "=" -and -not $_.StartsWith("#") }
+foreach ($line in $envLines) {
+    if ($line -match "^.*=$") { continue } # Skip empty values
+    $parts = $line -split "=", 2
+    $varName = $parts[0].Trim()
+    $varValue = $parts[1].Trim()
+    Set-Item -Path "Env:$varName" -Value $varValue
+}
+
+Write-Host "VITE_API_URL: $env:VITE_API_URL" -ForegroundColor Cyan
+Write-Host "GOOGLE_CLIENT_ID: $env:GOOGLE_CLIENT_ID" -ForegroundColor Cyan
+
+Write-Host "[1.5/4] Building Docker images..." -ForegroundColor Yellow
 docker compose --env-file .env.prod build
+
 if ($LASTEXITCODE -ne 0) {
     Write-Host "BUILD FAILED!" -ForegroundColor Red
     exit 1
@@ -67,7 +81,7 @@ Write-Host "  - ${FRONTEND_IMAGE}:${Tag}"
 Write-Host "  - ${BACKEND_IMAGE}:${Tag}"
 Write-Host "  - ${MYSQL_IMAGE}:${Tag}"
 Write-Host ""
-Write-Host "Next step — On the server, run:" -ForegroundColor Cyan
+Write-Host "Next step - On the server, run:" -ForegroundColor Cyan
 Write-Host "  export IMAGE_TAG=$Tag" -ForegroundColor White
 Write-Host "  ./deploy.sh" -ForegroundColor White
 Write-Host ""

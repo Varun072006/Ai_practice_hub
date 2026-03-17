@@ -291,7 +291,7 @@ const CourseLevels = () => {
                         state: {
                           sessionType:
                             isWebCourse &&
-                            (courseTitle.includes('html') || courseTitle.includes('css'))
+                              (courseTitle.includes('html') || courseTitle.includes('css'))
                               ? 'html-css-challenge'
                               : 'coding',
                         },

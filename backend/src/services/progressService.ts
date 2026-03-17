@@ -96,7 +96,7 @@ export const getLeaderboard = async (limit: number = 10) => {
   try {
     console.log(`[getLeaderboard] Fetching leaderboard with limit: ${limit}`);
 
-    // First, try to get real data
+    // Get real data only - no dummy/fake data
     // Count levels from completed coding/html-css sessions directly for more accurate tracking
     const result = await pool.query(
       `SELECT 
@@ -119,50 +119,18 @@ export const getLeaderboard = async (limit: number = 10) => {
     );
 
     const rows = getRows(result);
-    // If we have data, return it
-    if (rows.length > 0) {
-      console.log(`[getLeaderboard] Returning ${rows.length} real leaderboard entries`);
-      return rows.map((row: any, index: number) => ({
-        rank: index + 1,
-        ...row,
-        levels_cleared: parseInt(row.levels_cleared) || 0,
-        problems_solved: parseInt(row.problems_solved) || 0,
-        efficiency: parseFloat(row.efficiency) || 0,
-      }));
-    }
-
-    console.warn(`[getLeaderboard] No real data found, returning fake data`);
-    // Otherwise, return fake data
-    const fakeData = [
-      { id: 'fake-1', name: 'Rajesh Kumar', roll_number: 'STU001', problems_solved: 45, levels_cleared: 12, efficiency: 92 },
-      { id: 'fake-2', name: 'Priya Sharma', roll_number: 'STU002', problems_solved: 42, levels_cleared: 11, efficiency: 89 },
-      { id: 'fake-3', name: 'Amit Patel', roll_number: 'STU003', problems_solved: 38, levels_cleared: 10, efficiency: 87 },
-      { id: 'fake-4', name: 'Sneha Reddy', roll_number: 'STU004', problems_solved: 35, levels_cleared: 9, efficiency: 85 },
-      { id: 'fake-5', name: 'Vikram Singh', roll_number: 'STU005', problems_solved: 32, levels_cleared: 8, efficiency: 83 },
-      { id: 'fake-6', name: 'Anjali Mehta', roll_number: 'STU006', problems_solved: 28, levels_cleared: 7, efficiency: 80 },
-      { id: 'fake-7', name: 'Rohit Verma', roll_number: 'STU007', problems_solved: 25, levels_cleared: 6, efficiency: 78 },
-      { id: 'fake-8', name: 'Kavya Nair', roll_number: 'STU008', problems_solved: 22, levels_cleared: 5, efficiency: 75 },
-      { id: 'fake-9', name: 'Arjun Desai', roll_number: 'STU009', problems_solved: 18, levels_cleared: 4, efficiency: 72 },
-      { id: 'fake-10', name: 'Divya Joshi', roll_number: 'STU010', problems_solved: 15, levels_cleared: 3, efficiency: 70 },
-    ];
-
-    return fakeData.slice(0, limit).map((row, index) => ({
+    console.log(`[getLeaderboard] Returning ${rows.length} real leaderboard entries`);
+    return rows.map((row: any, index: number) => ({
       rank: index + 1,
       ...row,
+      levels_cleared: parseInt(row.levels_cleared) || 0,
+      problems_solved: parseInt(row.problems_solved) || 0,
+      efficiency: parseFloat(row.efficiency) || 0,
     }));
   } catch (error: any) {
     console.error('[getLeaderboard] Error:', error);
     console.error('[getLeaderboard] Error stack:', error.stack);
-    // Return fake data on error
-    const fakeData = [
-      { id: 'fake-1', name: 'Rajesh Kumar', roll_number: 'STU001', problems_solved: 45, levels_cleared: 12, efficiency: 92 },
-      { id: 'fake-2', name: 'Priya Sharma', roll_number: 'STU002', problems_solved: 42, levels_cleared: 11, efficiency: 89 },
-      { id: 'fake-3', name: 'Amit Patel', roll_number: 'STU003', problems_solved: 38, levels_cleared: 10, efficiency: 87 },
-    ];
-    return fakeData.slice(0, limit).map((row, index) => ({
-      rank: index + 1,
-      ...row,
-    }));
+    return [];
   }
 };
 

@@ -83,7 +83,7 @@ const Login = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <img src={theme === 'dark' ? '/assets/logo-light.png' : '/assets/logo-dark.png'} alt="Practice Hub" className="w-20 h-20 object-contain rounded-xl shadow-lg bg-white dark:bg-slate-800 p-2" />
+            <img src={`${import.meta.env.BASE_URL}assets/logo-${theme === 'dark' ? 'dark' : 'light'}.png`} alt="Practice Hub" className="w-20 h-20 object-contain rounded-xl shadow-lg bg-white dark:bg-slate-800 p-2" />
           </div>
           <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">Practice Hub</h1>
           <p className="text-gray-600 dark:text-gray-400">Welcome back! Please enter your details.</p>
@@ -179,12 +179,6 @@ const Login = () => {
             </div>
           )}
 
-          <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
-            New to Practice Hub?{' '}
-            <Link to="/register" className="text-blue-600 dark:text-blue-400 hover:underline">
-              Create an account
-            </Link>
-          </div>
         </div>
       </div>
     </div>

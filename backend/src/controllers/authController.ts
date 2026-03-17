@@ -30,8 +30,12 @@ export const loginController = async (req: Request, res: Response): Promise<void
       res.status(401).json({
         error: 'Invalid credentials',
       });
+    } else if (errorMessage.includes('Database connection failed') || errorMessage.includes('ECONNREFUSED')) {
+      res.status(503).json({ 
+        error: 'Database connection failed. Please ensure Docker Desktop and the MySQL container are running.' 
+      });
     } else {
-      res.status(401).json({ error: errorMessage });
+      res.status(500).json({ error: errorMessage });
     }
   }
 };

@@ -15,8 +15,19 @@ initializeUsers().catch((error) => {
   logger.debug('Initialization error:', error);
 });
 
-// Initialize Judge0 Language Map
-initializeJudge0Languages();
+// Initialize Judge0 Language Map (retry because Judge0 may not be ready yet)
+(async () => {
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      await initializeJudge0Languages();
+      logger.info('Judge0 language map initialized successfully.');
+      break;
+    } catch (err) {
+      logger.warn(`Judge0 language init attempt ${attempt}/5 failed, retrying in ${attempt * 3}s...`);
+      if (attempt < 5) await new Promise(r => setTimeout(r, attempt * 3000));
+    }
+  }
+})();
 
 const server = app.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);

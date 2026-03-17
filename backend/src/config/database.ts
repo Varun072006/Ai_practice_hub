@@ -20,7 +20,7 @@ if (process.env.DATABASE_URL) {
     password: url.password,
     database: url.pathname.slice(1), // Remove leading '/'
     waitForConnections: true,
-    connectionLimit: 10,
+    connectionLimit: 50,
     queueLimit: 0,
     multipleStatements: true,
     connectTimeout: 60000,
@@ -40,7 +40,7 @@ if (process.env.DATABASE_URL) {
     password: process.env.DB_PASSWORD || 'practicehub123',
     database: process.env.DB_NAME || 'practice_hub',
     waitForConnections: true,
-    connectionLimit: 10,
+    connectionLimit: 50,
     queueLimit: 0,
     multipleStatements: true,
     connectTimeout: 60000,

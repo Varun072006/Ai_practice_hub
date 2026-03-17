@@ -3,12 +3,12 @@ import axios from 'axios';
 import API_BASE_URL from '../config/api';
 
 const api = axios.create({
-  // If API_BASE_URL already contains /api, don't append it again
-  baseURL: API_BASE_URL.endsWith('/api') ? API_BASE_URL : `${API_BASE_URL}/api`,
+  // Ensure baseURL ends with a slash so that relative paths append correctly
+  baseURL: API_BASE_URL.endsWith('/') ? API_BASE_URL : `${API_BASE_URL}/`,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 60000,
+  timeout: 120000,
 });
 
 // Add token to requests

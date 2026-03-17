@@ -33,13 +33,16 @@ dotenv.config();
 const app: Application = express();
 
 // Security and Optimization Middlewares
-app.use(helmet());
+app.use(helmet({
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+  contentSecurityPolicy: false, // Disable CSP for easier integration with CDNs/external scripts if needed, or customize it
+}));
 app.use(compression());
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
 // CORS Configuration: Origins must NOT contain paths
-const defaultOrigins = ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'https://pcdp.bitsathy.ac.in'];
+const defaultOrigins = ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'https://pcdp.bitsathy.ac.in', 'https://pcdp.bitsathy.ac.in/aiportal', 'https://pcdp.bitsathy.ac.in/aipracticehub'];
 
 const allowedOrigins: string[] = (() => {
   const raw = process.env.FRONTEND_URL;
@@ -55,7 +58,7 @@ const allowedOrigins: string[] = (() => {
     }
   });
 
-  return [...new Set([...origins, 'https://pcdp.bitsathy.ac.in'])];
+  return [...new Set([...origins, 'https://pcdp.bitsathy.ac.in/aiportal/aipracticehub'])];
 })();
 
 app.use(cors({
@@ -90,65 +93,58 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Request logging (only in development)
-if (process.env.NODE_ENV === 'development' || process.env.LOG_LEVEL === 'debug') {
-  app.use((req, res, next) => {
-    logger.debug(`Incoming Request ${req.method} ${req.url}`);
-    next();
-  });
-}
+// Request logging (Enabled in production for initial routing diagnostics)
+app.use((req, res, next) => {
+  logger.info(`[Router] ${req.method} ${req.originalUrl} -> ${req.url}`);
+  next();
+});
 
-// Root route
-app.get('/', (req, res) => {
+// Create a combined API router
+const apiRouter = express.Router();
+
+// Root sub-route
+apiRouter.get('/', (req, res) => {
   res.json({
     message: 'AI Practice Hub API',
     version: '1.0.0',
     endpoints: {
       health: '/health',
       auth: '/api/auth',
-      users: '/api/users',
-      questions: '/api/questions',
-      courses: '/api/courses',
-      sessions: '/api/sessions',
-      results: '/api/results',
-      progress: '/api/progress',
-      admin: '/api/admin',
-      skills: '/api/skills',
-      onboarding: '/api/onboarding',
-      practice: '/api/practice',
-      learningPath: '/api/learning-path',
-      diagnostic: '/api/diagnostic',
-      analytics: '/api/analytics',
-      intelligence: '/api/intelligence',
-      profile: '/api/profile'
+      users: '/api/users'
     }
   });
 });
 
 // Health check
-app.get('/health', (req, res) => {
+apiRouter.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/questions', questionRoutes);
-app.use('/api/courses', courseRoutes);
-app.use('/api/sessions', sessionRoutes);
-app.use('/api/results', resultRoutes);
-app.use('/api/progress', progressRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/skills', skillRoutes);
-app.use('/api/onboarding', onboardingRoutes);
-app.use('/api/practice', skillPracticeRoutes);
-app.use('/api/learning-path', adaptivePathRoutes);
-app.use('/api/diagnostic', diagnosticRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/intelligence', intelligenceRoutes);
-app.use('/api/seed', seedRoutes);
-app.use('/api/profile', profileRoutes);
-app.use('/api/assets', assetRoutes);
+// Mount all feature routes on the apiRouter
+apiRouter.use('/auth', authRoutes);
+apiRouter.use('/users', userRoutes);
+apiRouter.use('/questions', questionRoutes);
+apiRouter.use('/courses', courseRoutes);
+apiRouter.use('/sessions', sessionRoutes);
+apiRouter.use('/results', resultRoutes);
+apiRouter.use('/progress', progressRoutes);
+apiRouter.use('/admin', adminRoutes);
+apiRouter.use('/skills', skillRoutes);
+apiRouter.use('/onboarding', onboardingRoutes);
+apiRouter.use('/practice', skillPracticeRoutes);
+apiRouter.use('/learning-path', adaptivePathRoutes);
+apiRouter.use('/diagnostic', diagnosticRoutes);
+apiRouter.use('/analytics', analyticsRoutes);
+apiRouter.use('/intelligence', intelligenceRoutes);
+apiRouter.use('/seed', seedRoutes);
+apiRouter.use('/profile', profileRoutes);
+apiRouter.use('/assets', assetRoutes);
+
+// Mounting Strategy: 
+// 1. Mount at /api to support standard /api/... calls
+// 2. Mount at / as a fallback if Nginx strips the prefix entirely
+app.use('/api', apiRouter);
+app.use('/', apiRouter);
 
 
 // Error handling

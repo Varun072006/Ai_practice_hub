@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { User, Mail, Lock, Loader } from 'lucide-react';
 
 const Register = () => {
@@ -15,6 +16,7 @@ const Register = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const { register } = useAuth();
+    const { theme } = useTheme();
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -48,7 +50,7 @@ const Register = () => {
         <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8 transition-colors duration-300">
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
                 <div className="flex justify-center mb-4">
-                    <img src="/assets/logo.png" alt="Practice Hub" className="w-16 h-16 object-contain rounded-xl shadow-md bg-white dark:bg-slate-800 p-2" />
+                    <img src={`${import.meta.env.BASE_URL}assets/logo-${theme === 'dark' ? 'dark' : 'light'}.png`} alt="Practice Hub" className="w-16 h-16 object-contain rounded-xl shadow-md bg-white dark:bg-slate-800 p-2" />
                 </div>
                 <h2 className="mt-2 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
                     Create your account

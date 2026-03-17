@@ -226,7 +226,7 @@ const AdminAssets = () => {
                                 {/* Image Preview */}
                                 <div className="aspect-square bg-slate-100 dark:bg-slate-900 relative overflow-hidden">
                                     <img
-                                        src={asset.path || `/assets/${asset.name}`}
+                                        src={asset.path || `${import.meta.env.BASE_URL}assets/${asset.name}`}
                                         alt={asset.name}
                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                     />
@@ -234,7 +234,7 @@ const AdminAssets = () => {
                                     {/* Overlay Actions */}
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-[2px]">
                                         <button
-                                            onClick={() => window.open(asset.path || `/assets/${asset.name}`, '_blank')}
+                                            onClick={() => window.open(asset.path || `${import.meta.env.BASE_URL}assets/${asset.name}`, '_blank')}
                                             className="p-2 bg-white/20 text-white rounded-lg hover:bg-white hover:text-blue-600 transition-all backdrop-blur-md"
                                             title="View Full Size"
                                         >
@@ -262,7 +262,7 @@ const AdminAssets = () => {
                                     </div>
 
                                     <button
-                                        onClick={() => copyToClipboard(asset.path || `/assets/${asset.name}`)}
+                                        onClick={() => copyToClipboard(asset.path || `${import.meta.env.BASE_URL}assets/${asset.name}`)}
                                         className={`
                                             flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all w-full border
                                             ${copiedId === (asset.path || `/assets/${asset.name}`)
@@ -271,7 +271,7 @@ const AdminAssets = () => {
                                             }
                                         `}
                                     >
-                                        {copiedId === (asset.path || `/assets/${asset.name}`) ? (
+                                        {copiedId === (asset.path || `${import.meta.env.BASE_URL}assets/${asset.name}`) ? (
                                             <> <Check size={14} /> Copied! </>
                                         ) : (
                                             <> <Copy size={14} /> Copy Path </>

@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import Editor from '@monaco-editor/react';
 import api from '../services/api';
-import { Play, Send, CheckCircle, Lock, Check, X, Lightbulb, X as CloseIcon } from 'lucide-react';
+import { Play, Send, CheckCircle, Lock, Check, X, Lightbulb, X as CloseIcon, ArrowLeft, AlertTriangle } from 'lucide-react';
 
 // Course-to-language mapping (must match backend validation)
 const COURSE_LANGUAGE_MAP = {
@@ -307,36 +307,51 @@ const Practice = () => {
   };
 
   return (
-    <Layout>
-      <div className="flex-1 flex flex-col md:flex-row pb-20 md:pb-0 h-full bg-white dark:bg-slate-900 max-w-full overflow-hidden">
-        <div className="w-full md:flex-1 p-6 overflow-y-auto bg-gray-50 dark:bg-slate-900">
-          {/* Question selection row */}
-          <div className="mb-4 flex gap-2 flex-wrap">
+    <div className="flex flex-col h-screen bg-gray-50 dark:bg-slate-900 overflow-hidden font-sans">
+      {/* Top Header Bar */}
+      <div className="h-16 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between px-4 md:px-6 shrink-0 z-10 shadow-sm">
+        <div>
+          <button onClick={() => navigate(-1)} className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-md text-sm font-medium text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+            <ArrowLeft size={16} /> Back
+          </button>
+        </div>
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-md shadow-inner">
+          <span className="text-xs text-gray-500 font-semibold tracking-wide uppercase">Time:</span>
+          <span className="text-sm font-bold text-gray-800 dark:text-white font-mono">{formatTime(timeLeft)}</span>
+        </div>
+        <div className="flex items-center gap-2 md:gap-3">
+          <button onClick={handleRun} disabled={isRunning} className="flex items-center border border-gray-300 dark:border-slate-600 justify-center px-4 py-2 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-md hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 font-medium text-sm shadow-sm">
+            {isRunning ? <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin mr-2"></div> : <Play size={16} className="mr-1" />}
+            Run
+          </button>
+          <button onClick={handleSubmit} disabled={isRunning} className="flex items-center justify-center gap-1.5 px-5 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors font-medium shadow-sm disabled:opacity-50">
+            <Send size={15} /> <span className="hidden sm:inline">Submit</span>
+          </button>
+          <button onClick={() => handleFinish(false)} className="flex items-center justify-center gap-1.5 px-5 py-2 bg-green-500 text-white rounded-md text-sm hover:bg-green-600 transition-colors font-medium shadow-sm">
+            <CheckCircle size={15} /> <span className="hidden sm:inline">Finish</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 flex flex-col md:flex-row h-full max-w-full overflow-hidden p-4 md:p-6 gap-6">
+        {/* Left Side: Question content */}
+        <div className="w-full md:w-5/12 overflow-y-auto bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 px-6 py-6 custom-scrollbar">
+          {/* Question selection tabs */}
+          <div className="mb-6 flex gap-2 flex-wrap pb-4 border-b border-gray-100 dark:border-slate-700">
             {session.questions.map((q, index) => {
               return (
                 <button
                   key={index}
                   onClick={() => {
-                    // Save current code before switching
-                    setUserCodeByQuestion((prev) => ({
-                      ...prev,
-                      [currentQuestionIndex]: code,
-                    }));
-
+                    setUserCodeByQuestion((prev) => ({ ...prev, [currentQuestionIndex]: code }));
                     setCurrentQuestionIndex(index);
-
-                    // Load saved code or start with empty code
                     const savedCode = userCodeByQuestion[index];
                     setCode(savedCode !== undefined ? savedCode : '');
-
-                    // Clear results when switching questions
-                    setSubmitResult(null);
-                    setOutput('');
-                    setLastRunError(null);
+                    setSubmitResult(null); setOutput(''); setLastRunError(null);
                   }}
-                  className={`px-4 py-2 rounded-lg font-medium border ${index === currentQuestionIndex
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 border-gray-300 dark:border-slate-600'
+                  className={`px-4 py-1.5 rounded-md font-semibold text-sm transition-all duration-200 ${index === currentQuestionIndex
+                      ? 'bg-blue-600 text-white shadow transform scale-105'
+                      : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-600'
                     }`}
                 >
                   Q{index + 1}
@@ -345,8 +360,8 @@ const Practice = () => {
             })}
           </div>
 
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md dark:shadow-slate-900/50 p-6 mb-4 border dark:border-slate-700">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
               {currentQuestion.title}
             </h2>
             <div className="prose dark:prose-invert max-w-none mb-4">
@@ -391,68 +406,49 @@ const Practice = () => {
                 </div>
               )}
 
-              <h3 className="font-semibold text-gray-800 dark:text-white mb-2">Test Cases:</h3>
-              <style>{`
-            @keyframes blink-green {
-              0%, 100% { opacity: 1; }
-              50% { opacity: 0.5; }
-            }
-            @keyframes blink-red {
-              0%, 100% { opacity: 1; }
-              50% { opacity: 0.5; }
-            }
-            .test-case-passed {
-              animation: blink-green 1s ease-in-out 3;
-            }
-            .test-case-failed {
-              animation: blink-red 1s ease-in-out 3;
-            }
-          `}</style>
-              <div className="space-y-2">
+              <h3 className="font-semibold text-gray-800 dark:text-white mb-4">Test Cases:</h3>
+              <div className="space-y-4">
                 {visibleTestCases.map((tc, index) => {
                   const status = getTestCaseStatus(tc.id);
                   const result = currentTestResults.find((r) => r.test_case_id === tc.id);
+
+                  let borderClass = 'border-l-4 border-gray-200 dark:border-slate-700';
+                  if (status === 'passed') borderClass = 'border-l-4 border-green-500';
+                  if (status === 'failed') borderClass = 'border-l-4 border-red-500';
+
                   return (
-                    <div
-                      key={tc.id}
-                      className={`p-3 rounded border text-sm ${status === 'passed'
-                          ? 'border-green-500 bg-green-50 dark:bg-green-900/20 test-case-passed'
-                          : status === 'failed'
-                            ? 'border-red-500 bg-red-50 dark:bg-red-900/20 test-case-failed'
-                            : 'border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800'
-                        }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-medium text-gray-900 dark:text-white">
-                          Test Case {index + 1}
-                        </span>
-                        {status === 'passed' && <Check className="text-green-600" size={18} />}
-                        {status === 'failed' && <X className="text-red-600" size={18} />}
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div key={tc.id} className={`p-5 rounded-r-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm transition-all duration-200 hover:shadow-md ${borderClass}`}>
+                      <h4 className="font-bold text-gray-900 dark:text-white mb-3 text-sm tracking-wide">Test Case {index + 1}</h4>
+
+                      {status === 'passed' && (
+                        <div className="flex items-center gap-1.5 text-green-600 dark:text-green-500 mb-4 font-bold text-xs tracking-wider uppercase">
+                          <CheckCircle size={16} /> PASSED
+                        </div>
+                      )}
+                      {status === 'failed' && (
+                        <div className="flex items-center gap-1.5 text-red-600 dark:text-red-500 mb-4 font-bold text-xs tracking-wider uppercase">
+                          <AlertTriangle size={16} /> FAILED
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
                         <div>
-                          <span className="font-medium text-gray-900 dark:text-white">Input:</span>
-                          <pre className="mt-1 text-gray-700 dark:text-slate-300 whitespace-pre-wrap">
-                            {tc.input_data}
-                          </pre>
+                          <div className="text-gray-400 dark:text-slate-500 font-bold mb-1.5 uppercase tracking-widest text-[10px]">Input:</div>
+                          <div className="font-mono text-gray-700 dark:text-slate-300 whitespace-pre-wrap">{tc.input_data}</div>
                         </div>
                         <div>
-                          <span className="font-medium text-gray-900 dark:text-white">
-                            Expected Output:
-                          </span>
-                          <pre className="mt-1 text-gray-700 dark:text-slate-300 whitespace-pre-wrap">
-                            {tc.expected_output}
-                          </pre>
+                          <div className="text-gray-400 dark:text-slate-500 font-bold mb-1.5 uppercase tracking-widest text-[10px]">Expected Output:</div>
+                          <div className="font-mono text-gray-700 dark:text-slate-300 whitespace-pre-wrap">{tc.expected_output}</div>
                         </div>
                         {result && !result.passed && (
-                          <div className="md:col-span-2">
-                            <span className="font-medium text-red-600">Actual Output:</span>
-                            <pre className="mt-1 text-red-700 whitespace-pre-wrap">
+                          <div className="md:col-span-2 mt-2 pt-4 border-t border-gray-100 dark:border-slate-700/50">
+                            <div className="text-red-400 dark:text-red-500 font-bold mb-1.5 uppercase tracking-widest text-[10px]">Actual Output:</div>
+                            <div className="font-mono text-red-600 dark:text-red-400 whitespace-pre-wrap bg-red-50 dark:bg-red-900/10 p-3 rounded-md border border-red-100 dark:border-red-900/30">
                               {result.actual_output || 'No output'}
-                            </pre>
+                            </div>
                             {result.error_message && (
-                              <div className="mt-1 text-red-600 text-xs">
-                                Error: {result.error_message}
+                              <div className="mt-2 text-red-500 font-mono text-xs p-3 bg-red-50 dark:bg-red-900/10 rounded-md border border-red-100 dark:border-red-900/30">
+                                {result.error_message}
                               </div>
                             )}
                           </div>
@@ -464,38 +460,19 @@ const Practice = () => {
 
                 {hiddenTestCases.map((tc, index) => {
                   const status = getTestCaseStatus(tc.id);
+                  let borderClass = 'border-gray-200 dark:border-slate-700';
+                  if (status === 'passed') borderClass = 'border-l-4 border-green-500';
+                  if (status === 'failed') borderClass = 'border-l-4 border-red-500';
+
                   return (
-                    <div
-                      key={tc.id}
-                      className={`p-3 rounded border flex items-center justify-between text-sm ${status === 'passed'
-                          ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-                          : status === 'failed'
-                            ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
-                            : 'border-gray-300 dark:border-slate-700 bg-gray-100 dark:bg-slate-800'
-                        }`}
-                    >
-                      <span className="font-medium text-gray-900 dark:text-white">
+                    <div key={tc.id} className={`p-4 rounded-xl border bg-white dark:bg-slate-800 shadow-sm flex items-center justify-between transition-all duration-200 hover:shadow-md ${borderClass} ${status !== 'pending' ? 'rounded-l-none' : ''}`}>
+                      <span className="font-medium text-sm text-gray-700 dark:text-slate-300">
                         Hidden Test Case {visibleTestCases.length + index + 1}
                       </span>
                       <div className="flex items-center gap-2">
-                        {status === 'passed' && (
-                          <>
-                            <Check className="text-green-600" size={16} />
-                            <span className="text-green-600 text-sm">Passed</span>
-                          </>
-                        )}
-                        {status === 'failed' && (
-                          <>
-                            <X className="text-red-600" size={16} />
-                            <span className="text-red-600 text-sm">Failed</span>
-                          </>
-                        )}
-                        {status === 'pending' && (
-                          <>
-                            <Lock size={16} className="text-gray-600 dark:text-slate-400" />
-                            <span className="text-gray-600 dark:text-slate-400">Locked</span>
-                          </>
-                        )}
+                        {status === 'passed' && <span className="text-green-600 dark:text-green-500 font-bold text-xs tracking-wider uppercase flex items-center gap-1.5"><CheckCircle size={15} /> PASSED</span>}
+                        {status === 'failed' && <span className="text-red-600 dark:text-red-500 font-bold text-xs tracking-wider uppercase flex items-center gap-1.5"><AlertTriangle size={15} /> FAILED</span>}
+                        {status === 'pending' && <span className="text-gray-400 dark:text-slate-500 font-bold text-xs tracking-wider flex items-center gap-1.5 uppercase"><Lock size={15} /> Locked</span>}
                       </div>
                     </div>
                   );
@@ -505,57 +482,15 @@ const Practice = () => {
           </div>
         </div>
 
-        <div className="w-full md:w-1/2 bg-white dark:bg-slate-800 border-t md:border-t-0 md:border-l border-gray-200 dark:border-slate-700 flex flex-col h-[500px] md:h-auto">
-          {/* Top Bar: Timer, Run, Submit, Finish Test */}
-          <div className="p-3 md:p-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between gap-2 md:gap-3 bg-gray-50 dark:bg-slate-800 flex-wrap">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg">
-                <span className="text-sm font-medium text-gray-600 dark:text-slate-400">Time:</span>
-                <span className="text-lg font-semibold text-gray-800 dark:text-white font-mono">
-                  {formatTime(timeLeft)}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleRun}
-                disabled={isRunning}
-                className={`flex items-center justify-center p-2.5 bg-gray-200 dark:bg-slate-600 text-gray-700 dark:text-slate-200 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors ${isRunning ? 'opacity-50 cursor-not-allowed' : ''}`}
-                title={isRunning ? 'Running...' : 'Run'}
-              >
-                {isRunning ? (
-                  <div className="w-5 h-5 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <Play size={20} />
-                )}
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={isRunning}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-              >
-                <Send size={18} />
-                <span className="hidden sm:inline">Submit</span>
-              </button>
-              <button
-                onClick={() => handleFinish(false)}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-              >
-                <CheckCircle size={18} />
-                <span className="hidden sm:inline">Finish</span>
-              </button>
-            </div>
-          </div>
-
+        <div className="w-full md:w-7/12 bg-[#0f172a] rounded-xl overflow-hidden flex flex-col border border-slate-700 shadow-lg h-[600px] md:h-auto">
           {/* Code Editor */}
-          <div className="flex-1" style={{ minHeight: '400px' }}>
+          <div className="flex-1 min-h-[40vh] border-b border-slate-800">
             <Editor
               height="100%"
               language={language}
               value={code}
               onChange={(value) => {
                 setCode(value || '');
-                // Update persistent state as user types (debouncing could be added if performance issues arise)
                 setUserCodeByQuestion((prev) => ({
                   ...prev,
                   [currentQuestionIndex]: value || '',
@@ -565,104 +500,94 @@ const Practice = () => {
               options={{
                 minimap: { enabled: false },
                 fontSize: 14,
+                fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
                 cursorBlinking: 'smooth',
+                padding: { top: 16 },
                 scrollbar: { verticalScrollbarSize: 8, horizontalScrollbarSize: 8 },
               }}
             />
           </div>
 
-          {/* Terminal/Input Area - Enlarged */}
-          <div
-            className="border-t border-gray-200 dark:border-slate-700 bg-gray-900 flex flex-col"
-            style={{ minHeight: '200px', maxHeight: '300px' }}
-          >
-            <div className="px-4 py-2 border-b border-gray-700 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">
-                  Custom Input Terminal
-                </span>
-                <label className="flex items-center gap-2 ml-4">
-                  <input
-                    type="checkbox"
-                    checked={useCustomInput}
-                    onChange={(e) => setUseCustomInput(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-blue-600 focus:ring-blue-500 focus:ring-2"
-                  />
-                  <span className="text-sm text-gray-400">Enable custom input</span>
+          {/* Combined Console Area */}
+          <div className="bg-[#1e293b] flex flex-col shrink-0" style={{ maxHeight: '45vh', minHeight: '30vh' }}>
+            {/* Console Header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-700/50 bg-[#0f172a] shadow-sm z-10">
+              <div className="flex items-center gap-6">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Console Output</span>
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input type="checkbox" checked={useCustomInput} onChange={(e) => setUseCustomInput(e.target.checked)} className="w-3.5 h-3.5 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-0 focus:ring-offset-0 cursor-pointer" />
+                  <span className="text-[11px] font-bold text-slate-500 group-hover:text-slate-400 transition-colors uppercase tracking-wider">Enable Custom Input</span>
                 </label>
               </div>
+              {lastRunError && (
+                <span className="text-[11px] font-bold text-red-500 uppercase tracking-widest bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">Execution Error</span>
+              )}
             </div>
-            <div className="flex-1 p-4">
-              <textarea
-                value={customInput}
-                onChange={(e) => setCustomInput(e.target.value)}
-                placeholder={
-                  useCustomInput
-                    ? 'Enter your custom input here...'
-                    : 'Enable custom input to enter test data...'
-                }
-                disabled={!useCustomInput}
-                className="w-full h-full px-4 py-3 bg-gray-800 text-green-400 font-mono text-sm rounded-lg border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ minHeight: '150px' }}
-              />
-            </div>
-          </div>
 
-          {/* Bottom Section: Results and Output */}
-          <div className="p-4 border-t border-gray-200 dark:border-slate-700 space-y-4 bg-white dark:bg-slate-800">
-            {/* AI Hint Panel */}
-
-            {/* LeetCode-style Submit Result Panel */}
-            {submitResult && (
-              <div
-                className={`p-4 rounded-lg border-l-4 ${submitResult.status === 'Accepted'
-                    ? 'bg-green-50 dark:bg-green-900/20 border-green-500'
-                    : 'bg-red-50 dark:bg-red-900/20 border-red-500'
-                  }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span
-                    className={`text-lg font-bold ${submitResult.status === 'Accepted' ? 'text-green-600' : 'text-red-600'
-                      }`}
-                  >
-                    {submitResult.status}
-                  </span>
-                  {submitResult.runtime && (
-                    <span className="text-sm text-gray-500">Runtime: {submitResult.runtime}ms</span>
+            {/* Console Body */}
+            <div className="flex-1 overflow-y-auto p-5 custom-scrollbar bg-[#111827]">
+              {useCustomInput ? (
+                <div className="h-full flex flex-col gap-3">
+                  <span className="text-xs text-slate-400 font-bold tracking-widest uppercase">Custom Input:</span>
+                  <textarea
+                    value={customInput}
+                    onChange={(e) => setCustomInput(e.target.value)}
+                    placeholder="Enter your custom input here..."
+                    className="w-full min-h-[120px] p-4 bg-[#0f172a] text-emerald-400 font-mono text-sm rounded-lg border border-slate-700/50 focus:border-slate-500 focus:ring-1 focus:ring-slate-500 focus:outline-none resize-y placeholder-slate-600 shadow-inner"
+                  />
+                  {(output || lastRunError) && (
+                    <div className="mt-2">
+                      <span className="text-xs text-slate-400 font-bold tracking-widest uppercase block mb-2">Output:</span>
+                      <pre className="font-mono text-sm whitespace-pre-wrap text-slate-300 p-4 bg-[#0f172a] rounded-lg border border-slate-700/50 shadow-inner overflow-x-auto">
+                        {lastRunError && <span className="text-red-400">{lastRunError}{'\n'}</span>}
+                        {output}
+                      </pre>
+                    </div>
                   )}
                 </div>
-                <div className="text-sm text-gray-700 dark:text-slate-300">
-                  <span className="font-medium">{submitResult.passed}</span> /{' '}
-                  <span>{submitResult.total}</span> test cases passed
-                </div>
-                <button
-                  onClick={() => setSubmitResult(null)}
-                  className="mt-2 text-xs text-gray-500 hover:text-gray-700"
-                >
-                  Dismiss
-                </button>
-              </div>
-            )}
+              ) : (
+                <div className="h-full">
+                  {!output && !lastRunError && !submitResult ? (
+                    <div className="flex items-center justify-center h-full min-h-[100px]">
+                      <span className="text-slate-500 font-mono text-sm">Run code to see output...</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-5">
+                      {/* Submit Result */}
+                      {submitResult && (
+                        <div className={`p-4 rounded-lg border ${submitResult.status === 'Accepted' ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className={`text-lg font-bold ${submitResult.status === 'Accepted' ? 'text-green-500' : 'text-red-500'}`}>{submitResult.status}</span>
+                            {submitResult.runtime && <span className="text-sm text-slate-400 font-mono bg-[#0f172a] px-2 py-1 rounded border border-slate-700">{submitResult.runtime}ms</span>}
+                          </div>
+                          <div className="text-sm text-slate-400 font-mono">Passed <span className="text-slate-200">{submitResult.passed}</span> / <span className="text-slate-200">{submitResult.total}</span> test cases.</div>
+                        </div>
+                      )}
 
-            {/* Console Output */}
-            {(output || lastRunError) && (
-              <div className="p-3 bg-gray-900 text-white rounded-lg font-mono text-sm max-h-40 overflow-y-auto">
-                <div className="flex justify-between items-center mb-1 border-b border-gray-700 pb-1">
-                  <span className="text-gray-400 text-xs">Console Output</span>
-                  {lastRunError && (
-                    <span className="text-red-400 text-xs text-right">Execution Error</span>
+                      {/* Last Run Error / Console Output */}
+                      {(output || lastRunError) && (
+                        <div className="flex flex-col gap-2">
+                          <span className="text-xs text-slate-400 font-bold tracking-widest uppercase">Output Log:</span>
+                          <pre className="font-mono text-sm whitespace-pre-wrap text-slate-300 p-4 bg-[#0f172a] rounded-lg border border-slate-700/50 shadow-inner overflow-x-auto">
+                            {lastRunError && (
+                              <div className="mb-4 text-red-400 bg-red-950/40 p-3 rounded-md border border-red-900/50">
+                                <strong className="flex items-center gap-2 mb-2 text-red-500"><AlertTriangle size={16} /> Runtime Error</strong>
+                                {lastRunError}
+                              </div>
+                            )}
+                            {output}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
-                <pre className="whitespace-pre-wrap">
-                  {lastRunError && <div className="text-red-400 mb-2">{lastRunError}</div>}
-                  {output}
-                </pre>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </Layout>
+    </div>
   );
 };
 

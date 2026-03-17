@@ -112,7 +112,7 @@ const AdminUsers = () => {
 
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">User Management</h1>
-          <p className="text-gray-600 dark:text-slate-400">Manage and monitor student activities</p>
+          <p className="text-gray-600 dark:text-slate-400">Manage and monitor all users</p>
         </div>
 
         {/* Total Users Card */}
@@ -165,7 +165,7 @@ const AdminUsers = () => {
               <thead className="bg-gray-50 dark:bg-slate-700/50 border-b border-gray-100 dark:border-slate-700">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">User ID</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Student Name</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Name</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Role</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Dept/Year</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Level Practiced</th>

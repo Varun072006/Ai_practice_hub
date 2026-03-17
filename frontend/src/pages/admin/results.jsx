@@ -829,8 +829,8 @@ const StudentResults = () => {
                                                 key={pageNum}
                                                 onClick={() => handlePageChange(pageNum)}
                                                 className={`w-8 h-8 flex items-center justify-center rounded border ${currentPage === pageNum
-                                                        ? 'bg-blue-600 text-white border-blue-600'
-                                                        : 'border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300'
+                                                    ? 'bg-blue-600 text-white border-blue-600'
+                                                    : 'border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300'
                                                     }`}
                                             >
                                                 {pageNum}

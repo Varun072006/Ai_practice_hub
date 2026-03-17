@@ -11,13 +11,18 @@ import { Request, Response, NextFunction } from 'express';
  */
 export const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100,
+    max: 500,
     message: {
         error: 'Too many requests, please try again later.',
         retryAfter: '15 minutes',
     },
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator: (req: Request) => {
+        // Use userId when authenticated (critical: all college students share same IP)
+        const userId = (req as any).user?.userId || (req as any).user?.id;
+        return userId || req.ip || 'anonymous';
+    },
 });
 
 /**
