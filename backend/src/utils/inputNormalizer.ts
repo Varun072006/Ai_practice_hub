@@ -7,8 +7,8 @@
  * @returns Normalized input with actual newlines, tabs, etc.
  */
 export const normalizeExecutionInput = (input: string | null | undefined): string => {
-  if (!input) return '';
-  
+  if (input === undefined || input === null) return '';
+
   // First, handle double-escaped sequences (like \\n in CSV becomes \n in string)
   // Then convert single-escaped sequences to actual characters
   let normalized = input
@@ -19,9 +19,9 @@ export const normalizeExecutionInput = (input: string | null | undefined): strin
     .replace(/\\r/g, '\n')      // Convert \r to newline
     .replace(/\r\n/g, '\n')     // Normalize Windows line endings
     .replace(/\r/g, '\n');      // Normalize old Mac line endings
-  
+
   // Remove trailing backslashes that might be left after normalization
   normalized = normalized.replace(/\\+$/, '');
-  
-  return normalized.trim();     // Trim leading/trailing whitespace
+
+  return normalized;     // Trim leading/trailing whitespace
 };

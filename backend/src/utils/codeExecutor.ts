@@ -22,7 +22,7 @@ export const executeCode = async (
     try {
         // Map internal language names to Judge0 language IDs
         const languageId = getJudge0LanguageId(language);
-        if (!languageId) {
+        if (languageId === null) {
             return {
                 success: false,
                 error: `Unsupported language: ${language}`,
@@ -36,15 +36,19 @@ export const executeCode = async (
 
         // Submission data with tight, production-safe limits
         const submissionData = {
-            source_code: code,
-            language_id: languageId,
-            stdin: normalizeExecutionInput(input),
-            cpu_time_limit: 5.0,       // 5 seconds CPU (plenty for student code)
-            wall_time_limit: 15.0,     // 15 seconds wall clock
-            memory_limit: 256000,      // 256 MB (aligned with worker MAX)
+            source_code: code && code.trim() ? code : "int main(){return 0;}",
+            language_id: Number(languageId),
+            stdin: normalizeExecutionInput(input) ?? "",
+            cpu_time_limit: 5.0,       // 5 seconds CPU (within MAX_CPU_TIME_LIMIT: 10)
+            wall_time_limit: 10.0,     // 10 seconds wall clock (within MAX_WALL_TIME_LIMIT: 15)
+            memory_limit: 128000,      // 128 MB (matches MAX_MEMORY_LIMIT in docker-compose.prod.yml)
         };
 
         logger.info(`[CodeExecutor] Submitting code to Judge0 (Language ID: ${languageId})...`);
+        logger.info(`[CodeExecutor] Payload: ${JSON.stringify({
+            ...submissionData,
+            source_code: submissionData.source_code.slice(0, 50) + "..."
+        })}`);
 
         // Try synchronous mode first (wait=true) — Judge0 returns result directly
         try {
@@ -59,11 +63,30 @@ export const executeCode = async (
 
             if (statusId && statusId >= 3) {
                 logger.info(`[CodeExecutor] Sync result: Status ${statusId} (${result.status?.description})`);
+
+                // Retry once for transient Internal Error (status 13)
+                if (statusId === 13) {
+                    logger.warn(`[CodeExecutor] Sync mode got Status 13 (Internal Error). Falling back to async retry...`);
+                    throw new Error('Fallback_To_Async');
+                }
+
                 const isSuccess = statusId === 3;
+
+                // Provide user-friendly error messages instead of Judge0 raw errors
+                let friendlyError = '';
+                if (!isSuccess) {
+                    if (statusId === 6) friendlyError = 'Compilation Error: Please check your syntax.';
+                    else if (statusId === 5) friendlyError = 'Time Limit Exceeded: Your code took too long to run.';
+                    else if (statusId === 4) friendlyError = 'Wrong Answer: Output did not match expected result.';
+                    else if (statusId >= 7 && statusId <= 12) friendlyError = 'Runtime Error: Your code crashed during execution.';
+                    else if (statusId === 13) friendlyError = 'Execution service is temporarily busy. Please try running again.';
+                    else friendlyError = result.status?.description || 'Execution failed.';
+                }
+
                 return {
                     success: isSuccess,
                     output: result.stdout || '',
-                    error: isSuccess ? undefined : (result.stderr || result.compile_output || result.status?.description || ''),
+                    error: isSuccess ? undefined : (result.stderr || result.compile_output || friendlyError),
                     executionTime: parseFloat(result.time || '0'),
                 };
             }
@@ -140,12 +163,29 @@ const pollForResult = async (token: string, headers: Record<string, string>): Pr
 
     const isSuccess = executionResult.status?.id === 3;
     const output = executionResult.stdout || '';
-    const errorOutput = executionResult.stderr || executionResult.compile_output || (executionResult.status?.description && executionResult.status.id !== 3 ? executionResult.status.description : '');
+    const statusId = executionResult.status?.id;
+
+    // Provide user-friendly error messages
+    let formattedError = '';
+    if (!isSuccess) {
+        if (executionResult.stderr || executionResult.compile_output) {
+            formattedError = executionResult.stderr || executionResult.compile_output;
+        } else if (statusId) {
+            if (statusId === 6) formattedError = 'Compilation Error: Please check your syntax.';
+            else if (statusId === 5) formattedError = 'Time Limit Exceeded: Your code took too long to run.';
+            else if (statusId === 4) formattedError = 'Wrong Answer: Output did not match expected result.';
+            else if (statusId >= 7 && statusId <= 12) formattedError = 'Runtime Error: Your code crashed during execution.';
+            else if (statusId === 13) formattedError = 'Execution service is temporarily busy. Please try running again.';
+            else formattedError = executionResult.status?.description || 'Execution failed.';
+        } else {
+            formattedError = 'Execution failed to complete.';
+        }
+    }
 
     return {
         success: isSuccess,
         output: output,
-        error: isSuccess ? undefined : errorOutput,
+        error: isSuccess ? undefined : formattedError,
         executionTime: parseFloat(executionResult.time || '0'),
     };
 };

@@ -81,11 +81,11 @@ export const analyticsLimiter = rateLimit({
  * 10 code runs per minute per user
  */
 export const codeExecutionLimiter = rateLimit({
-    windowMs: 60 * 1000, // 1 minute
-    max: 10,
+    windowMs: 2000, // 2 seconds
+    max: 1,
     message: {
-        error: 'Too many code execution requests. Please wait.',
-        retryAfter: '1 minute',
+        error: 'Please wait before running code again.',
+        retryAfter: '2 seconds',
     },
     standardHeaders: true,
     legacyHeaders: false,
@@ -94,3 +94,48 @@ export const codeExecutionLimiter = rateLimit({
         return userId || req.ip || 'anonymous';
     },
 });
+
+const activeUsers = new Set();
+
+export const executionLock = (req: Request, res: Response, next: NextFunction) => {
+    const userId = (req as any).user?.userId || req.ip;
+
+    if (activeUsers.has(userId)) {
+        return res.status(429).json({
+            error: "Wait for current execution to finish"
+        });
+    }
+
+    activeUsers.add(userId);
+
+    let cleaned = false;
+    const cleanup = () => {
+        if (!cleaned) { cleaned = true; activeUsers.delete(userId); }
+    };
+    res.on("finish", cleanup);
+    res.on("close", cleanup);
+
+    next();
+};
+
+let activeExecutions = 0;
+const MAX_EXECUTIONS = 10;
+
+export const globalExecutionGuard = (req: Request, res: Response, next: NextFunction) => {
+    if (activeExecutions >= MAX_EXECUTIONS) {
+        return res.status(503).json({
+            error: "Server busy, try again shortly"
+        });
+    }
+
+    activeExecutions++;
+
+    let cleaned = false;
+    const cleanup = () => {
+        if (!cleaned) { cleaned = true; activeExecutions--; }
+    };
+    res.on("finish", cleanup);
+    res.on("close", cleanup);
+
+    next();
+};

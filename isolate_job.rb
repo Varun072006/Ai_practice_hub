@@ -54,8 +54,18 @@ class IsolateJob < ApplicationJob
 
   def initialize_workdir
     @box_id = submission.id%2147483647
-    # FORCE NO CGROUPS FOR WSL2 COMPATIBILITY
-    @cgroups = ""
+    
+    # Auto-detect cgroups v1 (NOT v2) — isolate only supports v1
+    # cgroups v1 has /sys/fs/cgroup/memory/ directory
+    # cgroups v2 only has /sys/fs/cgroup/ (unified, no memory subdir)
+    if File.directory?("/sys/fs/cgroup/memory")
+       @cgroups = "--cg"
+       puts "[DEBUG] Cgroups v1 detected, enabling --cg"
+    else
+       @cgroups = ""
+       puts "[DEBUG] Cgroups v1 NOT found (v2 or missing), running without cgroups"
+    end
+    
     puts "[DEBUG] submission.id: #{submission.id}, box_id: #{box_id}"
     cmd = "isolate #{cgroups} -b #{box_id} --init"
     puts "[DEBUG] executing: #{cmd}"
@@ -81,7 +91,7 @@ class IsolateJob < ApplicationJob
   end
 
   def initialize_file(file)
-    `sudo touch #{file} && sudo chown $(whoami): #{file}`
+    `touch #{file} && chown $(whoami): #{file}`
   end
 
   def extract_archive
@@ -173,7 +183,7 @@ class IsolateJob < ApplicationJob
     files_to_remove = [compile_output_file]
     files_to_remove << compile_script unless submission.is_project
     files_to_remove.each do |f|
-      `sudo rm -rf #{f}`
+      `rm -rf #{f}`
     end
 
     return :success if process_status.success?
@@ -234,7 +244,7 @@ class IsolateJob < ApplicationJob
 
     `#{command}`
 
-    `sudo rm #{run_script}` unless submission.is_project
+    `rm #{run_script}` unless submission.is_project
   end
 
   def verify
@@ -270,21 +280,21 @@ class IsolateJob < ApplicationJob
 
   def cleanup(raise_exception = true)
     fix_permissions
-    `sudo rm -rf #{boxdir}/* #{tmpdir}/*`
+    `rm -rf #{boxdir}/* #{tmpdir}/*`
     [stdin_file, stdout_file, stderr_file, metadata_file].each do |f|
-      `sudo rm -rf #{f}`
+      `rm -rf #{f}`
     end
     `isolate #{cgroups} -b #{box_id} --cleanup`
     raise "Cleanup of sandbox #{box_id} failed." if raise_exception && Dir.exists?(workdir)
   end
 
   def reset_metadata_file
-    `sudo rm -rf #{metadata_file}`
+    `rm -rf #{metadata_file}`
     initialize_file(metadata_file)
   end
 
   def fix_permissions
-    `sudo chown -R $(whoami): #{boxdir}`
+    `chown -R $(whoami): #{boxdir}`
   end
 
   def call_callback
