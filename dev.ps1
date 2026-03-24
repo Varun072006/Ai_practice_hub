@@ -4,7 +4,7 @@
 # Usage:  .\dev.ps1
 #
 # This starts:
-#   - MySQL + Judge0 (via Docker)
+#   - MySQL + Piston + Redis (via Docker)
 #   - Backend (local Node.js on port 5000)
 #   - Frontend (Vite dev server at http://localhost:5173/)
 # ============================================================
@@ -19,9 +19,9 @@ Write-Host ""
 Write-Host "[1/5] Stopping Docker frontend/backend if running..." -ForegroundColor Yellow
 docker stop practice-hub-frontend practice-hub-backend 2>$null | Out-Null
 
-# Step 2: Start only DB + Judge0 services via Docker
-Write-Host "[2/5] Starting MySQL + Judge0 in Docker..." -ForegroundColor Yellow
-docker-compose up -d mysql judge0-server judge0-worker judge0-db judge0-redis
+# Step 2: Start only DB + Piston + Redis services via Docker
+Write-Host "[2/5] Starting MySQL, Piston, and Redis in Docker..." -ForegroundColor Yellow
+docker-compose up -d mysql piston redis
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Failed to start Docker services!" -ForegroundColor Red
     exit 1
@@ -39,11 +39,12 @@ do {
     Write-Host "  Waiting... ($retry/$maxRetries)" -ForegroundColor Gray
 } while ($retry -lt $maxRetries)
 
-# Step 4: Start backend locally (override DB + Judge0 to use localhost)
+# Step 4: Start backend locally (override DB + Piston + Redis to use localhost)
 Write-Host "[4/5] Starting backend (local Node.js)..." -ForegroundColor Yellow
 $env:DATABASE_URL = "mysql://practicehub:practicehub123@localhost:3306/practice_hub"
-$env:JUDGE0_API_URL = "http://localhost:2358"
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$env:DATABASE_URL='mysql://practicehub:practicehub123@localhost:3306/practice_hub'; `$env:JUDGE0_API_URL='http://localhost:2358'; cd '$PSScriptRoot\backend'; npm run dev"
+$env:PISTON_HOSTS = "http://localhost:2000"
+$env:REDIS_URL = "redis://localhost:6379"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$env:DATABASE_URL='mysql://practicehub:practicehub123@localhost:3306/practice_hub'; `$env:PISTON_HOSTS='http://localhost:2000'; `$env:REDIS_URL='redis://localhost:6379'; cd '$PSScriptRoot\backend'; npm run dev"
 
 # Step 5: Start frontend
 Write-Host "[5/5] Starting frontend (Vite dev server)..." -ForegroundColor Yellow

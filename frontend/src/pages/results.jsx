@@ -95,7 +95,7 @@ const Results = () => {
     return <McqResult results={results} onBack={handleBackToCourse} />;
   }
 
-  // 3. Default: Coding (Judge0)
+  // 3. Default: Coding (Piston)
   const selectedQuestion = results.questions[selectedQuestionIndex];
   const testResults = selectedQuestion.test_results || [];
   const passedCount = testResults.filter(tr => tr.passed).length;

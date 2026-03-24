@@ -3,6 +3,10 @@ import { startSession, submitSolution, completeSession, runCode, getAllSessions,
 import { AuthRequest } from '../middlewares/auth';
 import logger from '../config/logger';
 
+// Security: max code and input sizes
+const MAX_CODE_SIZE = 50 * 1024;   // 50KB
+const MAX_INPUT_SIZE = 10 * 1024;  // 10KB
+
 export const startSessionController = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { courseId, levelId, sessionType } = req.body;
@@ -68,6 +72,12 @@ export const submitSolutionController = async (req: AuthRequest, res: Response):
       return;
     }
 
+    // Validate code size
+    if (code && Buffer.byteLength(code) > MAX_CODE_SIZE) {
+      res.status(400).json({ error: 'Code exceeds 50KB limit.' });
+      return;
+    }
+
     const result = await submitSolution(sessionId, questionId, userId, {
       code,
       language,
@@ -111,6 +121,16 @@ export const runCodeController = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
+    // Validate code and input sizes
+    if (code && Buffer.byteLength(code) > MAX_CODE_SIZE) {
+      res.status(400).json({ error: 'Code exceeds 50KB limit.' });
+      return;
+    }
+    if (customInput && Buffer.byteLength(customInput) > MAX_INPUT_SIZE) {
+      res.status(400).json({ error: 'Input exceeds 10KB limit.' });
+      return;
+    }
+
     const result = await runCode(sessionId, code, language, customInput, files);
     res.json(result);
   } catch (error: any) {
@@ -127,6 +147,12 @@ export const runTestCasesController = async (req: AuthRequest, res: Response): P
 
     if (!userId) {
       res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    // Validate code size
+    if (code && Buffer.byteLength(code) > MAX_CODE_SIZE) {
+      res.status(400).json({ error: 'Code exceeds 50KB limit.' });
       return;
     }
 

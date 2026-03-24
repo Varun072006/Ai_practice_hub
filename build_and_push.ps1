@@ -46,7 +46,7 @@ Write-Host "VITE_API_URL: $env:VITE_API_URL" -ForegroundColor Cyan
 Write-Host "GOOGLE_CLIENT_ID: $env:GOOGLE_CLIENT_ID" -ForegroundColor Cyan
 
 Write-Host "[1.5/4] Building Docker images..." -ForegroundColor Yellow
-docker compose --env-file .env.prod build
+docker compose --env-file .env.prod build --no-cache
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "BUILD FAILED!" -ForegroundColor Red

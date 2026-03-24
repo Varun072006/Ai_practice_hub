@@ -4,7 +4,8 @@ import { initializeUsers } from './controllers/authController';
 import pool from './config/database';
 import { hashPassword } from './utils/password';
 import { getRows } from './utils/mysqlHelper';
-import { initializeJudge0Languages } from './utils/codeExecutor';
+import { initializePistonLanguages, warmupPiston } from './utils/codeExecutor';
+import { startHealthChecks } from './utils/pistonLoadBalancer';
 
 const PORT = process.env.PORT || 5000;
 
@@ -15,15 +16,25 @@ initializeUsers().catch((error) => {
   logger.debug('Initialization error:', error);
 });
 
-// Initialize Judge0 Language Map (retry because Judge0 may not be ready yet)
+// Initialize Piston + Queue Worker
 (async () => {
+  // Start load balancer health checks
+  startHealthChecks();
+
+  // Initialize Piston languages (retry up to 5 times)
   for (let attempt = 1; attempt <= 5; attempt++) {
     try {
-      await initializeJudge0Languages();
-      logger.info('Judge0 language map initialized successfully.');
+      await initializePistonLanguages();
+      logger.info('Piston language map initialized successfully.');
+
+      // Warm up Piston instances (cold-start prevention)
+      warmupPiston().catch(err =>
+        logger.warn(`Piston warmup failed (non-critical): ${err.message}`)
+      );
+
       break;
-    } catch (err) {
-      logger.warn(`Judge0 language init attempt ${attempt}/5 failed, retrying in ${attempt * 3}s...`);
+    } catch (err: any) {
+      logger.warn(`Piston language init attempt ${attempt}/5 failed, retrying in ${attempt * 3}s...`);
       if (attempt < 5) await new Promise(r => setTimeout(r, attempt * 3000));
     }
   }
@@ -46,5 +57,15 @@ server.on('error', (error: any) => {
     logger.error('Server error:', error);
     process.exit(1);
   }
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  logger.info('SIGTERM received. Shutting down gracefully...');
+  try {
+    const { shutdownQueue } = await import('./services/codeExecutionQueue');
+    await shutdownQueue();
+  } catch {}
+  server.close(() => process.exit(0));
 });
 

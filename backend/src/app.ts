@@ -140,6 +140,17 @@ apiRouter.use('/seed', seedRoutes);
 apiRouter.use('/profile', profileRoutes);
 apiRouter.use('/assets', assetRoutes);
 
+// Queue monitoring endpoint (admin only)
+apiRouter.get('/admin/queue-stats', async (req, res) => {
+  try {
+    const { getQueueStats } = await import('./services/codeExecutionQueue');
+    const stats = await getQueueStats();
+    res.json({ success: true, data: stats });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Mounting Strategy: 
 // 1. Mount at /api to support standard /api/... calls
 // 2. Mount at / as a fallback if Nginx strips the prefix entirely
