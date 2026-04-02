@@ -46,7 +46,7 @@ export const executeCode = async (
     memory_limit: 134217728,
   };
 
-  const maxAttempts = pistonHost ? 1 : 3;
+const maxAttempts = pistonHost ? 1 : getAllHosts().length;
   let lastErrorMsg = '';
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {

@@ -9,6 +9,19 @@ export interface CSVRow {
   [key: string]: string;
 }
 
+/**
+ * Normalizes newline placeholders in CSV text to actual newline characters.
+ * Supports both /n and //n formats.
+ */
+const normalizeNewlines = (text: string | null | undefined): string => {
+  if (!text) return '';
+  // Support //n, /n, and \n
+  return text.toString()
+    .replace(/\/\/n/g, '\n')
+    .replace(/\/n/g, '\n')
+    .replace(/\\n/g, '\n');
+};
+
 export const parseAndCreateQuestionsFromCSV = async (
   csvData: CSVRow[],
   levelId: string,
@@ -63,13 +76,13 @@ export const parseAndCreateQuestionsFromCSV = async (
           continue;
         }
 
-        const title = row.title?.toString().trim();
-        const description = row.description?.toString().trim();
-        const opt1 = row.option1?.toString().trim();
-        const opt2 = row.option2?.toString().trim();
-        const opt3 = row.option3?.toString().trim();
-        const opt4 = row.option4?.toString().trim();
-        const correctOptionRaw = row.correct_option?.toString().trim();
+        const title = normalizeNewlines(row.title).trim();
+        const description = normalizeNewlines(row.description).trim();
+        const opt1 = normalizeNewlines(row.option1).trim();
+        const opt2 = normalizeNewlines(row.option2).trim();
+        const opt3 = normalizeNewlines(row.option3).trim();
+        const opt4 = normalizeNewlines(row.option4).trim();
+        const correctOptionRaw = normalizeNewlines(row.correct_option).trim();
         const difficulty = row.difficulty?.toString().trim() || 'medium';
 
         // Validate required fields
@@ -138,12 +151,12 @@ export const parseAndCreateQuestionsFromCSV = async (
           continue;
         }
 
-        const title = row.title?.toString().trim();
-        const description = row.description?.toString().trim();
-        const inputFormat = row.input_format?.toString().trim() || null;
-        const outputFormat = row.output_format?.toString().trim() || null;
-        const constraints = row.constraints?.toString().trim() || null;
-        const referenceSolution = row.reference_solution?.toString().trim();
+        const title = normalizeNewlines(row.title).trim();
+        const description = normalizeNewlines(row.description).trim();
+        const inputFormat = normalizeNewlines(row.input_format).trim() || null;
+        const outputFormat = normalizeNewlines(row.output_format).trim() || null;
+        const constraints = normalizeNewlines(row.constraints).trim() || null;
+        const referenceSolution = normalizeNewlines(row.reference_solution).trim();
         const difficulty = row.difficulty?.toString().trim() || 'medium';
 
         // Validate required fields
@@ -209,14 +222,6 @@ export const parseAndCreateQuestionsFromCSV = async (
               hiddenStr.toLowerCase() === 'yes'
             );
 
-            // Convert //n (double forward slash + n) to actual newlines (\n)
-            // This handles multi-line input/output in CSV format
-            // Example: "3//n5 5 5" becomes "3\n5 5 5"
-            const normalizeNewlines = (text: string): string => {
-              if (!text) return text;
-              return text.replace(/\/\/n/g, '\n');
-            };
-
             const normalizedInput = normalizeNewlines(input);
             const normalizedOutput = normalizeNewlines(output);
 
@@ -280,13 +285,13 @@ export const parseAndCreateQuestionsFromCSV = async (
           continue;
         }
 
-        const description = row.description?.toString().trim();
-        const instructions = row.instructions?.toString().trim() || '';
-        const tags = row.tags?.toString().trim() || '';
-        const assets = row.assets?.toString().trim() || '';
-        const expectedHtml = row.expectedhtml?.toString().trim() || '';
-        const expectedCss = row.expectedcss?.toString().trim() || '';
-        const expectedJs = row.expectedjs?.toString().trim() || '';
+        const description = normalizeNewlines(row.description).trim();
+        const instructions = normalizeNewlines(row.instructions).trim() || '';
+        const tags = normalizeNewlines(row.tags).trim() || '';
+        const assets = normalizeNewlines(row.assets).trim() || '';
+        const expectedHtml = normalizeNewlines(row.expectedhtml).trim() || '';
+        const expectedCss = normalizeNewlines(row.expectedcss).trim() || '';
+        const expectedJs = normalizeNewlines(row.expectedjs).trim() || '';
 
         // Validate required content
         if (!description) {

@@ -270,7 +270,7 @@ const AdminCourses = () => {
                   <input
                     type="number"
                     value={formData.total_levels}
-                    onChange={(e) => setFormData({ ...formData, total_levels: parseInt(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, total_levels: Number(e.target.value) || 1 })}
                     placeholder="e.g., 5"
                     className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-white"
                     required

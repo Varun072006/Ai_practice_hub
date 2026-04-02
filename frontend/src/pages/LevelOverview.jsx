@@ -4,47 +4,27 @@ import Layout from '../components/Layout';
 import api from '../services/api';
 import { BookOpen, Code, Lightbulb, ExternalLink, ArrowRight, Sparkles, Loader, Edit, Save, Plus, X, Trash2, CheckCircle, FolderIcon, ListChecks } from 'lucide-react';
 
-const getYouTubeEmbedUrl = (input) => {
-    if (!input) return '';
-
-    // 1. Check for standard Playlist URL
-    if (input.includes('list=')) {
-        const listId = input.split('list=')[1]?.split('&')[0];
-        if (listId) return `https://www.youtube.com/embed?listType=playlist&list=${listId}`;
-    }
-
-    // 2. Parse all Video IDs from input (multiline support)
+const getYouTubeVideoIds = (input) => {
+    if (!input) return [];
     const videoIds = [];
-    const lines = input.split(/[\n,;]+/); // Split by newline, comma, or semicolon
-
+    const lines = input.split(/[\n,;]+/);
     lines.forEach(line => {
         let id = '';
-        if (line.includes('youtu.be/')) {
-            id = line.split('youtu.be/')[1]?.split('?')[0];
-        } else if (line.includes('v=')) {
-            id = line.split('v=')[1]?.split('&')[0];
-        } else if (line.includes('youtube.com/embed/')) {
-            id = line.split('embed/')[1]?.split('?')[0];
-        } else if (line.trim().length === 11) {
-            // Potential raw video ID (YouTube IDs are 11 chars)
-            id = line.trim();
-        }
-
-        if (id && id.length === 11) {
-            videoIds.push(id);
-        }
+        if (line.includes('youtu.be/')) id = line.split('youtu.be/')[1]?.split('?')[0];
+        else if (line.includes('v=')) id = line.split('v=')[1]?.split('&')[0];
+        else if (line.includes('youtube.com/embed/')) id = line.split('embed/')[1]?.split('?')[0];
+        else if (line.trim().length === 11) id = line.trim();
+        if (id && id.length === 11) videoIds.push(id);
     });
+    return videoIds;
+};
 
-    if (videoIds.length === 0) return input; // Return raw if no logic matched
+const getYouTubeEmbedUrl = (videoId) => {
+    return `https://www.youtube.com/embed/${videoId}`;
+};
 
-    // 3. Construct Embed URL
-    if (videoIds.length === 1) {
-        return `https://www.youtube.com/embed/${videoIds[0]}`;
-    } else {
-        // Multiple videos: First one is main, rest are playlist
-        const [first, ...rest] = videoIds;
-        return `https://www.youtube.com/embed/${first}?playlist=${rest.join(',')}`;
-    }
+const getYouTubeThumbnail = (videoId) => {
+    return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
 };
 
 const LevelOverview = () => {
@@ -54,6 +34,8 @@ const LevelOverview = () => {
     const [loading, setLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
+    const [activeVideoIndex, setActiveVideoIndex] = useState(0);
+    const [videoIds, setVideoIds] = useState([]);
 
     const [editData, setEditData] = useState({
         introduction: '',
@@ -96,6 +78,8 @@ const LevelOverview = () => {
                 example_code: response.data.example_code || '',
                 youtube_url: response.data.youtube_url || ''
             });
+            const vids = getYouTubeVideoIds(response.data.youtube_url || '');
+            setVideoIds(vids);
             setLoading(false);
         } catch (error) {
             console.error('Failed to fetch lesson plan:', error);
@@ -120,7 +104,8 @@ const LevelOverview = () => {
                     concepts: editData.concepts,
                     resources: editData.resources,
                     key_terms: editData.key_terms,
-                    youtube_url: editData.youtube_url
+                    youtube_url: editData.youtube_url,
+                    example_code: editData.example_code
                 }
             };
 
@@ -423,19 +408,19 @@ const LevelOverview = () => {
                             <div className="lg:col-span-7 space-y-8">
                                 <div className="space-y-6">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                                            <BookOpen size={20} />
+                                        <div className="w-11 h-11 rounded-2xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-sm">
+                                            <BookOpen size={22} />
                                         </div>
-                                        <span className="text-[10px] font-black tracking-[0.2em] uppercase bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-md border border-blue-100/50 dark:border-blue-800">
+                                        <span className="text-xs font-black tracking-[0.25em] uppercase bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 px-4 py-1.5 rounded-lg border border-blue-100/50 dark:border-blue-800 shadow-sm">
                                             LEVEL {lessonPlan.level_number ?? levelId}
                                         </span>
                                     </div>
 
                                     <div className="space-y-4">
-                                        <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.1]">
+                                        <h1 className="text-3xl md:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
                                             {lessonPlan.title || `Level ${levelId} Overview`}
                                         </h1>
-                                        <p className="text-base md:text-lg text-slate-500 dark:text-slate-400 leading-relaxed font-medium max-w-2xl">
+                                        <p className="text-sm md:text-sm lg:text-base text-slate-500 dark:text-slate-400 leading-relaxed font-medium max-w-2xl whitespace-pre-wrap">
                                             {lessonPlan.introduction}
                                         </p>
                                     </div>
@@ -443,7 +428,7 @@ const LevelOverview = () => {
                                     {/* Key Terms */}
                                     {lessonPlan.key_terms && lessonPlan.key_terms.length > 0 && (
                                         <div className="space-y-3">
-                                            <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
+                                            <h4 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em] mb-4">
                                                 KEY TERMS
                                             </h4>
                                             <div className="flex flex-wrap gap-2">
@@ -458,27 +443,45 @@ const LevelOverview = () => {
                                 </div>
                             </div>
 
-                            {/* Right: Video */}
-                            {lessonPlan.youtube_url && lessonPlan.youtube_url.trim() && (
-                                <div className="lg:col-span-5">
-                                    <div className="bg-white dark:bg-slate-800 rounded-[2rem] shadow-2xl shadow-slate-200/50 dark:shadow-slate-900/50 overflow-hidden border border-slate-100 dark:border-slate-700 flex flex-col group h-full max-h-[400px]">
-                                        <div className="p-5 bg-white dark:bg-slate-800 border-b border-slate-50 dark:border-slate-700 flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
+                            {/* Right: Video Section */}
+                            {videoIds.length > 0 && (
+                                <div className="lg:col-span-5 space-y-4">
+                                    <div className="bg-white dark:bg-slate-800 rounded-[2rem] shadow-2xl shadow-slate-200/50 dark:shadow-slate-900/50 overflow-hidden border border-slate-100 dark:border-slate-700 flex flex-col group h-[300px] md:h-full max-h-[400px]">
+                                        <div className="p-4 bg-white dark:bg-slate-800 border-b border-slate-50 dark:border-slate-700 flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
                                                 <div className="w-8 h-8 rounded-full bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 flex items-center justify-center">
                                                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                                                         <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
                                                     </svg>
                                                 </div>
-                                                <span className="font-bold text-slate-800 dark:text-white text-sm">Video Tutorial</span>
+                                                <span className="font-black text-slate-800 dark:text-white text-sm tracking-tight">
+                                                    Tutorial {activeVideoIndex + 1}/{videoIds.length}
+                                                </span>
                                             </div>
-                                            <ExternalLink size={16} className="text-slate-300 dark:text-slate-600 group-hover:text-red-500 transition-colors" />
+                                            <div className="flex items-center gap-1">
+                                                <button 
+                                                    onClick={() => setActiveVideoIndex(Math.max(0, activeVideoIndex - 1))}
+                                                    disabled={activeVideoIndex === 0}
+                                                    className={`p-1.5 rounded-lg border transition-all ${activeVideoIndex === 0 ? 'text-slate-300 border-slate-100' : 'text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                                                >
+                                                    <ArrowRight className="rotate-180" size={16} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => setActiveVideoIndex(Math.min(videoIds.length - 1, activeVideoIndex + 1))}
+                                                    disabled={activeVideoIndex === videoIds.length - 1}
+                                                    className={`p-1.5 rounded-lg border transition-all ${activeVideoIndex === videoIds.length - 1 ? 'text-slate-300 border-slate-100' : 'text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                                                >
+                                                    <ArrowRight size={16} />
+                                                </button>
+                                            </div>
                                         </div>
                                         <div className="flex-1 bg-black relative">
                                             <iframe
+                                                key={videoIds[activeVideoIndex]}
                                                 width="100%"
                                                 height="100%"
-                                                src={getYouTubeEmbedUrl(lessonPlan.youtube_url)}
-                                                title="Course Video Tutorial"
+                                                src={getYouTubeEmbedUrl(videoIds[activeVideoIndex])}
+                                                title={`Tutorial Part ${activeVideoIndex + 1}`}
                                                 frameBorder="0"
                                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                                 allowFullScreen
@@ -486,6 +489,29 @@ const LevelOverview = () => {
                                             ></iframe>
                                         </div>
                                     </div>
+
+                                    {/* Thumbnail Preview Area */}
+                                    {videoIds.length > 1 && (
+                                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                                            {videoIds.map((id, index) => (
+                                                <button
+                                                    key={id}
+                                                    onClick={() => setActiveVideoIndex(index)}
+                                                    className={`flex-shrink-0 w-24 aspect-video rounded-xl overflow-hidden border-2 transition-all ${
+                                                        activeVideoIndex === index 
+                                                        ? 'border-blue-500 scale-105 shadow-lg' 
+                                                        : 'border-transparent opacity-60 hover:opacity-100'
+                                                    }`}
+                                                >
+                                                    <img 
+                                                        src={getYouTubeThumbnail(id)} 
+                                                        alt={`Video ${index + 1}`} 
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -493,23 +519,23 @@ const LevelOverview = () => {
                         {/* Core Topics Grid */}
                         <div className="space-y-8">
                             <div className="flex items-center gap-3">
-                                <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
+                                <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em]">
                                     CORE TOPICS
                                 </h3>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {lessonPlan.concepts.map((concept, idx) => (
-                                    <div key={idx} className="bg-white dark:bg-slate-800 p-8 rounded-[2rem] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-500 border border-slate-100 dark:border-slate-700 flex flex-col min-h-[200px] group">
-                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 shadow-sm ${['bg-blue-50 dark:bg-blue-900/30 text-blue-500 dark:text-blue-400', 'bg-cyan-50 dark:bg-cyan-900/30 text-cyan-500 dark:text-cyan-400', 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400', 'bg-purple-50 dark:bg-purple-900/30 text-purple-500 dark:text-purple-400'][idx % 4]
+                                    <div key={idx} className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-slate-100 dark:border-slate-700 flex flex-col min-h-[220px] group">
+                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 group-hover:rotate-6 transition-all duration-500 shadow-sm ${['bg-blue-50 dark:bg-blue-900/40 text-blue-500 dark:text-blue-400', 'bg-cyan-50 dark:bg-cyan-900/40 text-cyan-500 dark:text-cyan-400', 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-500 dark:text-indigo-400', 'bg-purple-50 dark:bg-purple-900/40 text-purple-500 dark:text-purple-400'][idx % 4]
                                             }`}>
-                                            {[<ArrowRight size={24} className="rotate-[-45deg]" />, <Lightbulb size={24} />, <Edit size={22} />, <Sparkles size={24} />][idx % 4]}
+                                            {[<ArrowRight size={26} className="rotate-[-45deg]" />, <Lightbulb size={26} />, <Edit size={24} />, <Sparkles size={26} />][idx % 4]}
                                         </div>
                                         <h3 className="font-black text-slate-900 dark:text-white mb-4 text-xl group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-tight">
                                             {concept.title}
                                         </h3>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400 leading-[1.6] font-medium flex-1">
-                                            {concept.explanation || <span className="text-slate-300 dark:text-slate-600 italic">Description available in learning materials</span>}
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 leading-[1.7] font-medium flex-1 whitespace-pre-wrap">
+                                            {concept.explanation || <span className="text-slate-300 dark:text-slate-600 italic">No description available.</span>}
                                         </p>
                                     </div>
                                 ))}
@@ -526,7 +552,7 @@ const LevelOverview = () => {
                                             <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
                                             <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
                                         </div>
-                                        <span className="text-[10px] font-black text-slate-400 ml-2 tracking-widest">EXAMPLE CODE</span>
+                                        <span className="text-xs font-black text-slate-400 ml-2 tracking-[0.25em]">EXAMPLE CODE</span>
                                     </div>
                                 </div>
                                 <div className="p-1">
@@ -548,7 +574,7 @@ const LevelOverview = () => {
                                         </div>
                                         <h3 className="font-black text-slate-900 dark:text-white text-xl tracking-tight">Course Materials</h3>
                                     </div>
-                                    <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700">
+                                    <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em] bg-slate-50 dark:bg-slate-800 px-4 py-2 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
                                         {lessonPlan.resources.length} ASSETS
                                     </span>
                                 </div>
@@ -595,8 +621,8 @@ const LevelOverview = () => {
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 dark:bg-blue-900/20 rounded-full blur-3xl opacity-50 -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700"></div>
 
                                     <div className="space-y-2 relative z-10">
-                                        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-black text-[10px] uppercase tracking-[0.2em] mb-4">
-                                            <CheckCircle size={14} />
+                                        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-black text-xs uppercase tracking-[0.25em] mb-4">
+                                            <CheckCircle size={15} />
                                             ASSESSMENT READY
                                         </div>
                                         <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
